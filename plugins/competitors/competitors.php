@@ -58,13 +58,13 @@ add_action('wp_enqueue_scripts', 'competitors_enqueue_scripts');
 // Admin menu for judges and settings page
 function competitors_add_admin_menu() {
     add_menu_page(
-        'Competitors Custom Settings', // Page title
-        'Competitors Settings', // Menu title
-        'manage_options', // Capability
-        'competitors-settings', // Menu slug
-        'competitors_settings_page', // Function to display the page
-        'dashicons-groups' // Icon (optional)
-        // 10 Position (optional)
+        'Competitors Custom Settings',  // Page title
+        'Competitors Settings',         // Menu title
+        'manage_options',               // Capability
+        'competitors-settings',         // Menu slug
+        'competitors_settings_page',    // Function to display the page
+        'dashicons-groups',             // Icon (optional)
+        3,                              //Position (optional)
     );
 }
 add_action('admin_menu', 'competitors_add_admin_menu');
