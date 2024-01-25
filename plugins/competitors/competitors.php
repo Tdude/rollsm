@@ -56,7 +56,7 @@ add_action('wp_enqueue_scripts', 'competitors_enqueue_scripts');
 
 
 // Admin menu for judges and settings page
-function competitors_admin_menu() {
+function competitors_add_admin_menu() {
     add_menu_page(
         'Competitors Custom Settings', // Page title
         'Competitors Settings', // Menu title
@@ -67,17 +67,17 @@ function competitors_admin_menu() {
         // 10 Position (optional)
     );
 }
-add_action('admin_menu', 'competitors_admin_menu');
+add_action('admin_menu', 'competitors_add_admin_menu');
 
 // Submenu
 function competitors_add_submenu_pages() {
     add_submenu_page(
-        'competitors-main-menu',        // Parent slug
+        'competitors-settings',        // Parent slug
         'Competitors Data',             // Page title
         'manage_options',               // Capability required
         'competitors-data',             // Menu slug
         'competitors_admin_page',       // Callback function
-        'dashicons-groups',             // Dash öööhh, icon
+        'dashicons-settings',           // Dash öööhh, icon
         //2,                            // Position (optional)
     );
 }
