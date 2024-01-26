@@ -8,3 +8,18 @@ label {
   padding: 5em;
   display: inline-block;
 }
+
+.lbl-checkbox,
+input[type="checkbox"] {
+  padding: 1em;
+  display: inline-block;
+}
+
+.pt-1 {
+  padding-top: 1em;
+}
+
+.entry-content input[type="submit"] {
+  font-size: 1.2em;
+  font-weight: bold;
+}

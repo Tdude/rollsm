@@ -18,18 +18,6 @@ function competitors_enqueue_scripts() {
 }
 add_action('wp_enqueue_scripts', 'competitors_enqueue_scripts');
 
-// Add styling to the admin only
-function competitors_admin_styles($hook) {
-    // Only add to the competitors admin page
-    if ('toplevel_page_competitors-settings' !== $hook) {
-        return;
-    }
-    // Path to plugin CSS file
-    wp_enqueue_style('competitors_admin_css', plugin_dir_url(__FILE__) . 'assets/admin.css');
-}
-add_action('admin_enqueue_scripts', 'competitors_admin_styles');
-
-
 
 // Register Custom Post Type
 function create_competitors_post_type() {
@@ -64,7 +52,6 @@ function competitors_deactivate() {
 register_deactivation_hook(__FILE__, 'competitors_deactivate');
 
 
-
 // Admin menu for judges and settings page. Order of the params is important.
 function competitors_add_admin_menu() {
     add_menu_page(
@@ -78,7 +65,6 @@ function competitors_add_admin_menu() {
     );
 }
 add_action('admin_menu', 'competitors_add_admin_menu');
-
 
 
 // Submenu (WP needs two items to show sub menu items!)
@@ -95,7 +81,6 @@ function competitors_add_submenu_settings() {
 add_action('admin_menu', 'competitors_add_submenu_settings');
 
 
-
 function competitors_add_submenu_scoring() {
     add_submenu_page(
         'competitors-settings',       // Parent slug (should match the main menu's slug)
@@ -107,6 +92,33 @@ function competitors_add_submenu_scoring() {
     );
 }
 add_action('admin_menu', 'competitors_add_submenu_scoring');
+
+
+function competitors_add_submenu_scoring_list() {
+    add_submenu_page(
+        'competitors-settings',         // Parent slug (should match the main menu's slug)
+        'Scoring list page',            // Page title
+        'Competitor Scoring List',      // Menu title
+        'manage_options',               // Capability
+        'competitors-list',             // Menu slug
+        'competitors_scoring_list_page'  // Callback function
+    );
+}
+add_action('admin_menu', 'competitors_add_submenu_scoring_list');
+
+
+
+function competitors_add_submenu_scoring_view() {
+    add_submenu_page(
+        'competitors-settings',       // Parent slug (should match the main menu's slug)
+        'Scoring view page',        // Page title
+        'Individual Scoring',             // Menu title
+        'manage_options',             // Capability
+        'competitors-view',        // Menu slug
+        'competitors_scoring_view_page'         // Callback function
+    );
+}
+add_action('admin_menu', 'competitors_add_submenu_scoring_view');
 
 
 
