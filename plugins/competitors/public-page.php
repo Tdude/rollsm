@@ -3,48 +3,57 @@
 function competitors_form_shortcode() {
     ob_start(); 
     // Form HTML for public part ?>
+<style>
+.lbl-checkbox,
+input[type='checkbox'] {
+  padding: 1em;
+  display: inline-block;
+}
 
+
+</style>
     <form action="<?php echo admin_url('admin-post.php'); ?>" method="post">
         <input type="hidden" name="action" value="competitors_form_submit">
 
         <h2>Anmälan  <?php if (current_user_can('manage_options')): ?>och poängresultat<?php endif; ?> RollSM 2024</h2>
-        <label for="name">Name:</label>
-        <input type="text" id="name" name="name"><br>
+            <label for="name">Name:</label>
+            <input aria-label="Name" type="text" id="name" name="name"><br>
 
-        <label for="email">Email:</label>
-        <input type="text" id="email" name="email"><br>
+            <label for="email">Email:</label>
+            <input aria-label="Email" type="text" id="email" name="email"><br>
 
-        <label for="phone">Phone:</label>
-        <input type="text" id="phone" name="phone"><br>
+            <label for="phone">Phone:</label>
+            <input aria-label="Phone" type="text" id="phone" name="phone"><br>
 
-        <label for="club">Club:</label>
-        <input type="text" id="club" name="club"><br>
+            <label for="club">Club:</label>
+            <input aria-label="Club" type="text" id="club" name="club"><br>
 
-        <label for="license">License:</label>
-        <input type="checkbox" id="license" name="license"><br>
+            <label for="license">License:</label>
+            <input aria-label="License" type="checkbox" id="license" name="license"><br>
 
-        <label for="sponsors">Sponsors:</label>
-        <input type="text" id="sponsors" name="sponsors"><br>
+            <label for="sponsors">Sponsors:</label>
+            <input aria-label="Sponsors" type="text" id="sponsors" name="sponsors"><br>
 
-        <label for="speaker_info">Speaker Info:</label>
-        <textarea id="speaker_info" name="speaker_info"></textarea><br>
+            <label for="speaker_info">Speaker Info:</label>
+            <textarea aria-label="Speaker Info" id="speaker_info" name="speaker_info"></textarea><br>
 
-        <label>Participation in Class:</label>
-        <input type="radio" id="open" name="participation_class" value="open">
-        <label for="open">Open</label>
-        <input type="radio" id="championship" name="participation_class" value="championship">
-        <label for="championship">Championship</label>
-        <input type="radio" id="amateur" name="participation_class" value="amateur">
-        <label for="amateur">Amateur</label><br>
+            <label>Participation in Class:</label>
+            <input aria-label="Participation Class - Open" type="radio" id="open" name="participation_class" value="open">
+            <label for="open">Open</label>
+            <input aria-label="Participation Class - Championship" type="radio" id="championship" name="participation_class" value="championship">
+            <label for="championship">Championship</label>
+            <input aria-label="Participation Class - Amateur" type="radio" id="amateur" name="participation_class" value="amateur">
+            <label for="amateur">Amateur</label><br>
 
-        <input type="checkbox" id="consent" name="consent">
-        <label for="consent">Jag godkänner, har läst och förstått mm.</label><br>
-
+            <input aria-label="Consent" type="checkbox" id="consent" name="consent">
+            <label for="consent">Jag godkänner, har läst och förstått mm.</label><br>
         <fieldset>
             <legend>Performing Rolls</legend>
             <table>
                 <tr>
-                    <th>Ska göra</th>
+                    <th><label for="check-all" class="lbl-checkbox">Markera alla</label>
+                    <input type="checkbox" id="roll_check" name="check-all" onchange="checkAll(this)">
+                    </th>
                     <th>Rollnamn</th>
                     <?php if (current_user_can('manage_options')): ?>
                     <th>Poäng V</th>
@@ -65,7 +74,7 @@ function competitors_form_shortcode() {
             for ($i = 0; $i < count($roll_names_array); $i++):
                 ?>
                 <tr>
-                    <td><input type="checkbox" id="roll_<?php echo $i + 1; ?>" name="performing_rolls[]" onchange="checkAll(this)"></td>
+                    <td><input type="checkbox" id="roll_<?php echo $i + 1; ?>" name="performing_rolls[]"></td>
                     <td><?php echo esc_html($roll_names_array[$i]); ?></td>
                     
                     <?php if (current_user_can('manage_options')): ?>

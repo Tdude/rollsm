@@ -2,7 +2,7 @@
 document.addEventListener("DOMContentLoaded", function(){
 
 
-    // Check all bozes with event listener for checkbox "<input type="checkbox" onchange="checkAll(this)" name="performing_rolls[]" />"
+    // Check all boxes with event listener for checkbox "<input type="checkbox" onchange="checkAll(this)" name="checks-all" />"
     function checkAll(e) {
         var checkboxes = document.getElementsByTagName('input');
         if (e.checked) {

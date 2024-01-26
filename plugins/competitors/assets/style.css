@@ -3,3 +3,8 @@
   /* styles go here */
   background: #ccc;
 }
+
+label {
+  padding: 5em;
+  display: inline-block;
+}
