@@ -55,12 +55,12 @@ register_deactivation_hook(__FILE__, 'competitors_deactivate');
 // Admin menu for judges and settings page. Order of the params is important.
 function competitors_add_admin_menu() {
     add_menu_page(
-        'Competitors Custom Settings',  // Page title
-        'Competitors admin',            // Menu title
+        'Competitors custom settings',  // Page title
+        'Competitors settings',         // Menu title
         'manage_options',               // Capability
         'competitors-settings',         // Menu slug
         'competitors_settings_page',    // Function to display the page
-        'dashicons-groups'              // Icon (optional)
+        'dashicons-clipboard'           // Icon (optional)
         //3,                            //Position (optional)
     );
 }
@@ -71,8 +71,8 @@ add_action('admin_menu', 'competitors_add_admin_menu');
 function competitors_add_submenu_settings() {
     add_submenu_page(
         'competitors-settings',        // Parent slug
-        'Competitors Detailed Data',   // Page title
-        'Detailed Data',               // Menu title (changed to avoid duplication)
+        'Competitors personal data',   // Page title
+        'Personal data',               // Menu title (changed to avoid duplication)
         'manage_options',              // Capability
         'competitors-detailed-data',   // Menu slug (different from the parent slug)
         'competitors_admin_page'       // Callback function
@@ -85,7 +85,7 @@ function competitors_add_submenu_scoring() {
     add_submenu_page(
         'competitors-settings',       // Parent slug (should match the main menu's slug)
         'Judges scoring submenu',     // Page title
-        'Judges Scoring',             // Menu title
+        'Judges scoring',             // Menu title
         'manage_options',             // Capability
         'competitors-scoring',        // Menu slug
         'judges_scoring_page'         // Callback function
@@ -98,10 +98,10 @@ function competitors_add_submenu_scoring_list() {
     add_submenu_page(
         'competitors-settings',         // Parent slug (should match the main menu's slug)
         'Scoring list page',            // Page title
-        'Competitor Scoring List',      // Menu title
+        'Competitors scoring list',     // Menu title
         'manage_options',               // Capability
         'competitors-list',             // Menu slug
-        'competitors_scoring_list_page'  // Callback function
+        'competitors_scoring_list_page' // Callback function
     );
 }
 add_action('admin_menu', 'competitors_add_submenu_scoring_list');
@@ -110,12 +110,12 @@ add_action('admin_menu', 'competitors_add_submenu_scoring_list');
 
 function competitors_add_submenu_scoring_view() {
     add_submenu_page(
-        'competitors-settings',       // Parent slug (should match the main menu's slug)
-        'Scoring view page',        // Page title
-        'Individual Scoring',             // Menu title
-        'manage_options',             // Capability
-        'competitors-view',        // Menu slug
-        'competitors_scoring_view_page'         // Callback function
+        'competitors-settings',         // Parent slug (should match the main menu's slug)
+        'Scoring view page',            // Page title
+        'Individual scoring',           // Menu title
+        'manage_options',               // Capability
+        'competitors-view',             // Menu slug
+        'competitors_scoring_view_page' // Callback function
     );
 }
 add_action('admin_menu', 'competitors_add_submenu_scoring_view');

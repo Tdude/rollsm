@@ -96,6 +96,8 @@ function competitors_admin_page() {
     }// current_user_can edit
 } // End competitors_admin_page 
 
+
+
 function save_sorted_competitors() {
     check_ajax_referer('competitors_nonce', 'nonce');
     $sortedIDs = isset($_POST['order']) ? $_POST['order'] : array();
@@ -136,6 +138,7 @@ function judges_scoring_page() {
 
     echo '<h1>Competitors Judges Scoring</h1>';
     echo '<form action="' . esc_url(admin_url('admin-post.php')) . '" method="post">';
+    wp_nonce_field('competitors_score_update_action', 'competitors_score_update_nonce');
     echo '<input type="hidden" name="action" value="competitors_score_update">';
     echo '<table class="competitors-table">';
 
@@ -227,12 +230,64 @@ function judges_scoring_page() {
 }
 
 
+// make this function handle empty values!
+
+function handle_competitors_score_update() {
+
+    error_reporting(E_ALL); 
+    ini_set('display_errors', 1);
+
+    if (isset($_POST['action']) && $_POST['action'] == 'competitors_score_update' && current_user_can('manage_options')) {
+        // Verify nonce
+        if (!isset($_POST['competitors_score_update_nonce']) || !wp_verify_nonce($_POST['competitors_score_update_nonce'], 'competitors_score_update_action')) {
+            wp_die('Security check failed. Are you sure you should be here?');
+        }
+        // Iterate through POST data and save scores
+        foreach ($_POST as $key => $value) {
+            if (strpos($key, 'left_score_') !== false || strpos($key, 'left_deduct_') !== false || strpos($key, 'right_score_') !== false || strpos($key, 'right_deduct_') !== false) {
+                // Extract competitor ID and roll index from the field name
+                $parts = explode('_', $key);
+                $competitor_id = $parts[2];
+                $roll_index = $parts[3];
+
+                // Update score in the database
+                $result = update_post_meta($competitor_id, $key, sanitize_text_field($value));
+                //var_dump($competitor_id, $key, $value); // DEBUGGING ONLY
+                if ($result === false) {
+                    error_log('Oops! Failed to update meta for competitor ID: ' . $competitor_id . ' and key: ' . $key);
+                }
+            }
+        }
+    }
+    // Set a transient to show a success message
+    set_transient('competitors_scores_updated', 'Scores updated successfully!', 10); // 10 seconds expiration
+
+    // Redirect back to appropriate page
+    wp_redirect(admin_url('admin.php?page=competitors-list'));
+    exit;
+}
+add_action('admin_post_competitors_score_update', 'handle_competitors_score_update');
+
+
+
+
+
+
+
 
 
 
 
 
 function competitors_scoring_list_page() {
+    error_reporting(E_ALL); 
+    ini_set('display_errors', 1);
+
+    if (get_transient('competitors_scores_updated')) {
+        echo '<div id="message" class="updated notice is-dismissible"><p>' . get_transient('competitors_scores_updated') . '</p></div>';
+        // Delete the transient so it's not shown again
+        delete_transient('competitors_scores_updated');
+    }
 
     $args = array(
         'post_type' => 'competitors',
@@ -261,6 +316,8 @@ function competitors_scoring_list_page() {
 
 
 function competitors_scoring_view_page() {
+error_reporting(E_ALL); 
+ini_set('display_errors', 1);
 
     $competitor_id = isset($_GET['competitor_id']) ? intval($_GET['competitor_id']) : 0;
 
@@ -291,7 +348,7 @@ function competitors_scoring_view_page() {
         echo '<td>' . esc_html($left_deduct) . '</td>';
         echo '<td>' . esc_html($right_score) . '</td>';
         echo '<td>' . esc_html($right_deduct) . '</td>';
-        echo '<td>' . esc_html($total) . '</td>';
+        echo '<td>' . esc_html($total) . ' points</td>';
         echo '</tr>';
     }
 
