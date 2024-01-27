@@ -329,10 +329,10 @@ function competitors_scoring_view_page() {
     // Iterate through each roll name and fetch corresponding scores
     foreach ($roll_names as $index => $roll_name) {
         $meta_key = 'left_score_' . $competitor_id . '_' . ($index + 1);
-        $meta_key1 = 'left_deduct_' . $competitor_id . '_' . ($index + 2);
-        $meta_key2 = 'right_score_' . $competitor_id . '_' . ($index + 3);
-        $meta_key3 = 'right_deduct_' . $competitor_id . '_' . ($index + 4);
-        $meta_key4 = 'total_' . $competitor_id . '_' . ($index + 5);
+        $meta_key1 = 'left_deduct_' . $competitor_id . '_' . ($index + 1);
+        $meta_key2 = 'right_score_' . $competitor_id . '_' . ($index + 1);
+        $meta_key3 = 'right_deduct_' . $competitor_id . '_' . ($index + 1);
+        $meta_key4 = 'total_' . $competitor_id . '_' . ($index + 1);
         //echo "<p>Trying to retrieve: $meta_key</p>"; // Debug line
         
         $left_score = get_post_meta($competitor_id, $meta_key, true);
