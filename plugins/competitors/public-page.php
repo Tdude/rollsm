@@ -50,75 +50,54 @@ function competitors_form_html() {
             please let us know if there are rolls you will not try to perform. 
             You can always change your mind on the water, we just need a hint for time planning!</p>
        
-        <fieldset>
+            <fieldset>
             <legend>Performing Rolls</legend>
             <table>
                 <tr>
-                    <th>Uncheck
-                        
-                    <!--
-                        <label for="check-all" class="lbl-checkbox"></label>
-                        <input type="checkbox" id="roll_check" name="check-all">
-                    -->
+                    <th>
+                        <input type="checkbox" id="check_all" onchange="checkAll(this)">
+                        <label for="check_all">Check/uncheck All</label>
                     </th>
-                    <th>Name of roll or manouver. Uncheck the rolls you do not want to perform.</th>
+                    <th>Name of roll or maneuver. Uncheck the rolls you do not want to perform.</th>
                 </tr>
-            <?php 
-        
-            // Outside of loop
-            $roll_names = get_option('competitors_custom_values');
-            $roll_names_array = explode("\n", $roll_names);
-            $roll_names_array = array_filter(array_map('trim', $roll_names_array));
-
-            // Use count of $roll_names_array to control the loop
-            for ($i = 0; $i < count($roll_names_array); $i++):
-                ?>
-                <tr>
-                    <td><input type="checkbox" checked id="roll_<?php echo $i + 1; ?>" name="performing_rolls[]"></td>
-                    <td><?php echo esc_html($roll_names_array[$i]); ?></td>
-                </tr>
-            <?php endfor; ?>
-
+                <?php 
+                $roll_names = get_option('competitors_custom_values');
+                // Like a ninja...soldier?
+                $roll_names_array = array_map('trim', $roll_names);
+                // Filter out empty values
+                $roll_names_array = array_filter($roll_names_array);
+                // Add checkboxes
+                foreach ($roll_names_array as $i => $roll_name) {
+                    echo '<tr>';
+                    echo '<td><input type="checkbox" class="roll-checkbox" checked id="roll_' . ($i + 1) . '" name="performing_rolls[]"></td>';
+                    echo '<td>' . esc_html($roll_name) . '</td>';
+                    echo '</tr>';
+                } ?>
             </table>
         </fieldset>
+
+
         <a name="submit-button"></a>
         <input type="submit" value="Submit"><?php
         wp_nonce_field('competitors_form_submission', 'competitors_nonce');
         ?>
-    </form><?php
-
-    return ob_get_clean(); 
-    ?>
+    </form>
     <script>
-        document.addEventListener("DOMContentLoaded", function(){
-            // Check all boxes with event listener for checkbox "<input type="checkbox" onchange="checkAll(this)" name="checks-all" />"
-            function checkAll(e) {
-                var checkboxes = document.getElementsByTagName('input');
-                if (e.checked) {
-                    for (var i = 0; i < checkboxes.length; i++) {
-                        if (checkboxes[i].type == 'checkbox') {
-                            checkboxes[i].checked = true;
-                        }
-                    }
-                } else {
-                    for (var i = 0; i < checkboxes.length; i++) {
-                        console.log(i)
-                        if (checkboxes[i].type == 'checkbox') {
-                            checkboxes[i].checked = false;
-                        }
-                    }
+        function checkAll(ele) {
+            var checkboxes = document.querySelectorAll('input[type="checkbox"].roll-checkbox');
+            for (var i = 0; i < checkboxes.length; i++) {
+                if (checkboxes[i] !== ele) {
+                    checkboxes[i].checked = ele.checked;
                 }
             }
-        });
+        }
     </script>
     <?php
+    return ob_get_clean(); 
 }
 add_shortcode('competitors_form_public', 'competitors_form_html');
 
 
-function sanitize_phone_number($phone) {
-    return preg_replace('/[^\d\s\(\)-]/', '', $phone);
-}
 
 
 
@@ -143,6 +122,9 @@ function handle_competitors_form_submission() {
             return;
         }
 
+        function sanitize_phone_number($phone) {
+            return preg_replace('/[^\d\s\(\)-]/', '', $phone);
+        }
         $phone = sanitize_phone_number($_POST['phone']);
         $club = sanitize_text_field($_POST['club']);
         $sponsors = sanitize_text_field($_POST['sponsors']);
@@ -185,11 +167,19 @@ function handle_competitors_form_submission() {
         } else {
             // Log successful creation
             error_log('Post created with ID: ' . $post_id);
+            // Set a transient to show a confirmation message
+            set_transient('competitors_form_submitted', 'Thanks for saving, this will be fun!', 10);
         }
         
         // Save the performing_rolls data
         if ($post_id && !empty($performing_rolls)) {
             update_post_meta($post_id, 'performing_rolls', $performing_rolls);
+        }
+        // Check if our transient is set and display the message
+        if (get_transient('competitors_form_submitted')) {
+            echo '<div id="message" class="updated notice is-dismissible"><p>' . get_transient('competitors_form_submitted') . '</p></div>';
+            // Delete the transient so the message doesn't keep appearing
+            delete_transient('competitors_form_submitted');
         }
         // Log redirection
         error_log('Redirecting to thank-you page.');

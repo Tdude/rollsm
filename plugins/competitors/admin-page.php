@@ -131,10 +131,7 @@ function judges_scoring_page() {
         'posts_per_page' => -1 // Fetch all
     );
     $competitors_query = new WP_Query($args);
-
     $roll_names = get_option('competitors_custom_values');
-    $roll_names_array = explode("\n", $roll_names);
-    $roll_names_array = array_filter(array_map('trim', $roll_names_array));
 
     echo '<h1>Competitors Judges Scoring</h1>';
     echo '<form action="' . esc_url(admin_url('admin-post.php')) . '" method="post">';
@@ -164,9 +161,8 @@ function judges_scoring_page() {
         echo '<td colspan="5"><b>Speaker info:</b> ' . esc_html($speaker_info) . ', <b>Sponsor:</b> ' . esc_html($sponsor_info) . '</td>';
         echo '</tr>';
 
-
         // Scoring rows
-        foreach ($roll_names_array as $index => $roll_name) {
+        foreach ($roll_names as $index => $roll_name) {
             echo '<tr class="competitors-scores" data-competitor="' . get_the_ID() . '" data-row-index="' . ($index + 1) . '">';
             echo '<td colspan="2">' . esc_html($roll_name) . '</td>';
             echo '<td><input type="text" class="score-input" name="left_score_' . get_the_ID() . '_' . ($index + 1) . '" maxlength="2"></td>';
@@ -182,7 +178,6 @@ function judges_scoring_page() {
     echo '<input type="submit" value="Update Scores" class="button button-primary">';
     echo '</form>';
     wp_reset_postdata();
-
 
     ?>
   <script>
@@ -316,8 +311,8 @@ function competitors_scoring_list_page() {
 
 
 function competitors_scoring_view_page() {
-error_reporting(E_ALL); 
-ini_set('display_errors', 1);
+// error_reporting(E_ALL); 
+//ini_set('display_errors', 1);
 
     $competitor_id = isset($_GET['competitor_id']) ? intval($_GET['competitor_id']) : 0;
 
@@ -325,23 +320,27 @@ ini_set('display_errors', 1);
         echo 'Competitor ID not provided.';
         return;
     }
-
     $roll_names = get_option('competitors_custom_values');
-    $roll_names_array = explode("\n", $roll_names);
-    $roll_names_array = array_filter(array_map('trim', $roll_names_array));
 
     echo '<h1>Scoring for ' . esc_html(get_the_title($competitor_id)) . '</h1>';
     echo '<table class="competitors-table">';
     echo '<tr><th>Roll Name</th><th>Left Score</th><th>Left Deduct</th><th>Right Score</th><th>Right Deduct</th><th>Total</th></tr>';
 
     // Iterate through each roll name and fetch corresponding scores
-    foreach ($roll_names_array as $index => $roll_name) {
-        $left_score = get_post_meta($competitor_id, 'left_score_' . ($index + 1), true);
-        $left_deduct = get_post_meta($competitor_id, 'left_deduct_' . ($index + 1), true);
-        $right_score = get_post_meta($competitor_id, 'right_score_' . ($index + 1), true);
-        $right_deduct = get_post_meta($competitor_id, 'right_deduct_' . ($index + 1), true);
-        $total = get_post_meta($competitor_id, 'total_' . ($index + 1), true);
-
+    foreach ($roll_names as $index => $roll_name) {
+        $meta_key = 'left_score_' . $competitor_id . '_' . ($index + 1);
+        $meta_key1 = 'left_deduct_' . $competitor_id . '_' . ($index + 2);
+        $meta_key2 = 'right_score_' . $competitor_id . '_' . ($index + 3);
+        $meta_key3 = 'right_deduct_' . $competitor_id . '_' . ($index + 4);
+        $meta_key4 = 'total_' . $competitor_id . '_' . ($index + 5);
+        //echo "<p>Trying to retrieve: $meta_key</p>"; // Debug line
+        
+        $left_score = get_post_meta($competitor_id, $meta_key, true);
+        $left_deduct = get_post_meta($competitor_id, $meta_key1, true);
+        $right_score = get_post_meta($competitor_id, $meta_key2, true);
+        $right_deduct = get_post_meta($competitor_id, $meta_key3, true);
+        $total = get_post_meta($competitor_id, $meta_key4, true);
+        
         echo '<tr>';
         echo '<td>' . esc_html($roll_name) . '</td>';
         echo '<td>' . esc_html($left_score) . '</td>';
@@ -360,15 +359,14 @@ ini_set('display_errors', 1);
 
 
 
-
-
-
-
-
-
-
 // Display the settings page content
 function competitors_settings_page() {
+    // Check if our transient is set and display the message
+    if (get_transient('competitors_form_submitted')) {
+        echo '<div id="message" class="updated notice is-dismissible"><p>' . get_transient('competitors_form_submitted') . '</p></div>';
+        // Delete the transient so the message doesn't keep appearing
+        delete_transient('competitors_form_submitted');
+    }
     echo '<div class="wrap"><h1>Competitors rolls and settings</h1>';
     echo '<form method="post" action="options.php">';
     settings_fields('competitors_settings');
@@ -377,10 +375,13 @@ function competitors_settings_page() {
     echo '</form></div>';
 }
 
-
 // Register a new setting for our "Competitors" page
 function competitors_settings_init() {
-    register_setting('competitors_settings', 'competitors_custom_values');
+    register_setting(
+        'competitors_settings', 
+        'competitors_custom_values', 
+        'competitors_custom_values_sanitize' // Custom sanitize callback
+    );
 
     add_settings_section(
         'competitors_custom_values_section',
@@ -402,15 +403,40 @@ add_action('admin_init', 'competitors_settings_init');
 function competitors_settings_section_callback() {
     echo __('<p>');
     echo __('These values correspond to what rolls competitors check with check boxes on the front end, as well as the admin area. ', 'wordpress');
-    echo __('You can display either the registration form for competitors or the results on any WP Post or Page with shortcodes . [competitors_form_public] or (COMING SOON!) [competitors_score_public]', 'wordpress');
-    echo __('<p>');
+    echo __('You can display either the registration form for competitors or the results on any WP Post or Page with shortcodes. [competitors_form_public] or (COMING SOON!) [competitors_score_public]', 'wordpress');
+    echo '</p>';
 }
 
 function competitors_text_field_render() {
-    $roll_name = get_option('competitors_custom_values');
-    echo '<textarea cols="100" rows="30" name="competitors_custom_values">';
-    echo esc_textarea($roll_name);
-    echo '</textarea>';
+    $roll_names = get_option('competitors_custom_values');
+    if (!is_array($roll_names)) {
+        $roll_names = [$roll_names];
+    }
+
+    echo '<div id="competitors_roll_names_wrapper">';
+    foreach ($roll_names as $index => $roll_name) {
+        echo '<p>';
+        echo '<input type="text" name="competitors_custom_values[]" value="' . esc_attr($roll_name) . '" />';
+        if ($index === 0) {
+            echo '<button type="button" id="add_more_roll_names" class="button button-primary custom-button"></button>';
+        }
+        echo '</p>';
+    }
+    echo '</div>';
+
+    // Adding the JS for more rows
+    echo "<script>
+        jQuery(document).ready(function($) {
+            $('#add_more_roll_names').click(function() {
+                $('#competitors_roll_names_wrapper').append('<p><input type=\"text\" name=\"competitors_custom_values[]\" value=\"\" /></p>');
+            });
+        });
+    </script>";
+}
+
+function competitors_custom_values_sanitize($input) {
+    // Sanitize each input value
+    return array_map('sanitize_text_field', $input);
 }
 
 

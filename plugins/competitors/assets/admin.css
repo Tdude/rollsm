@@ -1,0 +1,65 @@
+/* Style for admin table */
+.competitors-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.competitors-table tr:hover {
+  background-color: #efe;
+}
+
+.competitors-table th,
+.competitors-table td {
+  border: none;
+  padding: 8px;
+  text-align: left;
+}
+
+.competitors-table tr:nth-child(odd) {
+  background-color: #f9f9f9;
+}
+
+.competitors-table tr:nth-child(even) {
+  background-color: #fff;
+}
+
+/* Style for input fields */
+.competitors-table .score-input,
+.competitors-table input[type="text"] {
+  width: 30px; /* Adjust as needed */
+  padding: 4px;
+  box-sizing: border-box; /* Make sure padding doesn't affect width */
+}
+
+/* WP bootstrap button */
+.button-primary {
+  margin-top: 2rem;
+  padding: 1em 2em;
+}
+
+.wp-admin .custom-button {
+  margin-left: 20px; /* or your desired margin */
+}
+
+.wp-admin .custom-button:before {
+  content: "+";
+  font-weight: bold; /* for a bold plus sign */
+}
+
+/* for accordion view, must be hidden for the js to work */
+.competitors-scores {
+  display: none;
+}
+.competitors-header:hover {
+  background-color: #f0faf0;
+  cursor: pointer;
+}
+.competitors-header:active {
+  background-color: #cfc;
+}
+
+/* Even out WP quirky header styles */
+.wrap h1 {
+  font-size: 2em;
+  font-weight: bold;
+}

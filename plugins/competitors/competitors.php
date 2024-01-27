@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Competitors
  * Description:  A RollSM registering and scoreboard plugin.
- * Version: 0.41
+ * Version: 0.51
  * Author: Tdude
  */
 
@@ -56,7 +56,7 @@ register_deactivation_hook(__FILE__, 'competitors_deactivate');
 function competitors_add_admin_menu() {
     add_menu_page(
         'Competitors custom settings',  // Page title
-        'Competitors settings',         // Menu title
+        'Competitors',                  // Menu title
         'manage_options',               // Capability
         'competitors-settings',         // Menu slug
         'competitors_settings_page',    // Function to display the page
