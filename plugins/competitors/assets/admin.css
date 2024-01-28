@@ -15,10 +15,11 @@
   text-align: left;
 }
 
+.competitors-header tr:nth-child(odd),
 .competitors-table tr:nth-child(odd) {
   background-color: #f9f9f9;
 }
-
+.competitors-header tr:nth-child(even),
 .competitors-table tr:nth-child(even) {
   background-color: #fff;
 }
@@ -47,19 +48,32 @@
 }
 
 /* for accordion view, must be hidden for the js to work */
-.competitors-scores {
+.competitors-scores,
+.competitors-info {
   display: none;
 }
-.competitors-header:hover {
-  background-color: #f0faf0;
-  cursor: pointer;
+tr.competitors-header {
+  opacity: 0.8;
+  transition: 0.5s;
 }
-.competitors-header:active {
-  background-color: #cfc;
+tr.competitors-header:hover {
+  background-color: #efe;
+  opacity: 1;
+  transition: 0.5s;
+  cursor: pointer;
 }
 
 /* Even out WP quirky header styles */
 .wrap h1 {
   font-size: 2em;
   font-weight: bold;
+}
+
+/* 
+USEAGE: <span class="dashicons dashicons-arrow-down-alt2"></span> 
+*/
+.dashicons {
+  vertical-align: middle;
+  margin-right: 5px;
+  padding: 0.2 1em;
 }

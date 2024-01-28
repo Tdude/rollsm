@@ -1,12 +1,6 @@
 <?php
-function competitors_admin_styles($hook) {
-    // Conditional check for specific admin page can be uncommented
-    /*
-    if ($hook !== 'competitors_admin_page' && $hook !== 'judges_scoring_page') {
-        return;
-    }
-    */
-
+function enqueue_dashicons_for_competitors() {
+    wp_enqueue_style('dashicons');
     wp_enqueue_style('competitors_admin_css', plugin_dir_url(__FILE__) . 'assets/admin.css');
     wp_enqueue_script('competitors_admin_page', plugin_dir_url(__FILE__) . 'assets/script.js', array('jquery'), null, true);
 
@@ -16,6 +10,17 @@ function competitors_admin_styles($hook) {
         'nonce' => wp_create_nonce('competitors_nonce')
     ));
 }
+
+function competitors_admin_styles($hook) {
+    // Uncomment and modify the condition as needed for specific admin pages
+    /*
+    if ($hook !== 'competitors_admin_page' && $hook !== 'judges_scoring_page') {
+        return;
+    }
+    */
+    enqueue_dashicons_for_competitors();
+}
+
 add_action('admin_enqueue_scripts', 'competitors_admin_styles');
 
 
@@ -114,13 +119,6 @@ add_action('wp_ajax_save_sorted_competitors', 'save_sorted_competitors');
 
 
 
-
-
-
-
-
-
-
 function judges_scoring_page() {
     if (!current_user_can('manage_options')) {
         echo 'Access denied dude, sorry.';
@@ -134,6 +132,7 @@ function judges_scoring_page() {
     $roll_names = get_option('competitors_custom_values');
 
     echo '<h1>Competitors Judges Scoring</h1>';
+    echo '<p>Click to have a look-see.</p>';
     echo '<form action="' . esc_url(admin_url('admin-post.php')) . '" method="post">';
     wp_nonce_field('competitors_score_update_action', 'competitors_score_update_nonce');
     echo '<input type="hidden" name="action" value="competitors_score_update">';
@@ -141,21 +140,21 @@ function judges_scoring_page() {
 
     while ($competitors_query->have_posts()) {
         $competitors_query->the_post();
+        $competitor_id = get_the_ID();
+        // Competitor metadata
+        $email = get_post_meta(get_the_ID(), 'email', true);
+        $phone = get_post_meta(get_the_ID(), 'phone', true);
+        $club = get_post_meta(get_the_ID(), 'club', true);
+        $speaker_info = get_post_meta(get_the_ID(), 'speaker_info', true);
+        $sponsor_info = get_post_meta(get_the_ID(), 'sponsor_info', true);
 
-         // Competitor metadata
-         $email = get_post_meta(get_the_ID(), 'email', true);
-         $phone = get_post_meta(get_the_ID(), 'phone', true);
-         $club = get_post_meta(get_the_ID(), 'club', true);
-         $speaker_info = get_post_meta(get_the_ID(), 'speaker_info', true);
-         $sponsor_info = get_post_meta(get_the_ID(), 'sponsor_info', true);
- 
         // Competitor header row
         echo '<tr class="competitors-header" data-competitor="' . get_the_ID() . '">';
-        echo '<th colspan="7">' . get_the_title() . ' (click to see rolls scoresheet)</th>';
+        echo '<th colspan="7"><span class="dashicons dashicons-arrow-down-alt2"></span> ' . get_the_title() . ' (click to see rolls scoresheet)</th>';
         echo '</tr>';
 
         // Competitor information row
-        echo '<tr>';
+        echo '<tr class="competitors-info">';
         echo '<td>' . get_the_title() . '</td>';
         echo '<td>' . esc_html($club) . '</td>';
         echo '<td colspan="5"><b>Speaker info:</b> ' . esc_html($speaker_info) . ', <b>Sponsor:</b> ' . esc_html($sponsor_info) . '</td>';
@@ -163,13 +162,21 @@ function judges_scoring_page() {
 
         // Scoring rows
         foreach ($roll_names as $index => $roll_name) {
-            echo '<tr class="competitors-scores" data-competitor="' . get_the_ID() . '" data-row-index="' . ($index + 1) . '">';
+            $base_meta_key = $competitor_id . '_' . ($index + 1);
+            $score_keys = array('left_score_', 'left_deduct_', 'right_score_', 'right_deduct_', 'total_');
+            $scores = array();
+
+            foreach ($score_keys as $key) {
+                $scores[$key] = get_post_meta($competitor_id, $key . $base_meta_key, true);
+            }
+
+            echo '<tr class="competitors-scores" data-competitor="' . $competitor_id . '" data-row-index="' . ($index + 1) . '">';
             echo '<td colspan="2">' . esc_html($roll_name) . '</td>';
-            echo '<td><input type="text" class="score-input" name="left_score_' . get_the_ID() . '_' . ($index + 1) . '" maxlength="2"></td>';
-            echo '<td><input type="text" class="score-input" name="left_deduct_' . get_the_ID() . '_' . ($index + 1) . '" maxlength="2"></td>';
-            echo '<td><input type="text" class="score-input" name="right_score_' . get_the_ID() . '_' . ($index + 1) . '" maxlength="2"></td>';
-            echo '<td><input type="text" class="score-input" name="right_deduct_' . get_the_ID() . '_' . ($index + 1) . '" maxlength="2"></td>';
-            echo '<td><input type="text" readonly name="total_' . get_the_ID() . '_' . ($index + 1) . '" maxlength="4"></td>';
+            echo '<td><input type="text" class="score-input" name="left_score_' . $base_meta_key . '" maxlength="2" value="' . esc_attr($scores['left_score_']) . '"></td>';
+            echo '<td><input type="text" class="score-input" name="left_deduct_' . $base_meta_key . '" maxlength="2" value="' . esc_attr($scores['left_deduct_']) . '"></td>';
+            echo '<td><input type="text" class="score-input" name="right_score_' . $base_meta_key . '" maxlength="2" value="' . esc_attr($scores['right_score_']) . '"></td>';
+            echo '<td><input type="text" class="score-input" name="right_deduct_' . $base_meta_key . '" maxlength="2" value="' . esc_attr($scores['right_deduct_']) . '"></td>';
+            echo '<td><input type="text" readonly name="total_' . $base_meta_key . '" maxlength="4" value="' . esc_attr($scores['total_']) . '"></td>';
             echo '</tr>';
         }
     }
@@ -188,6 +195,18 @@ function judges_scoring_page() {
                 const competitorId = this.dataset.competitor;
                 const scores = document.querySelectorAll('.competitors-scores[data-competitor="' + competitorId + '"]');
                 scores.forEach(row => row.style.display = row.style.display === 'none' || row.style.display === '' ? 'table-row' : 'none');
+                // The competitor info row is immediately following the header row in the DOM
+                const infoRow = this.nextElementSibling;
+                infoRow.style.display = infoRow.style.display === 'none' || infoRow.style.display === '' ? 'table-row' : 'none';
+                // Toggle arrow icon
+                const icon = this.querySelector('.dashicons');
+                if (icon.classList.contains('dashicons-arrow-down-alt2')) {
+                    icon.classList.remove('dashicons-arrow-down-alt2');
+                    icon.classList.add('dashicons-arrow-up-alt2');
+                } else {
+                    icon.classList.remove('dashicons-arrow-up-alt2');
+                    icon.classList.add('dashicons-arrow-down-alt2');
+                }
             });
         });
 
@@ -321,35 +340,30 @@ function competitors_scoring_view_page() {
         return;
     }
     $roll_names = get_option('competitors_custom_values');
-
-    echo '<h1>Scoring for ' . esc_html(get_the_title($competitor_id)) . '</h1>';
+    $listing_page_url = admin_url('admin.php?page=competitors-list');
+    echo '<h1><a href="' . esc_url($listing_page_url) . '" class="competitors-back-link"><span class="dashicons dashicons-arrow-left-alt2"></span> Score for ' . esc_html(get_the_title($competitor_id)) . '</a></h1>';
     echo '<table class="competitors-table">';
     echo '<tr><th>Roll Name</th><th>Left Score</th><th>Left Deduct</th><th>Right Score</th><th>Right Deduct</th><th>Total</th></tr>';
 
     // Iterate through each roll name and fetch corresponding scores
     foreach ($roll_names as $index => $roll_name) {
-        $meta_key = 'left_score_' . $competitor_id . '_' . ($index + 1);
-        $meta_key1 = 'left_deduct_' . $competitor_id . '_' . ($index + 1);
-        $meta_key2 = 'right_score_' . $competitor_id . '_' . ($index + 1);
-        $meta_key3 = 'right_deduct_' . $competitor_id . '_' . ($index + 1);
-        $meta_key4 = 'total_' . $competitor_id . '_' . ($index + 1);
-        //echo "<p>Trying to retrieve: $meta_key</p>"; // Debug line
-        
-        $left_score = get_post_meta($competitor_id, $meta_key, true);
-        $left_deduct = get_post_meta($competitor_id, $meta_key1, true);
-        $right_score = get_post_meta($competitor_id, $meta_key2, true);
-        $right_deduct = get_post_meta($competitor_id, $meta_key3, true);
-        $total = get_post_meta($competitor_id, $meta_key4, true);
-        
+        $base_meta_key = $competitor_id . '_' . ($index + 1);
+
+        // Fetching meta values in a loop
+        $scores = array();
+        foreach (array('left_score_', 'left_deduct_', 'right_score_', 'right_deduct_', 'total_') as $key_prefix) {
+            $scores[$key_prefix] = get_post_meta($competitor_id, $key_prefix . $base_meta_key, true);
+        }
         echo '<tr>';
         echo '<td>' . esc_html($roll_name) . '</td>';
-        echo '<td>' . esc_html($left_score) . '</td>';
-        echo '<td>' . esc_html($left_deduct) . '</td>';
-        echo '<td>' . esc_html($right_score) . '</td>';
-        echo '<td>' . esc_html($right_deduct) . '</td>';
-        echo '<td>' . esc_html($total) . ' points</td>';
+        echo '<td>' . esc_html($scores['left_score_']) . '</td>';
+        echo '<td>' . esc_html($scores['left_deduct_']) . '</td>';
+        echo '<td>' . esc_html($scores['right_score_']) . '</td>';
+        echo '<td>' . esc_html($scores['right_deduct_']) . '</td>';
+        echo '<td>' . esc_html($scores['total_']) . ' points</td>';
         echo '</tr>';
     }
+
 
     echo '</table>';
 }
@@ -416,7 +430,7 @@ function competitors_text_field_render() {
     echo '<div id="competitors_roll_names_wrapper">';
     foreach ($roll_names as $index => $roll_name) {
         echo '<p>';
-        echo '<input type="text" name="competitors_custom_values[]" value="' . esc_attr($roll_name) . '" />';
+        echo '<input type="text" name="competitors_custom_values[]" size="60" value="' . esc_attr($roll_name) . '" />';
         if ($index === 0) {
             echo '<button type="button" id="add_more_roll_names" class="button button-primary custom-button"></button>';
         }
@@ -428,7 +442,7 @@ function competitors_text_field_render() {
     echo "<script>
         jQuery(document).ready(function($) {
             $('#add_more_roll_names').click(function() {
-                $('#competitors_roll_names_wrapper').append('<p><input type=\"text\" name=\"competitors_custom_values[]\" value=\"\" /></p>');
+                $('#competitors_roll_names_wrapper').append('<p><input type=\"text\" name=\"competitors_custom_values[]\" size=\"60\" value=\"\" /></p>');
             });
         });
     </script>";

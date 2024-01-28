@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Competitors
  * Description:  A RollSM registering and scoreboard plugin.
- * Version: 0.51
+ * Version: 0.52
  * Author: Tdude
  */
 
@@ -29,6 +29,8 @@ function create_competitors_post_type() {
         'public' => true,
         'has_archive' => true,
         'supports' => array('title', 'editor', 'custom-fields'),
+        'menu_icon' => 'dashicons-groups',
+
     ));
 }
 add_action('init', 'create_competitors_post_type');
@@ -56,12 +58,12 @@ register_deactivation_hook(__FILE__, 'competitors_deactivate');
 function competitors_add_admin_menu() {
     add_menu_page(
         'Competitors custom settings',  // Page title
-        'Competitors',                  // Menu title
+        'Competitors settings',         // Menu title
         'manage_options',               // Capability
         'competitors-settings',         // Menu slug
         'competitors_settings_page',    // Function to display the page
-        'dashicons-clipboard'           // Icon (optional)
-        //3,                            //Position (optional)
+        'dashicons-clipboard',          // Icon (optional)
+        27                              //Position (optional)
     );
 }
 add_action('admin_menu', 'competitors_add_admin_menu');
@@ -110,12 +112,12 @@ add_action('admin_menu', 'competitors_add_submenu_scoring_list');
 
 function competitors_add_submenu_scoring_view() {
     add_submenu_page(
-        'competitors-settings',         // Parent slug (should match the main menu's slug)
+        null,                           // Parent slug (should match the main menu's slug)
         'Scoring view page',            // Page title
         'Individual scoring',           // Menu title
         'manage_options',               // Capability
         'competitors-view',             // Menu slug
-        'competitors_scoring_view_page' // Callback function
+        'competitors_scoring_view_page', // Callback function
     );
 }
 add_action('admin_menu', 'competitors_add_submenu_scoring_view');
