@@ -1,31 +1,4 @@
 <?php
-function enqueue_dashicons_for_competitors() {
-    wp_enqueue_style('dashicons');
-    wp_enqueue_style('competitors_admin_css', plugin_dir_url(__FILE__) . 'assets/admin.css');
-    wp_enqueue_script('competitors_admin_page', plugin_dir_url(__FILE__) . 'assets/script.js', array('jquery'), null, true);
-
-    // Localize script for AJAX
-    wp_localize_script('competitors_admin_page', 'competitorsData', array(
-        'ajaxurl' => admin_url('admin-ajax.php'),
-        'nonce' => wp_create_nonce('competitors_nonce')
-    ));
-}
-
-function competitors_admin_styles($hook) {
-    // Uncomment and modify the condition as needed for specific admin pages
-    /*
-    if ($hook !== 'competitors_admin_page' && $hook !== 'judges_scoring_page') {
-        return;
-    }
-    */
-    enqueue_dashicons_for_competitors();
-}
-
-add_action('admin_enqueue_scripts', 'competitors_admin_styles');
-
-
-
-
 // The function that displays the content of the admin page
 function competitors_admin_page() {
     if (current_user_can('edit_posts')) {
@@ -73,29 +46,7 @@ function competitors_admin_page() {
 
 
     ?>
-    <script>
-        jQuery(document).ready(function($) {
-        $('#sortable-table th').on('click', function() {
-            var table = $(this).parents('table').eq(0);
-            var rows = table.find('tr:gt(0)').toArray().sort(comparer($(this).index()));
-            this.asc = !this.asc;
-            if (!this.asc) { rows = rows.reverse(); }
-            for (var i = 0; i < rows.length; i++) { table.append(rows[i]); }
-        });
-    
-        function comparer(index) {
-            return function(a, b) {
-                var valA = getCellValue(a, index), valB = getCellValue(b, index);
-                return $.isNumeric(valA) && $.isNumeric(valB) ? valA - valB : valA.localeCompare(valB);
-            };
-        }
-    
-        function getCellValue(row, index) { 
-            return $(row).children('td').eq(index).text(); 
-        }
-    });
-    
-    </script>
+
     <?php
 
     }// current_user_can edit
@@ -121,7 +72,7 @@ add_action('wp_ajax_save_sorted_competitors', 'save_sorted_competitors');
 
 function judges_scoring_page() {
     if (!current_user_can('manage_options')) {
-        echo 'Access denied dude, sorry.';
+        echo 'Access denied to scoring dude, sorry.';
         return;
     }
     $args = array(
@@ -131,7 +82,7 @@ function judges_scoring_page() {
     $competitors_query = new WP_Query($args);
     $roll_names = get_option('competitors_custom_values');
 
-    echo '<h1>Competitors Judges Scoring</h1>';
+    echo '<h1>Competitors Judges Scoring Page</h1>';
     echo '<p>Click to have a look-see.</p>';
     echo '<form action="' . esc_url(admin_url('admin-post.php')) . '" method="post">';
     wp_nonce_field('competitors_score_update_action', 'competitors_score_update_nonce');
@@ -176,7 +127,7 @@ function judges_scoring_page() {
             echo '<td><input type="text" class="score-input" name="left_deduct_' . $base_meta_key . '" maxlength="2" value="' . esc_attr($scores['left_deduct_']) . '"></td>';
             echo '<td><input type="text" class="score-input" name="right_score_' . $base_meta_key . '" maxlength="2" value="' . esc_attr($scores['right_score_']) . '"></td>';
             echo '<td><input type="text" class="score-input" name="right_deduct_' . $base_meta_key . '" maxlength="2" value="' . esc_attr($scores['right_deduct_']) . '"></td>';
-            echo '<td><input type="text" readonly name="total_' . $base_meta_key . '" maxlength="4" value="' . esc_attr($scores['total_']) . '"></td>';
+            echo '<td><input type="text" readonly name="total_' . $base_meta_key . '" maxlength="2" value="' . esc_attr($scores['total_']) . '"></td>';
             echo '</tr>';
         }
     }
@@ -186,161 +137,112 @@ function judges_scoring_page() {
     echo '</form>';
     wp_reset_postdata();
 
-    ?>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const headers = document.querySelectorAll('.competitors-header');
-        headers.forEach(header => {
-            header.addEventListener('click', function() {
-                const competitorId = this.dataset.competitor;
-                const scores = document.querySelectorAll('.competitors-scores[data-competitor="' + competitorId + '"]');
-                scores.forEach(row => row.style.display = row.style.display === 'none' || row.style.display === '' ? 'table-row' : 'none');
-                // The competitor info row is immediately following the header row in the DOM
-                const infoRow = this.nextElementSibling;
-                infoRow.style.display = infoRow.style.display === 'none' || infoRow.style.display === '' ? 'table-row' : 'none';
-                // Toggle arrow icon
-                const icon = this.querySelector('.dashicons');
-                if (icon.classList.contains('dashicons-arrow-down-alt2')) {
-                    icon.classList.remove('dashicons-arrow-down-alt2');
-                    icon.classList.add('dashicons-arrow-up-alt2');
-                } else {
-                    icon.classList.remove('dashicons-arrow-up-alt2');
-                    icon.classList.add('dashicons-arrow-down-alt2');
-                }
-            });
-        });
-
-        const scoreInputs = document.querySelectorAll('.score-input');
-        scoreInputs.forEach(input => {
-            input.addEventListener('input', function() {
-                const nameParts = this.name.split('_');
-                const competitorId = nameParts[2]; // Adjusted index for competitor ID
-                const rollIndex = nameParts[3]; // Adjusted index for roll index
-
-                const leftScoreName = `left_score_${competitorId}_${rollIndex}`;
-                const leftDeductName = `left_deduct_${competitorId}_${rollIndex}`;
-                const rightScoreName = `right_score_${competitorId}_${rollIndex}`;
-                const rightDeductName = `right_deduct_${competitorId}_${rollIndex}`;
-                const totalName = `total_${competitorId}_${rollIndex}`;
-
-                const leftScore = parseInt(document.querySelector(`[name='${leftScoreName}']`).value) || 0;
-                const leftDeduct = parseInt(document.querySelector(`[name='${leftDeductName}']`).value) || 0;
-                const rightScore = parseInt(document.querySelector(`[name='${rightScoreName}']`).value) || 0;
-                const rightDeduct = parseInt(document.querySelector(`[name='${rightDeductName}']`).value) || 0;
-
-                let total = (leftScore - leftDeduct) + (rightScore - rightDeduct);
-                total = total < 0 ? 0 : total;
-
-                const totalField = document.querySelector(`[name='${totalName}']`);
-                if (totalField) {
-                    totalField.value = total;
-                }
-            });
-        });
-    });
-</script>
-
-<?php   
+  
 }
 
 
-// make this function handle empty values!
+
 
 function handle_competitors_score_update() {
+    if (!is_valid_score_update_request()) {
+        wp_die('Security check failed. Are you sure you should be here?');
+    }
 
-    error_reporting(E_ALL); 
-    ini_set('display_errors', 1);
-
-    if (isset($_POST['action']) && $_POST['action'] == 'competitors_score_update' && current_user_can('manage_options')) {
-        // Verify nonce
-        if (!isset($_POST['competitors_score_update_nonce']) || !wp_verify_nonce($_POST['competitors_score_update_nonce'], 'competitors_score_update_action')) {
-            wp_die('Security check failed. Are you sure you should be here?');
-        }
-        // Iterate through POST data and save scores
-        foreach ($_POST as $key => $value) {
-            if (strpos($key, 'left_score_') !== false || strpos($key, 'left_deduct_') !== false || strpos($key, 'right_score_') !== false || strpos($key, 'right_deduct_') !== false) {
-                // Extract competitor ID and roll index from the field name
-                $parts = explode('_', $key);
-                $competitor_id = $parts[2];
-                $roll_index = $parts[3];
-
-                // Update score in the database
-                $result = update_post_meta($competitor_id, $key, sanitize_text_field($value));
-                //var_dump($competitor_id, $key, $value); // DEBUGGING ONLY
-                if ($result === false) {
-                    error_log('Oops! Failed to update meta for competitor ID: ' . $competitor_id . ' and key: ' . $key);
-                }
-            }
+    foreach ($_POST as $key => $value) {
+        // Check if the key is a score key and update it in the database
+        if (is_competitor_score_field($key)) {
+            list($competitor_id, $roll_index) = get_competitor_info_from_key($key);
+            update_post_meta($competitor_id, $key, sanitize_text_field($value));
         }
     }
-    // Set a transient to show a success message
-    set_transient('competitors_scores_updated', 'Scores updated successfully!', 10); // 10 seconds expiration
 
-    // Redirect back to appropriate page
-    wp_redirect(admin_url('admin.php?page=competitors-list'));
+    // Set a transient to show a success message and redirect
+    set_transient('competitors_scores_updated', 'Scores updated successfully!', 10);
+    wp_redirect(admin_url('admin.php?page=competitors-scoring'));
     exit;
 }
+
+function is_valid_score_update_request() {
+    return isset($_POST['action'], $_POST['competitors_score_update_nonce']) &&
+           $_POST['action'] == 'competitors_score_update' &&
+           current_user_can('manage_options') &&
+           wp_verify_nonce($_POST['competitors_score_update_nonce'], 'competitors_score_update_action');
+}
+
+function is_competitor_score_field($key) {
+    return preg_match('/^(left_score_|left_deduct_|right_score_|right_deduct_|total_)\d+_\d+$/', $key);
+}
+
+function get_competitor_info_from_key($key) {
+    $parts = explode('_', $key);
+    $competitor_id = $parts[count($parts) - 2];
+    $roll_index = $parts[count($parts) - 1];
+    return [$competitor_id, $roll_index];
+}
+
 add_action('admin_post_competitors_score_update', 'handle_competitors_score_update');
 
 
 
-
-
-
-
-
-
-
-
-
 function competitors_scoring_list_page() {
-    error_reporting(E_ALL); 
-    ini_set('display_errors', 1);
-
-    if (get_transient('competitors_scores_updated')) {
-        echo '<div id="message" class="updated notice is-dismissible"><p>' . get_transient('competitors_scores_updated') . '</p></div>';
-        // Delete the transient so it's not shown again
+    //error_reporting(E_ALL); 
+    //ini_set('display_errors', 1);
+    if ($message = get_transient('competitors_scores_updated')) {
+        echo '<div id="message" class="updated notice is-dismissible"><p>' . esc_html($message) . '</p></div>';
         delete_transient('competitors_scores_updated');
     }
-
     $args = array(
         'post_type' => 'competitors',
-        'posts_per_page' => -1 // Fetch all
+        'posts_per_page' => -1
     );
     $competitors_query = new WP_Query($args);
-
+    echo '<div id="competitors-list">';
     echo '<h1>Competitors List</h1>';
-    echo '<table class="competitors-table">';
-
+    echo '<ul class="competitors-table">';
     while ($competitors_query->have_posts()) {
         $competitors_query->the_post();
-
-        // Competitors header row
-        echo '<tr class="competitors-header">';
-        echo '<th>' . get_the_title() . '</th>';
-        echo '<th><a href="' . esc_url(admin_url('admin.php?page=competitors-view&competitor_id=' . get_the_ID())) . '">View individual scoring</a></th>';
-        echo '</tr>';
+        echo '<li class="competitors-list-item" data-competitor-id="' . get_the_ID() . '">' . get_the_title() . '</li>';
     }
-
-    echo '</table>';
     wp_reset_postdata();
+    wp_reset_query();
+    echo '</ul>';
+    echo '</div>';
+    echo '<div id="competitors-details-container"></div>';
 }
 
 
+// For the public part we have a shortcode: [competitors_scoring]
+function competitors_scoring_shortcode() {
+    ob_start();
+    competitors_scoring_list_page(); // The initial list
+    return ob_get_clean();
+}
+add_shortcode('competitors_scoring', 'competitors_scoring_shortcode');
+
+// AJAX handler for loading the competitor details
+add_action('wp_ajax_load_competitor_details', 'load_competitor_details');
+add_action('wp_ajax_nopriv_load_competitor_details', 'load_competitor_details'); // If you want it accessible to non-logged-in users
 
 
-function competitors_scoring_view_page() {
-// error_reporting(E_ALL); 
-//ini_set('display_errors', 1);
-
-    $competitor_id = isset($_GET['competitor_id']) ? intval($_GET['competitor_id']) : 0;
-
+function load_competitor_details() {
+    $competitor_id = isset($_POST['competitor_id']) ? intval($_POST['competitor_id']) : 0;
+    error_log('Received competitor ID: ' . $competitor_id);
     if (!$competitor_id) {
-        echo 'Competitor ID not provided.';
-        return;
+        echo 'No Competitor ID provided';
+        wp_die();
     }
+    if ('competitors' !== get_post_type($competitor_id)) {
+        echo 'Post with ID ' . $competitor_id . ' is not a Competitor post type';
+        wp_die();
+    }
+    competitors_scoring_view_page($competitor_id);
+    wp_die();
+}
+
+
+function competitors_scoring_view_page($competitor_id = 0) {
+    $listing_page_url = admin_url('admin.php?page=competitors-scoring');
     $roll_names = get_option('competitors_custom_values');
-    $listing_page_url = admin_url('admin.php?page=competitors-list');
     echo '<h1><a href="' . esc_url($listing_page_url) . '" class="competitors-back-link"><span class="dashicons dashicons-arrow-left-alt2"></span> Score for ' . esc_html(get_the_title($competitor_id)) . '</a></h1>';
     echo '<table class="competitors-table">';
     echo '<tr><th>Roll Name</th><th>Left Score</th><th>Left Deduct</th><th>Right Score</th><th>Right Deduct</th><th>Total</th></tr>';
@@ -363,18 +265,17 @@ function competitors_scoring_view_page() {
         echo '<td>' . esc_html($scores['total_']) . ' points</td>';
         echo '</tr>';
     }
-
-
     echo '</table>';
 }
 
 
 
-
-
-
 // Display the settings page content
 function competitors_settings_page() {
+    if (!current_user_can('manage_options')) {
+        echo 'Access denied to settings dude, sorry.';
+        return;
+    }
     // Check if our transient is set and display the message
     if (get_transient('competitors_form_submitted')) {
         echo '<div id="message" class="updated notice is-dismissible"><p>' . get_transient('competitors_form_submitted') . '</p></div>';
@@ -438,14 +339,6 @@ function competitors_text_field_render() {
     }
     echo '</div>';
 
-    // Adding the JS for more rows
-    echo "<script>
-        jQuery(document).ready(function($) {
-            $('#add_more_roll_names').click(function() {
-                $('#competitors_roll_names_wrapper').append('<p><input type=\"text\" name=\"competitors_custom_values[]\" size=\"60\" value=\"\" /></p>');
-            });
-        });
-    </script>";
 }
 
 function competitors_custom_values_sanitize($input) {

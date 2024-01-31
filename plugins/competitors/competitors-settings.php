@@ -10,13 +10,31 @@
 include_once plugin_dir_path(__FILE__) . 'admin-page.php';
 include_once plugin_dir_path(__FILE__) . 'public-page.php';
 
-
-// Enqueue Scripts and Styles
+// Enqueue PUBLIC
 function competitors_enqueue_scripts() {
     wp_enqueue_style('competitors-style', plugins_url('assets/style.css', __FILE__));
-    wp_enqueue_script('competitors-script', plugins_url('assets/script.js', __FILE__));
+    wp_enqueue_style('dashicons');
+
+    if (!is_admin()) { // Only enqueue publicly
+        wp_enqueue_script('jquery'); // Enqueue WP jQuery
+        wp_enqueue_script('competitors_scoring_list_page', plugins_url('assets/script.js', __FILE__), array('jquery'), null, true);
+        wp_localize_script('competitors_scoring_list_page', 'competitorsAjax', array(
+            'ajaxurl' => admin_url('admin-ajax.php'),
+        ));
+    }
 }
 add_action('wp_enqueue_scripts', 'competitors_enqueue_scripts');
+
+// Enqueue ADMIN
+function competitors_enqueue_admin_scripts() {
+    wp_enqueue_style('competitors-admin-style', plugins_url('assets/admin.css', __FILE__));
+    wp_enqueue_script('competitors_admin_page', plugins_url('assets/admin-script.js', __FILE__), array('jquery'), null, true);
+    wp_localize_script('competitors_admin_page', 'competitorsData', array(
+        'ajaxurl' => admin_url('admin-ajax.php'),
+        'nonce' => wp_create_nonce('competitors_nonce')
+    ));
+}
+add_action('admin_enqueue_scripts', 'competitors_enqueue_admin_scripts');
 
 
 // Register Custom Post Type
@@ -54,7 +72,7 @@ function competitors_deactivate() {
 register_deactivation_hook(__FILE__, 'competitors_deactivate');
 
 
-// Admin menu for judges and settings page. Order of the params is important.
+// Admin menu for judges and settings page. Order of the params is important. See https://developer.wordpress.org/reference/functions/add_menu_page/
 function competitors_add_admin_menu() {
     add_menu_page(
         'Competitors custom settings',  // Page title
@@ -63,7 +81,7 @@ function competitors_add_admin_menu() {
         'competitors-settings',         // Menu slug
         'competitors_settings_page',    // Function to display the page
         'dashicons-clipboard',          // Icon (optional)
-        27                              //Position (optional)
+        27                              // Position (in quintuples)
     );
 }
 add_action('admin_menu', 'competitors_add_admin_menu');
@@ -112,7 +130,7 @@ add_action('admin_menu', 'competitors_add_submenu_scoring_list');
 
 function competitors_add_submenu_scoring_view() {
     add_submenu_page(
-        null,                           // Parent slug (should match the main menu's slug)
+        'null',         // Parent slug (should match the main menu's slug)
         'Scoring view page',            // Page title
         'Individual scoring',           // Menu title
         'manage_options',               // Capability

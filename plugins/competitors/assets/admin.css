@@ -15,13 +15,17 @@
   text-align: left;
 }
 
-.competitors-header tr:nth-child(odd),
 .competitors-table tr:nth-child(odd) {
   background-color: #f9f9f9;
 }
-.competitors-header tr:nth-child(even),
 .competitors-table tr:nth-child(even) {
   background-color: #fff;
+}
+
+.competitors-table tr:hover {
+  background-color: #fff0f0;
+  opacity: 1;
+  transition: 0.3s;
 }
 
 /* Style for input fields */
@@ -34,6 +38,7 @@
 
 /* WP bootstrap button */
 .button-primary {
+  display: inline-block;
   margin-top: 2rem;
   padding: 1em 2em;
 }
@@ -52,12 +57,13 @@
 .competitors-info {
   display: none;
 }
+.competitors-table tr,
 tr.competitors-header {
   opacity: 0.8;
   transition: 0.5s;
 }
 tr.competitors-header:hover {
-  background-color: #efe;
+  background-color: #dfd;
   opacity: 1;
   transition: 0.5s;
   cursor: pointer;
@@ -76,4 +82,8 @@ USEAGE: <span class="dashicons dashicons-arrow-down-alt2"></span>
   vertical-align: middle;
   margin-right: 5px;
   padding: 0.2 1em;
+}
+
+.competitors-back-link {
+  text-decoration: none;
 }
