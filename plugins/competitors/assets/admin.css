@@ -38,7 +38,6 @@
 
 /* WP bootstrap button */
 .button-primary {
-  display: inline-block;
   margin-top: 2rem;
   padding: 1em 2em;
 }
@@ -67,6 +66,11 @@ tr.competitors-header:hover {
   opacity: 1;
   transition: 0.5s;
   cursor: pointer;
+}
+
+/* Grayed out but managable scoring rows */
+tr.not-sure {
+  background: #ddd !important;
 }
 
 /* Even out WP quirky header styles */

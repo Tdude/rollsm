@@ -42,27 +42,24 @@ function competitors_form_html() {
 
             <input aria-label="Consent" type="checkbox" id="consent" name="consent">
             <label for="consent">I agree for you to save my data, publish results, photos etc. I also agree to have fun and be nice.</label><br>
-
-
         </fieldset>
 
         <p class="pt-1">According to The Rules you get 30 min to perform your rolls. To save time and make for a better comp, 
             please let us know if there are rolls you will not try to perform. 
             You can always change your mind on the water, we just need a hint for time planning!</p>
        
-            <fieldset>
+        <fieldset>
             <legend>Performing Rolls</legend>
             <table>
                 <tr>
                     <th>
-                        <input type="checkbox" id="check_all" onchange="checkAll(this)">
+                        <input type="checkbox" id="check_all" checked />
                         <label for="check_all">Check/uncheck All</label>
                     </th>
-                    <th>Name of roll or maneuver. Uncheck the rolls you do not want to perform.</th>
+                    <th>Name of roll or maneuver. Uncheck the rolls you don't want to perform. You can change your mind during the event.</th>
                 </tr>
                 <?php 
                 $roll_names = get_option('competitors_custom_values');
-                // Like a ninja...soldier?
                 $roll_names_array = array_map('trim', $roll_names);
                 // Filter out empty values
                 $roll_names_array = array_filter($roll_names_array);
@@ -72,26 +69,17 @@ function competitors_form_html() {
                     echo '<td><input type="checkbox" class="roll-checkbox" checked id="roll_' . ($i + 1) . '" name="performing_rolls[]"></td>';
                     echo '<td>' . esc_html($roll_name) . '</td>';
                     echo '</tr>';
-                } ?>
+                } 
+                ?>
             </table>
         </fieldset>
-
 
         <a name="submit-button"></a>
         <input type="submit" value="Submit"><?php
         wp_nonce_field('competitors_form_submission', 'competitors_nonce');
         ?>
     </form>
-    <script>
-        function checkAll(ele) {
-            var checkboxes = document.querySelectorAll('input[type="checkbox"].roll-checkbox');
-            for (var i = 0; i < checkboxes.length; i++) {
-                if (checkboxes[i] !== ele) {
-                    checkboxes[i].checked = ele.checked;
-                }
-            }
-        }
-    </script>
+
     <?php
     return ob_get_clean(); 
 }
@@ -99,32 +87,40 @@ add_shortcode('competitors_form_public', 'competitors_form_html');
 
 
 
+function sanitize_phone_number($phone) {
+    // Allowing country codes and number formatting characters
+    $cleaned = preg_replace('/[^\+\d\s\(\)-\.]/', '', $phone);
+
+    // Remove non-digits to count the digits only
+    $digitsOnly = preg_replace('/[^\d]/', '', $cleaned);
+
+    // Check if numbers exceed whatever 
+    if (strlen($digitsOnly) > 15) {
+        return 'Error: is this number really correct Stevie?';
+    }
+    return $cleaned;
+}
+
+
 
 
 function handle_competitors_form_submission() {
     error_log('Form submission initiated.');
     
+    // Verify nonce and mandatory fields
     if (isset($_POST['competitors_nonce'], $_POST['name'], $_POST['email']) && 
         wp_verify_nonce($_POST['competitors_nonce'], 'competitors_form_submission') && 
         $_SERVER['REQUEST_METHOD'] === 'POST') {
-
-        if (!isset($_POST['competitors_nonce'])) {
-            error_log('Nonce field not set.');
-        } else {
-            error_log('Received nonce: ' . $_POST['competitors_nonce']);
-        }
         
         // Sanitize and Validate input
         $name = sanitize_text_field($_POST['name']);
         $email = sanitize_email($_POST['email']);
         if (!is_email($email)) {
-            error_log('Invalid email: ' . $email); // Log invalid email
+            error_log('Invalid email: ' . $email);
             return;
         }
 
-        function sanitize_phone_number($phone) {
-            return preg_replace('/[^\d\s\(\)-]/', '', $phone);
-        }
+        // Define sanitize_phone_number function outside for reusability and clarity
         $phone = sanitize_phone_number($_POST['phone']);
         $club = sanitize_text_field($_POST['club']);
         $sponsors = sanitize_text_field($_POST['sponsors']);
@@ -132,9 +128,7 @@ function handle_competitors_form_submission() {
         $participation_class = sanitize_text_field($_POST['participation_class']);
         $license = isset($_POST['license']) ? 'yes' : 'no';
         $consent = isset($_POST['consent']) ? 'yes' : 'no';
-
-        // Handling performing_rolls as an array of values
-        $performing_rolls = isset($_POST['performing_rolls']) ? array_map('sanitize_text_field', $_POST['performing_rolls']) : array();
+        $performing_rolls = isset($_POST['performing_rolls']) ? array_map('sanitize_text_field', $_POST['performing_rolls']) : [];
 
         // Prepare data for insertion
         $competitor_data = array(
@@ -151,44 +145,41 @@ function handle_competitors_form_submission() {
                 'participation_class' => $participation_class,
                 'license' => $license,
                 'consent' => $consent,
-                // Additional meta fields
+                'grand_total' => 0,
+                'meta_value_num' => 0,
+                'selected_rolls' => $performing_rolls
             ),
         );
 
-        // Log data before insertion
-        error_log('Inserting post with title: ' . $name);
-        
-        // Insert the post into the database
-        $post_id = wp_insert_post($competitor_data);
-        if ($post_id == 0) {
-            // Log error in post creation
+        // Insert the post into the database and capture the new post ID
+        $competitor_id = wp_insert_post($competitor_data);
+        if ($competitor_id == 0) {
             error_log('Error in creating post.');
             return;
         } else {
-            // Log successful creation
-            error_log('Post created with ID: ' . $post_id);
-            // Set a transient to show a confirmation message
+            error_log('Post created with ID: ' . $competitor_id);
             set_transient('competitors_form_submitted', 'Thanks for saving, this will be fun!', 10);
         }
-        
-        // Save the performing_rolls data
-        if ($post_id && !empty($performing_rolls)) {
-            update_post_meta($post_id, 'performing_rolls', $performing_rolls);
+
+        // Handle the selected checkboxes (rolls)
+        if (!empty($performing_rolls)) {
+            update_post_meta($competitor_id, 'selected_rolls', $performing_rolls);
+        } else {
+            delete_post_meta($competitor_id, 'selected_rolls');
         }
-        // Check if our transient is set and display the message
+
+        // Display the message if our transient is set
         if (get_transient('competitors_form_submitted')) {
             echo '<div id="message" class="updated notice is-dismissible"><p>' . get_transient('competitors_form_submitted') . '</p></div>';
-            // Delete the transient so the message doesn't keep appearing
             delete_transient('competitors_form_submitted');
         }
-        // Log redirection
-        error_log('Redirecting to thank-you page.');
+
         // Redirect after successful submission
+        error_log('Redirecting to thank-you page.');
         wp_redirect(home_url('/thank-you'));
         exit;
 
     } else {
-        // Log that nonce verification failed or required fields are missing
         error_log('Sorry, form submission failed dude. Nonce verification failed or required fields are missing.');
     }
 }
@@ -199,65 +190,120 @@ add_action('admin_post_nopriv_competitors_form_submit', 'handle_competitors_form
 
 
 
-function competitors_score_html() {
 
+
+// For the public part we have a shortcode: [competitors_scoring]
+function competitors_scoring_shortcode() {
+    ob_start();
+    competitors_scoring_list_page(); // The initial list
+    return ob_get_clean();
+}
+add_shortcode('competitors_scoring', 'competitors_scoring_shortcode');
+
+
+// Names and scores on the public side
+function competitors_scoring_list_page() {
+    error_reporting(E_ALL); 
+    ini_set('display_errors', 1);
+    if ($message = get_transient('competitors_scores_updated')) {
+        echo '<div id="message" class="updated notice is-dismissible"><p>' . esc_html($message) . '</p></div>';
+        delete_transient('competitors_scores_updated');
+    }
     $args = array(
         'post_type' => 'competitors',
-        'posts_per_page' => -1 // Fetch all
+        'posts_per_page' => -1,
+        'meta_key' => 'grand_total',
+        'orderby' => 'meta_value_num',
+        'order' => 'DESC'
     );
     $competitors_query = new WP_Query($args);
 
-    $roll_names = get_option('competitors_custom_values');
-    $roll_names_array = explode("\n", $roll_names);
-    $roll_names_array = array_filter(array_map('trim', $roll_names_array));
-
-    echo '<h1>Competitors Scoring</h1>';
-    echo '<table class="competitors-table">';
-
+    echo '<div id="competitors-list">';
+    echo '<ul class="competitors-table">';
     while ($competitors_query->have_posts()) {
         $competitors_query->the_post();
-
-        // Competitor metadata
-        $email = get_post_meta(get_the_ID(), 'email', true);
-        $phone = get_post_meta(get_the_ID(), 'phone', true);
-        $club = get_post_meta(get_the_ID(), 'club', true);
-        $speaker_info = get_post_meta(get_the_ID(), 'speaker_info', true);
-        $sponsor_info = get_post_meta(get_the_ID(), 'sponsor_info', true);
-
-        // Competitor header row
-        echo '<tr class="competitors-header" data-competitor="' . get_the_ID() . '">';
-        echo '<th colspan="7">' . get_the_title() . '</th>';
-        echo '</tr>';
-
-        // Competitor information row
-        echo '<tr>';
-        echo '<td>' . get_the_title() . '</td>';
-        echo '<td>' . esc_html($club) . '</td>';
-        echo '<td colspan="5"><b>Speaker info:</b> ' . esc_html($speaker_info) . ', <b>Sponsor:</b> ' . esc_html($sponsor_info) . '</td>';
-        echo '</tr>';
-
-        // Scoring rows
-        foreach ($roll_names_array as $index => $roll_name) {
-            $left_score = get_post_meta(get_the_ID(), 'left_score_' . ($index + 1), true);
-            $left_deduct = get_post_meta(get_the_ID(), 'left_deduct_' . ($index + 1), true);
-            $right_score = get_post_meta(get_the_ID(), 'right_score_' . ($index + 1), true);
-            $right_deduct = get_post_meta(get_the_ID(), 'right_deduct_' . ($index + 1), true);
-            $total = get_post_meta(get_the_ID(), 'total_' . ($index + 1), true);
-
-            echo '<tr class="competitors-scores" data-competitor="' . get_the_ID() . '" data-row-index="' . ($index + 1) . '">';
-            echo '<td colspan="2">' . esc_html($roll_name) . '</td>';
-            echo '<td>' . esc_html($left_score) . '</td>';
-            echo '<td>' . esc_html($left_deduct) . '</td>';
-            echo '<td>' . esc_html($right_score) . '</td>';
-            echo '<td>' . esc_html($right_deduct) . '</td>';
-            echo '<td>' . esc_html($total) . '</td>';
-            echo '</tr>';
-        }
+        echo '<li class="competitors-list-item" data-competitor-id="' . get_the_ID() . '">' . get_the_title() . '</li>';
     }
-
-    echo '</table>';
     wp_reset_postdata();
+    wp_reset_query();
+    echo '</ul>';
+    echo '</div>';
+    echo '<div id="competitors-details-container" class="fade-inout"></div>';
 }
 
 
-add_shortcode('competitors_score_public', 'competitors_score_html');
+function load_competitor_details() {
+    $competitor_id = isset($_POST['competitor_id']) ? intval($_POST['competitor_id']) : 0;
+    //error_log('Received competitor ID: ' . $competitor_id);
+    if (!$competitor_id) {
+        echo 'No Competitor ID provided';
+        wp_die();
+    }
+    if ('competitors' !== get_post_type($competitor_id)) {
+        echo 'Post with ID ' . $competitor_id . ' is not a Competitor post type';
+        wp_die();
+    }
+    competitors_scoring_view_page($competitor_id);
+    wp_die();
+}
+// AJAX handler for loading the competitor details
+add_action('wp_ajax_load_competitor_details', 'load_competitor_details');
+add_action('wp_ajax_nopriv_load_competitor_details', 'load_competitor_details'); // If you want it accessible to non-logged-in users
+
+
+
+// Public view of per competitor scoring list
+function competitors_scoring_view_page($competitor_id = 0) {
+    $listing_page_url = admin_url('admin.php?page=competitors-view');
+    $roll_names = get_option('competitors_custom_values');
+    $performing_rolls_selected = get_post_meta($competitor_id, 'performing_rolls', true);
+    echo $performing_rolls_selected;
+
+    // Ensure array of whatever
+    if (!is_array($performing_rolls_selected)) {
+        $performing_rolls_selected = [];
+    }
+    // Define score keys
+    $score_keys = ['left_score_', 'left_deduct_', 'right_score_', 'right_deduct_', 'total_'];
+
+    echo '<small>Score for</small>';
+    echo '<h2><a href="' . esc_url($listing_page_url) . '" class="competitors-back-link"><i class="dashicons dashicons-arrow-left-alt2 arrow-back"></i> ' . esc_html(get_the_title($competitor_id)) . '</a></h2>';
+    echo '<table class="competitors-table">';
+    echo '<tr><th>Roll Name</th><th>Left Score</th><th>Left Deduct</th><th>Right Score</th><th>Right Deduct</th><th>Total</th></tr>';
+
+    $grand_total = 0;
+
+    foreach ($roll_names as $index => $roll_name) {
+        $base_meta_key = $competitor_id . '_' . ($index + 1);
+
+        // Fetching meta values
+        $scores = [];
+        foreach ($score_keys as $key_prefix) {
+            $scores[$key_prefix] = get_post_meta($competitor_id, $key_prefix . $base_meta_key, true);
+        }
+       
+       // print_r($performing_rolls_selected, true);
+       
+
+
+        $is_selected = in_array($roll_name, $performing_rolls_selected);
+        $row_class = $is_selected ? 'competitors-scores' : 'competitors-scores not-sure';
+
+        $total_points = '';
+        if ($scores['total_'] > 0) {
+            $total_points = esc_html($scores['total_']) . ' p';
+            $grand_total += (int)$scores['total_'];
+        }
+
+        echo '<tr class="' . esc_attr($row_class) . '">';
+        echo '<td>' . esc_html($roll_name) . '</td>';
+        foreach ($score_keys as $key) {
+            echo '<td>' . esc_html($scores[$key]) . '</td>';
+        }
+        echo '</tr>';
+    }
+
+    // Add the grand total row at the end
+    echo '<tr><td colspan="5"><b>Total score</b></td><td><b>' . $grand_total . ' p</b></td></tr>';
+    echo '</table>';
+}

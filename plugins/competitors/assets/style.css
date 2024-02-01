@@ -1,9 +1,4 @@
 /* The Competitor plugin's styles */
-.my-plugin-class {
-  /* styles go here */
-  background: #ccc;
-}
-
 label {
   padding: 5em;
   display: inline-block;
@@ -22,4 +17,44 @@ input[type="checkbox"] {
 .entry-content input[type="submit"] {
   font-size: 1.2em;
   font-weight: bold;
+}
+
+ul.competitors-table {
+  column-width: 20em;
+  list-style-type: decimal;
+}
+
+li.competitors-list-item:hover {
+  cursor: pointer;
+  background: #ffe2e2;
+}
+li.competitors-list-item.current {
+  background: #ffe2e2;
+}
+
+/* i-tag dashicon */
+.arrow-back {
+  margin-right: 1em;
+  height: 1.2em;
+  font-size: 1em;
+  vertical-align: middle;
+}
+
+.not-sure {
+  background: #ebebeb;
+}
+
+.fade-inout {
+  animation: fadeInAnimation ease 0.5s;
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+}
+
+@keyframes fadeInAnimation {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
