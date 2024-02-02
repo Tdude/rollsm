@@ -1,6 +1,3 @@
-// The js
-console.log("I am public!");
-
 document.addEventListener("DOMContentLoaded", function() {
 
     var masterCheckbox = document.getElementById('check_all');
@@ -21,26 +18,46 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
+    const competitorsList = document.getElementById('competitors-list');
+    const spinner = document.getElementById("spinner");
 
-    var competitorsList = document.getElementById('competitors-list');
-    // Check if the competitors-list exists before adding the event listener
+    function showSpinner() {
+        spinner.style.display = 'flex';
+        requestAnimationFrame(() => {
+            spinner.style.opacity = '1';
+        });
+    }
+    
+    function hideSpinner() {
+        spinner.style.opacity = '0';
+        spinner.addEventListener('transitionend', function handler(e) {
+            if (e.propertyName === 'opacity') {
+                spinner.style.display = 'none';
+                spinner.removeEventListener('transitionend', handler);
+            }
+        });
+    }
+
+    // Fetch and show the details container
+    function showDetailsContainer() {
+        var detailsContainer = document.getElementById('competitors-details-container');
+        detailsContainer.style.display = 'block'; // or 'flex' 
+    }
+
     if (competitorsList) {
         competitorsList.addEventListener('click', function(e) {
-            // Check if the clicked element has the class 'competitors-list-item'
+            showSpinner();
+
             if (e.target && e.target.matches('.competitors-list-item')) {
                 var competitorId = e.target.getAttribute('data-competitor-id');
-                console.log(competitorId);
-
-                // Remove 'current' class from any previously selected item
                 var currentItem = document.querySelector('.competitors-list-item.current');
                 if (currentItem) {
                     currentItem.classList.remove('current');
                 }
-
-                // Add 'current' class to the clicked item
                 e.target.classList.add('current');
+    
+                showDetailsContainer();
 
-                // Perform the AJAX request using the Fetch API
                 fetch(competitorsAjax.ajaxurl, {
                     method: 'POST',
                     headers: {
@@ -51,9 +68,28 @@ document.addEventListener("DOMContentLoaded", function() {
                 .then(response => response.text())
                 .then(response => {
                     document.getElementById('competitors-details-container').innerHTML = response;
+                    hideSpinner();
                 })
-                .catch(error => console.error('Error:', error));
+                .catch(error => {
+                    console.error('Error:', error);
+                    hideSpinner();
+                });
             }
         });
     }
+
+
+    document.getElementById('close-details').addEventListener('click', function(e) {
+        e.preventDefault();
+        document.getElementById('competitors-details-container').style.display = 'none';
+        //document.getElementById('competitors-details-container').innerHTML = ''; // Optional
+        hideSpinner(); 
+        var currentItem = document.querySelector('.competitors-list-item.current');
+        if (currentItem) {
+            currentItem.classList.remove('current');
+        }
+    });
+
+    
+
 });
