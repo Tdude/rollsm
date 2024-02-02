@@ -34,9 +34,9 @@ li.competitors-list-item.current {
 
 /* i-tag dashicon */
 .arrow-back {
-  margin-right: 1em;
-  height: 1.2em;
-  font-size: 1em;
+  margin: 0 1em;
+  height: 2em;
+  font-size: 2em;
   vertical-align: middle;
 }
 
@@ -56,5 +56,50 @@ li.competitors-list-item.current {
   }
   100% {
     opacity: 1;
+  }
+}
+
+th {
+  font-weight: 400;
+}
+
+#spinner {
+  display: none;
+  opacity: 0;
+  transition: opacity 0.4s ease-in-out;
+}
+
+#spinner.show {
+  display: flex;
+  opacity: 1;
+}
+
+#spinner:not([hidden]) {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  justify-content: center;
+  align-items: center;
+}
+
+#spinner::after {
+  content: "";
+  width: 80px;
+  height: 80px;
+  border: 3px solid #f6f9fc;
+  border-top: 3px solid #e33;
+  border-radius: 100%;
+  will-change: transform;
+  animation: spin 1s infinite ease-in-out;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
