@@ -1,93 +1,92 @@
-/* Style for admin table */
+/* General Style for Admin Table */
 .competitors-table {
+  background-color: #fff;
   border-collapse: collapse;
   width: 100%;
 }
 
-.competitors-table tr:hover {
-  background-color: #efe;
-}
-
+/* Table Header and Data Cells */
 .competitors-table th,
 .competitors-table td {
-  border: none;
+  border: 1px solid #ddd;
   padding: 8px;
   text-align: left;
 }
 
-.competitors-table tr:nth-child(odd) {
-  background-color: #f9f9f9;
-}
-.competitors-table tr:nth-child(even) {
-  background-color: #fff;
-}
-
-.competitors-table tr:hover {
-  background-color: #fff0f0;
+/* Hover Effect */
+.competitors-table tr:hover,
+tr.competitors-header:hover {
+  background-color: #efe;
   opacity: 1;
-  transition: 0.3s;
 }
 
-/* Style for input fields */
+/* Selected and Non-Selected Row Styles */
+.competitors-table tr.selected {
+  color: #000;
+}
+
+.competitors-table tr.non-selected {
+  background-color: #eee;
+  color: #666;
+}
+
+/* Input Field Styling */
 .competitors-table .score-input,
 .competitors-table input[type="text"] {
-  width: 30px; /* Adjust as needed */
+  width: 30px;
   padding: 4px;
-  box-sizing: border-box; /* Make sure padding doesn't affect width */
+  box-sizing: border-box;
 }
 
-/* WP bootstrap button */
+/* Button Styling */
 .button-primary {
-  margin-top: 2rem;
-  padding: 1em 2em;
+  margin-top: 20px; /* Consistent spacing */
+  padding: 10px 20px; /* Comfortable padding */
 }
 
+/* Custom Button Styles */
 .wp-admin .custom-button {
-  margin-left: 20px; /* or your desired margin */
+  margin-left: 20px;
 }
 
-.wp-admin .custom-button:before {
+.wp-admin .plus-button:before {
   content: "+";
-  font-weight: bold; /* for a bold plus sign */
+  font-weight: bold;
 }
 
-/* for accordion view, must be hidden for the js to work */
-.competitors-scores,
-.competitors-info {
-  display: none;
-}
+/* Accordion View for Judges Scoring */
 .competitors-table tr,
 tr.competitors-header {
-  opacity: 0.8;
-  transition: 0.5s;
-}
-tr.competitors-header:hover {
-  background-color: #dfd;
-  opacity: 1;
-  transition: 0.5s;
-  cursor: pointer;
+  transition: opacity 0.5s ease;
 }
 
-/* Grayed out but managable scoring rows */
-tr.not-sure {
-  background: #ddd !important;
+/* Hidden Rows Initial State */
+.competitors-table .hidden {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.5s ease, opacity 0.5s ease;
 }
 
-/* Even out WP quirky header styles */
+/* Visible Rows State */
+.competitors-info,
+.competitors-scores {
+  max-height: 1000px;
+}
+
+/* Header Styles */
 .wrap h1 {
   font-size: 2em;
   font-weight: bold;
 }
 
-/* 
-USEAGE: <span class="dashicons dashicons-arrow-down-alt2"></span> 
-*/
+/* Dashicons */
 .dashicons {
   vertical-align: middle;
   margin-right: 5px;
-  padding: 0.2 1em;
 }
 
+/* Back Link Styling */
 .competitors-back-link {
   text-decoration: none;
 }

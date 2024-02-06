@@ -1,85 +1,166 @@
-//console.log("I am admin js. Yes, really!");
-
-// for judges_scoring_page
 document.addEventListener('DOMContentLoaded', function() {
-    const headers = document.querySelectorAll('.competitors-header');
-    headers.forEach(header => {
+    // Toggle visibility of score and info rows
+    document.querySelectorAll('.competitors-header').forEach(header => {
         header.addEventListener('click', function() {
             const competitorId = this.dataset.competitor;
-            const scores = document.querySelectorAll('.competitors-scores[data-competitor="' + competitorId + '"]');
-            scores.forEach(row => row.style.display = row.style.display === 'none' || row.style.display === '' ? 'table-row' : 'none');
-            
-            // The competitor info row is immediately following the header row in the DOM
-            const infoRow = this.nextElementSibling;
-            infoRow.style.display = infoRow.style.display === 'none' || infoRow.style.display === '' ? 'table-row' : 'none';
 
-            // Toggle arrow icon
+            // Toggle visibility for the clicked competitor's scores and info rows
+            document.querySelectorAll(`.competitors-scores[data-competitor="${competitorId}"], .competitors-info[data-competitor="${competitorId}"]`).forEach(row => {
+                row.classList.toggle('hidden');
+            });
+
+            // Toggle the arrow icon direction
             const icon = this.querySelector('.dashicons');
-            if (icon.classList.contains('dashicons-arrow-down-alt2')) {
-                icon.classList.remove('dashicons-arrow-down-alt2');
-                icon.classList.add('dashicons-arrow-up-alt2');
-            } else {
-                icon.classList.remove('dashicons-arrow-up-alt2');
-                icon.classList.add('dashicons-arrow-down-alt2');
+            if (icon) {
+                icon.classList.toggle('dashicons-arrow-down-alt2');
+                icon.classList.toggle('dashicons-arrow-up-alt2');
             }
         });
     });
 
+    // Event delegation for score input to handle dynamically added elements
+    document.addEventListener('input', function(e) {
+        if (e.target && e.target.classList.contains('score-input')) {
+            const row = e.target.closest('tr');
+            const competitorId = row.dataset.competitor;
+            calculateAndUpdateTotalScore(row, competitorId);
+        }
+    });
 
-    document.querySelectorAll('.score-input').forEach(input => {
-        input.addEventListener('input', function() {
-            const nameParts = this.name.split('_');
-            const competitorId = nameParts[nameParts.length - 2]; // Adjusted index for competitor ID
-            const rollIndex = nameParts[nameParts.length - 1]; // Adjusted index for roll index
-    
-            const scoreNames = ['left_score', 'left_deduct', 'right_score', 'right_deduct'].map(
-                type => `${type}_${competitorId}_${rollIndex}`
-            );
-    
-            const [leftScore, leftDeduct, rightScore, rightDeduct] = scoreNames.map(
-                name => parseInt(document.querySelector(`[name='${name}']`).value) || 0
-            );
-    
-            let total = (leftScore - leftDeduct) + (rightScore - rightDeduct);
-            total = Math.max(total, 0); // Ensure total is not negative
-    console.log(total);
-            const totalField = document.querySelector(`[name='total_${competitorId}_${rollIndex}']`);
-            if (totalField) {
-                totalField.value = total;
+    // Function to calculate and update the total score for a competitor's row in the admin.
+    function calculateAndUpdateTotalScore(row, competitorId) {
+        // Initialize variables for each score component
+        let left = 0, left_deduct = 0, right = 0, right_deduct = 0;
+
+        // Collect and assign values to each score component based on the input names
+        row.querySelectorAll('.score-input').forEach(input => {
+            const name = input.name;
+            const value = parseInt(input.value) || 0;
+            if (name.includes('left_score')) {
+                left = value;
+            } else if (name.includes('left_deduct')) {
+                left_deduct = value;
+            } else if (name.includes('right_score')) {
+                right = value;
+            } else if (name.includes('right_deduct')) {
+                right_deduct = value;
             }
         });
-    });
+
+        // Calculate total score
+        let total = (left - left_deduct) + (right - right_deduct);
+
+        // Find the total score input for this row and update its value
+        const totalInput = row.querySelector('input.score-input[name*="total"]');
+        if (totalInput) {
+            totalInput.value = total;
+        }
+    }
+
+
+
     
+
+
+
+    // Sort in admin "Personal data"
+    var tableHeaders = document.querySelectorAll('#sortable-table th');
+
+    Array.from(tableHeaders).forEach(function(header) {
+        header.addEventListener('click', function() {
+            var table = this.closest('table');
+            var rowsArray = Array.from(table.querySelectorAll('tbody tr')); // Corrected to select all data rows
+            var index = Array.from(table.querySelectorAll('th')).indexOf(this);
+            var asc = !(this.asc = !this.asc);
+    
+            rowsArray.sort(function(rowA, rowB) {
+                var cellA = rowA.querySelectorAll('td')[index].textContent;
+                var cellB = rowB.querySelectorAll('td')[index].textContent;
+                var isNumericA = !isNaN(parseFloat(cellA)) && isFinite(cellA);
+                var isNumericB = !isNaN(parseFloat(cellB)) && isFinite(cellB);
+    
+                return isNumericA && isNumericB ? cellA - cellB : cellA.localeCompare(cellB);
+            });
+    
+            if (asc) { rowsArray.reverse(); }
+    
+            rowsArray.forEach(function(row) { table.querySelector('tbody').appendChild(row); });
+        });
+    });
+
+
+
+ 
+    if (document.querySelector('#settings-page')) {
+        const wrapper = document.getElementById('competitors_roll_names_wrapper');
+        const addButton = document.getElementById('add_more_roll_names');
+
+        if (!wrapper || !addButton) {
+            // Exit if required elements are not found
+            return;
+        }
+
+        function addRow() {
+            const newIndex = wrapper.querySelectorAll('p').length;
+            const newField = document.createElement('p');
+            newField.setAttribute('data-index', newIndex);
+            newField.innerHTML = `<label for="maneuver_${newIndex}">Maneuver: </label>` +
+                                    `<input type="text" id="maneuver_${newIndex}" name="competitors_custom_values[]" size="60" />` +
+                                    `<label for="points_${newIndex}"> Points: </label>` +
+                                    `<input type="text" class="numeric-input" id="points_${newIndex}" name="competitors_numeric_values[]" size="2" maxlength="2" pattern="\\d*" title="Only 2 digits allowed" />` +
+                                    `<button type="button" class="button custom-button button-secondary remove-row">Remove</button>`;
+            wrapper.appendChild(newField);
+        }
+
+        addButton.addEventListener('click', addRow);
+
+        wrapper.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-row')) {
+                e.preventDefault(); // Prevent form submission
+                if (confirm('Remove, destroy, kill this row irrevocably?')) {
+                    const rowIndex = e.target.parentNode.getAttribute('data-index');
+                    const nonce = document.querySelector('#competitors_nonce').value;
+
+                    // AJAX request to WordPress
+                    fetch(competitorsData.ajaxurl, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: new URLSearchParams({
+                            action: 'remove_competitor_row',
+                            index: rowIndex,
+                            security: competitorsData.nonce,
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            console.log(data.message); // Log success message
+                            e.target.parentNode.remove(); // Remove the parent <p> element
+                            alert('Row removed successfully.');
+                        } else {
+                            // Handle failure
+                            console.error(data.message); // Log failure message
+                            alert('Failed to remove row.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error); // Log error
+                        alert('Error removing row.');
+                    });
+                }    
+            }
+        });
+
+        wrapper.addEventListener('input', function(e) {
+            if (e.target.classList.contains('numeric-input')) {
+                e.target.value = e.target.value.slice(0, 2); // Ensure only 2 digits
+            }
+        });
+    }
+
+
 });
-
-// sorts by clicking on competitors data table headers in admin
-jQuery(document).ready(function($) {
-    $('#sortable-table th').on('click', function() {
-        var table = $(this).parents('table').eq(0);
-        var rows = table.find('tr:gt(0)').toArray().sort(comparer($(this).index()));
-        this.asc = !this.asc;
-        if (!this.asc) { rows = rows.reverse(); }
-        for (var i = 0; i < rows.length; i++) { table.append(rows[i]); }
-    });
-
-    function comparer(index) {
-        return function(a, b) {
-            var valA = getCellValue(a, index), valB = getCellValue(b, index);
-            return $.isNumeric(valA) && $.isNumeric(valB) ? valA - valB : valA.localeCompare(valB);
-        };
-    }
-
-    function getCellValue(row, index) { 
-        return $(row).children('td').eq(index).text(); 
-    }
-
-    // Adding the JS for more rows
-    $('#add_more_roll_names').click(function() {
-        $('#competitors_roll_names_wrapper').append('<p><input type=\"text\" name=\"competitors_custom_values[]\" size=\"60\" value=\"\" /></p>');
-    });
-
-});// docready
-
-
-
-   
+    

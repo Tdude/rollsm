@@ -1,13 +1,13 @@
-/* The Competitor plugin's styles */
+/* The Competitor plugin's public styles */
 label {
-  padding: 5em;
+  padding: 0.5em;
   display: inline-block;
 }
 
 .lbl-checkbox,
 input[type="checkbox"] {
-  padding: 1em;
-  display: inline-block;
+  vertical-align: middle;
+  margin-right: 0.5em;
 }
 
 .pt-1 {
@@ -17,31 +17,62 @@ input[type="checkbox"] {
 .entry-content input[type="submit"] {
   font-size: 1.2em;
   font-weight: bold;
+  background-color: #c00;
+  color: white;
+  padding: 10px 24px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.entry-content input[type="submit"]:hover {
+  background-color: #c00;
+  animation: fadeInAnimation ease 0.5s;
+  animation-iteration-count: 1;
 }
 
 ul.competitors-table {
   column-width: 20em;
-  list-style-type: decimal;
+  list-style-type: none;
+  padding: 0;
+}
+
+li.competitors-list-item {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
 }
 
 li.competitors-list-item:hover {
   cursor: pointer;
-  background: #ffe2e2;
-}
-li.competitors-list-item.current {
-  background: #ffe2e2;
+  background-color: #f0f0f0;
 }
 
-/* i-tag dashicon */
+li.competitors-list-item.current,
+li.competitors-list-item.selected {
+  background-color: #e0e9f;
+  color: #000;
+  opacity: 0.8;
+  transition: 0.3s;
+}
+
+/* Highlight for selected rows */
+tr.competitors-scores.selected {
+  background-color: #fff;
+  color: #000;
+}
+
+/* Grayed out non-selected rows */
+tr.competitors-scores.non-selected {
+  background-color: #eee;
+  color: #666;
+  transition: background-color 0.3s ease;
+}
+
 .arrow-back {
-  margin: 0 1em;
-  height: 2em;
-  font-size: 2em;
-  vertical-align: middle;
-}
-
-.not-sure {
-  background: #ebebeb;
+  margin: 0 0.7em 0 0;
+  height: 1em;
+  font-size: 1.2em;
+  vertical-align: text-bottom;
 }
 
 .fade-inout {
@@ -63,9 +94,9 @@ th {
   font-weight: 400;
 }
 
+/* Spinner styles */
 #spinner {
   display: none;
-  opacity: 0;
   transition: opacity 0.4s ease-in-out;
 }
 
@@ -82,6 +113,7 @@ th {
   bottom: 0;
   justify-content: center;
   align-items: center;
+  background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent overlay */
 }
 
 #spinner::after {
@@ -89,10 +121,9 @@ th {
   width: 80px;
   height: 80px;
   border: 3px solid #f6f9fc;
-  border-top: 3px solid #e33;
+  border-top: 3px solid #009688;
   border-radius: 100%;
-  will-change: transform;
-  animation: spin 1s infinite ease-in-out;
+  animation: spin 1s infinite linear;
 }
 
 @keyframes spin {
