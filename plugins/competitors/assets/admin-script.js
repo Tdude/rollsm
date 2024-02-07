@@ -1,15 +1,28 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Toggle visibility of score and info rows
+    // Toggle visibility of score and info rows in admin
     document.querySelectorAll('.competitors-header').forEach(header => {
         header.addEventListener('click', function() {
             const competitorId = this.dataset.competitor;
-
+    
+            // Close all rows except for the clicked competitor's rows
+            document.querySelectorAll('.competitors-scores, .competitors-info').forEach(row => {
+                if (row.dataset.competitor !== competitorId) {
+                    row.classList.add('hidden');
+                }
+            });
+    
             // Toggle visibility for the clicked competitor's scores and info rows
             document.querySelectorAll(`.competitors-scores[data-competitor="${competitorId}"], .competitors-info[data-competitor="${competitorId}"]`).forEach(row => {
                 row.classList.toggle('hidden');
             });
-
-            // Toggle the arrow icon direction
+    
+            // Reset all arrow icons to point down
+            document.querySelectorAll('.competitors-header .dashicons').forEach(icon => {
+                icon.classList.remove('dashicons-arrow-up-alt2');
+                icon.classList.add('dashicons-arrow-down-alt2');
+            });
+    
+            // Toggle the arrow icon direction for the clicked header
             const icon = this.querySelector('.dashicons');
             if (icon) {
                 icon.classList.toggle('dashicons-arrow-down-alt2');
@@ -17,6 +30,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+    
+
 
     // Event delegation for score input to handle dynamically added elements
     document.addEventListener('input', function(e) {
@@ -59,11 +74,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 
-    
 
-
-
-    // Sort in admin "Personal data"
+    // Sort columns in admin table "Personal data"
     var tableHeaders = document.querySelectorAll('#sortable-table th');
 
     Array.from(tableHeaders).forEach(function(header) {
