@@ -1,4 +1,5 @@
 /* The Competitor plugin's public styles */
+
 label {
   padding: 0.5em;
   display: inline-block;
@@ -14,6 +15,7 @@ input[type="checkbox"] {
   padding-top: 1em;
 }
 
+/* Enhanced button styling for better UX */
 .entry-content input[type="submit"] {
   font-size: 1.2em;
   font-weight: bold;
@@ -23,14 +25,16 @@ input[type="checkbox"] {
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  transition: background-color 0.3s ease; /* Smooth transition for hover effect */
 }
 
 .entry-content input[type="submit"]:hover {
-  background-color: #c00;
+  background-color: #a00; /* Slightly darker on hover for better feedback */
   animation: fadeInAnimation ease 0.5s;
   animation-iteration-count: 1;
 }
 
+/* List styles for displaying competitors */
 ul.competitors-table {
   column-width: 20em;
   list-style-type: none;
@@ -42,29 +46,31 @@ li.competitors-list-item {
   border-bottom: 1px solid #ddd;
 }
 
-li.competitors-list-item:hover {
-  cursor: pointer;
+li.competitors-list-item:hover,
+li.competitors-list-item.current, /* Consistent hover and current item styling */
+li.competitors-list-item.selected {
   background-color: #f0f0f0;
+  cursor: pointer;
 }
 
-li.competitors-list-item.current,
+/* Corrected background color for selected items */
 li.competitors-list-item.selected {
-  background-color: #e0e9f;
+  background-color: #e0e0ff; /* Updated color for better visibility */
   color: #000;
   opacity: 0.8;
-  transition: 0.3s;
+  transition: background-color 0.3s ease; /* Smooth transition for background change */
 }
 
-/* Highlight for selected rows */
-tr.competitors-scores.selected {
-  background-color: #fff;
+/* Highlight for selected-roll rows */
+tr.selected-roll {
+  background-color: #fff; /* Ensure visibility of selected rows */
   color: #000;
 }
 
-/* Grayed out non-selected rows */
-tr.competitors-scores.non-selected {
-  background-color: #eee;
-  color: #666;
+/* Styles for non-selected or default rows */
+tr.non-selected-roll {
+  background-color: #f3f3f3; /* Slightly different background for non-selected rows */
+  color: #333;
   transition: background-color 0.3s ease;
 }
 
@@ -94,7 +100,7 @@ th {
   font-weight: 400;
 }
 
-/* Spinner styles */
+/* Spinner styles for loading indication */
 #spinner {
   display: none;
   transition: opacity 0.4s ease-in-out;
@@ -120,10 +126,10 @@ th {
   content: "";
   width: 80px;
   height: 80px;
-  border: 3px solid #f6f9fc;
-  border-top: 3px solid #009688;
+  border: 3px solid rgba(255, 200, 200, 0.5);
+  border-top: 3px solid var(--theme-link-initial-color); /* Brand color for consistency */
   border-radius: 100%;
-  animation: spin 1s infinite linear;
+  animation: spin 0.8s infinite linear;
 }
 
 @keyframes spin {
