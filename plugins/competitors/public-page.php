@@ -104,7 +104,6 @@ function sanitize_phone_number($phone) {
 
 
 
-
 function handle_competitors_form_submission() {
     error_log('Form submission initiated.');
 
@@ -128,16 +127,11 @@ function handle_competitors_form_submission() {
         $license = isset($_POST['license']) ? 'yes' : 'no';
         $consent = isset($_POST['consent']) ? 'yes' : 'no';
 
-        // Handle scores
-        $scores = isset($_POST['scores']) ? $_POST['scores'] : [];
-        array_walk_recursive($scores, function(&$item, $key) {
-            $item = sanitize_text_field($item);
-        });
+        // Sanitization for selected rolls - ensuring array structure is maintained
+        $selected_rolls = isset($_POST['selected_rolls']) ? $_POST['selected_rolls'] : [];
+        $selected_rolls_indexes = array_map('intval', array_keys($selected_rolls));
 
-        // Handle selected rolls indexes
-        $selected_rolls_indexes = isset($_POST['selected_rolls']) ? array_keys($_POST['selected_rolls']) : [];
-
-        // Prepare data for insertion including scores
+        // Prepare data for insertion, initializing competitor_scores as an empty array for future updates
         $competitor_data = array(
             'post_title'    => wp_strip_all_tags($name),
             'post_status'   => 'publish',
@@ -151,7 +145,7 @@ function handle_competitors_form_submission() {
                 'participation_class' => $participation_class,
                 'license' => $license,
                 'consent' => $consent,
-                'scores' => $scores, // Include scores in meta_input
+                'competitor_scores' => array(), // Initialize competitor_scores for future updates
                 'selected_rolls' => $selected_rolls_indexes,
             ),
         );
@@ -179,7 +173,7 @@ add_action('admin_post_nopriv_competitors_form_submit', 'handle_competitors_form
 
 
 
-// For the public part we have a shortcode: [competitors_scoring]
+// For the public part we have a shortcode to show this in the page: [competitors_scoring]
 function competitors_scoring_shortcode() {
     ob_start();
     competitors_scoring_list_page(); // The initial list
@@ -220,6 +214,7 @@ function competitors_scoring_list_page() {
 }
 
 
+
 function load_competitor_details() {
     check_ajax_referer('competitors_nonce', 'security');
 
@@ -239,44 +234,45 @@ add_action('wp_ajax_nopriv_load_competitor_details', 'load_competitor_details');
 
 
 
-// Public view of per competitor scoring list. It lacks the points given by the judges.
+
 function competitors_scoring_view_page($competitor_id = 0) {
     $rolls = get_roll_names_and_max_scores();
     
-    // Ensure $selected_rolls_indexes is always an array
+    $competitor_scores = get_post_meta($competitor_id, 'competitor_scores', true);
     $selected_rolls_indexes = (array) get_post_meta($competitor_id, 'selected_rolls', true);
+    
+    $noScoresYet = empty($competitor_scores);
+    $scoresText = $noScoresYet ? " - Newly registered" : "";
+    echo '<h3><a href="#" id="close-details" class="competitors-back-link"><i class="dashicons dashicons-arrow-right-alt2 arrow-back"></i>' . esc_html(get_the_title($competitor_id)) . $scoresText . '</a></h3>';
 
-    echo '<h3><a href="#" id="close-details" class="competitors-back-link"><i class="dashicons dashicons-arrow-left-alt2 arrow-back"></i></a>' . esc_html(get_the_title($competitor_id)) . '</h3>';
     echo '<table class="competitors-table"><tr><th>Roll Name</th><th>Left Score</th><th>Left Deduct</th><th>Right Score</th><th>Right Deduct</th><th>Total</th></tr>';
 
     $grand_total = 0;
 
-    // Define $score_keys if necessary or fetch dynamically
-    // Assuming $score_keys are consistent for all competitors and defined elsewhere
-    $score_keys = ['left_score', 'left_deduct', 'right_score', 'right_deduct']; // Example score keys
-    
     foreach ($rolls as $index => $roll) {
-        if (!in_array($index, $selected_rolls_indexes)) continue; // Skip unselected rolls with "continue"
+        $isSelected = in_array($index, $selected_rolls_indexes, true);
+        $selectedClass = $isSelected ? 'selected-roll' : 'non-selected-roll';
 
-        $scores = array_reduce($score_keys, function ($carry, $key) use ($competitor_id, $index) {
-            $carry[$key] = get_post_meta($competitor_id, "{$key}{$competitor_id}_{$index}", true);
-            return $carry;
-        }, []);
+        $scores = $competitor_scores[$index] ?? [];
+        // Adjust the display logic for scores to ensure zeros are not displayed unless explicitly entered
+        $displayScores = array_map(function($score) {
+            // Treat "0" values as unset, displaying them as empty strings
+            return ($score !== '' && $score !== 0) ? $score : '';
+        }, $scores);
 
-        $total = array_sum($scores); // Calculate total score
-        $grand_total += $total;
+        $total = array_sum(array_values($displayScores)); // Sum the displayed scores for total calculation
 
-        // Output the row for the current roll
-        echo sprintf('<tr class="%s"><td>%s %s</td>%s</tr>', 
-            $total > 0 ? 'competitors-scores selected' : 'competitors-scores non-selected',
-            esc_html($roll['name']), 
+        echo sprintf('<tr class="%s"><td>%s (%s)</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%d</td></tr>',
+            esc_attr($selectedClass),
+            esc_html($roll['name']),
             esc_html($roll['max_score']),
-            implode('', array_map(function($score) { return "<td>" . esc_html($score) . "</td>"; }, $scores))
+            $displayScores['left_score'] ?? '',
+            $displayScores['left_deduct'] ?? '',
+            $displayScores['right_score'] ?? '',
+            $displayScores['right_deduct'] ?? '',
+            $total
         );
     }
 
-    echo "<tr><td colspan='5'><b>Total score</b></td><td><b>{$grand_total}</b></td></tr></table>";
+    echo "<tr><td colspan='5'><b>Grand Total</b></td><td><b>{$grand_total}</b></td></tr></table>";
 }
-
-
-
