@@ -21,13 +21,15 @@ tr.competitors-header:hover {
 }
 
 /* Selected and Non-Selected Row Styles */
-.competitors-table tr.selected {
-  color: #000;
+.competitors-table {
+  background-color: #f3f3f3;
+  color: #666;
 }
 
-.competitors-table tr.non-selected {
-  background-color: #eee;
-  color: #666;
+.competitors-table .competitors-info,
+.competitors-table tr.selected-roll {
+  background-color: #fff;
+  color: #000;
 }
 
 /* Input Field Styling */
