@@ -59,46 +59,54 @@ function competitors_admin_page() {
 
 
 
+
+
+
 function judges_scoring_page() {
     if (!current_user_can('manage_options')) {
-        echo 'Access denied to scoring, dude.';
+        echo '<p>Access denied to scoring, dude.</p>';
         return;
     }
 
     $competitors_query = new WP_Query([
         'post_type' => 'competitors',
-        'posts_per_page' => -1
+        'posts_per_page' => -1,
+        'order' => 'DESC',
     ]);
 
     echo '<h1>Competitors Judges Scoring Page</h1>';
-    echo '<p>Click to have a look-see.</p>';
+    echo '<p>Click name rows to have a look-see.</p>';
     echo '<form action="' . esc_url(admin_url('admin-post.php')) . '" method="post">';
     wp_nonce_field('competitors_score_update_action', 'competitors_score_update_nonce');
     echo '<input type="hidden" name="action" value="competitors_score_update">';
-
+    echo '<p><input type="submit" value="Update Scores" class="button button-primary"></p>';
     echo '<table class="competitors-table" id="judges-scoring">';
+    echo '<tbody>';
 
     while ($competitors_query->have_posts()) {
         $competitors_query->the_post();
         $competitor_id = get_the_ID();
-        $scores_data = get_post_meta($competitor_id, 'scores', true) ?: [];
-        $selected_rolls = get_post_meta($competitor_id, 'selected_rolls', true) ?: []; // Assuming this is how selected rolls are stored
 
         echo render_competitor_header_row($competitor_id);
         echo render_competitor_info_row($competitor_id);
-        $rolls = get_roll_names_and_max_scores(); // Assume this function returns an array of rolls
+
+        $rolls = get_roll_names_and_max_scores(); // Ensure this function exists and returns an array
+
+        $competitor_scores = get_post_meta($competitor_id, 'competitor_scores', true) ?: [];
+        $selected_rolls = get_post_meta($competitor_id, 'selected_rolls', true) ?: [];
 
         foreach ($rolls as $index => $roll) {
-            $roll_scores = $scores_data[$index] ?? []; // Use existing scores if available, otherwise an empty array
+            $roll_scores = $competitor_scores[$index] ?? [];
             echo render_competitor_score_row($competitor_id, $index, $roll, $roll_scores, $selected_rolls);
         }
     }
 
-    echo '</table>';
+    echo '</tbody></table>';
     echo '<p><input type="submit" value="Update Scores" class="button button-primary"></p>';
     echo '</form>';
     wp_reset_postdata();
 }
+
 
 
 function render_competitor_header_row($competitor_id) {
@@ -107,7 +115,7 @@ function render_competitor_header_row($competitor_id) {
     return <<<HTML
         <tr class="competitors-header" data-competitor="$competitor_id">
             <th colspan="2"><span id="close-details" class="dashicons dashicons-arrow-down-alt2"></span> $title (click to see scoresheet)</th>
-            <th width="5%">L</th><th width="5%">L-</th><th width="5%">R</th><th width="5%">R-</th><th width="5%">Sum</th>
+            <th width="7%">L</th><th width="7%">L-</th><th width="7%">R</th><th width="7%">R-</th><th width="7%">Sum</th>
         </tr>
     HTML;
 }
@@ -130,63 +138,86 @@ function render_competitor_info_row($competitor_id) {
 
 function render_competitor_score_row($competitor_id, $index, $roll, $scores, $selected_rolls) {
     $roll_name = esc_html($roll['name']);
-    $max_score = esc_html($roll['max_score']);
+    $max_score = isset($roll['max_score']) ? esc_html($roll['max_score']) : 'N/A';
     
-    // Check if the current roll index is in the array of selected rolls
-    $isSelected = in_array($index, $selected_rolls);
-    $selectedClass = $isSelected ? 'selected-roll' : ''; // Use an empty string or a specific class for non-selected
+    $isSelected = in_array($index, $selected_rolls, true);
+    $selectedClass = $isSelected ? 'selected-roll' : '';
     
-    $row_contents = "<td colspan=\"2\" class=\"$selectedClass\">$roll_name $max_score</td>";
+    $row_contents = "<td colspan=\"2\">$roll_name ($max_score)</td>";
 
     $score_keys = ['left_score', 'left_deduct', 'right_score', 'right_deduct', 'total'];
     foreach ($score_keys as $key) {
-        $scores[$key] = $scores[$key] ?? ''; // Ensure each score key is initialized
-        $input_name = esc_attr("scores[$competitor_id][$index][$key]");
-        $value = esc_attr($scores[$key]);
-        $row_contents .= "<td><input type=\"text\" class=\"score-input $selectedClass\" name=\"$input_name\" maxlength=\"2\" value=\"$value\"></td>";
+        // Adjusted for 'competitor_scores' data structure to display empty if score is 0
+        $value = isset($scores[$key]) && $scores[$key] !== 0 ? esc_attr($scores[$key]) : '';
+        $input_name = "competitor_scores[$competitor_id][$index][$key]";
+        $row_contents .= "<td><input type=\"text\" class=\"score-input\" name=\"$input_name\" maxlength=\"2\" value=\"$value\"></td>";
     }
 
-    return "<tr class=\"competitors-scores hidden\" data-competitor=\"$competitor_id\">$row_contents</tr>";
+    return "<tr class=\"competitors-scores $selectedClass hidden\" data-competitor=\"$competitor_id\">$row_contents</tr>";
 }
 
 
 
 
-function handle_competitors_score_update() {
-    // Check if the form is submitted and the nonce is valid
-    if (isset($_POST['action']) && $_POST['action'] == 'competitors_score_update' && check_admin_referer('competitors_score_update_action', 'competitors_score_update_nonce')) {
-        // From DB: score_33_right_deduct etc. It's creating a post and not an array int the public-page.php
-        // Assuming the scores are structured as: scores[competitorID][rollIndex][scoreType]
-        if (isset($_POST['scores']) && is_array($_POST['scores'])) {
-            foreach ($_POST['scores'] as $competitor_id => $rolls_scores) {
+function handle_competitors_score_update_serialized() {
+    if (isset($_POST['action'], $_POST['competitors_score_update_nonce']) &&
+        $_POST['action'] === 'competitors_score_update' &&
+        check_admin_referer('competitors_score_update_action', 'competitors_score_update_nonce')) {
+
+        // Check and update scores for each competitor
+        if (!empty($_POST['competitor_scores']) && is_array($_POST['competitor_scores'])) {
+            foreach ($_POST['competitor_scores'] as $competitor_id => $rolls_scores) {
+                $competitor_id = intval($competitor_id); // Ensure $competitor_id is an integer
+
+                // Initialize an array to hold all scores for serialization
+                $scores_array = [];
+
                 foreach ($rolls_scores as $roll_index => $score_types) {
+                    $roll_index = intval($roll_index); // Ensure $roll_index is an integer
                     foreach ($score_types as $score_type => $score_value) {
-                        // Sanitize each score value
-                        $sanitized_score_value = sanitize_text_field($score_value);
+                        $score_type = sanitize_key($score_type);
+                        $sanitized_score_value = intval($score_value);
                         
-                        // Construct a unique meta key for each score type
-                        $meta_key = "score_{$roll_index}_{$score_type}";
-                        
-                        // Update the score in the competitor's post meta
-                        update_post_meta($competitor_id, $meta_key, $sanitized_score_value);
+                        // Store scores in an array instead of creating a unique meta key
+                        $scores_array[$roll_index][$score_type] = $sanitized_score_value;
                     }
                 }
+
+                // Update the 'competitor_scores' meta for the competitor with the new scores array
+                update_post_meta($competitor_id, 'competitor_scores', $scores_array);
             }
         }
 
-        // Handle selected rolls, assuming they are structured as: selected_rolls[competitorID][rollIndex]
-        if (isset($_POST['selected_rolls']) && is_array($_POST['selected_rolls'])) {
+        // Process selected_rolls if provided
+        if (!empty($_POST['selected_rolls']) && is_array($_POST['selected_rolls'])) {
             foreach ($_POST['selected_rolls'] as $competitor_id => $rolls) {
-                // Simply storing the array of selected roll indices
-                $selected_rolls_indices = array_keys($rolls);
+                $competitor_id = intval($competitor_id);
+                $selected_rolls_indices = array_map('intval', array_keys($rolls));
                 update_post_meta($competitor_id, 'selected_rolls', $selected_rolls_indices);
             }
         }
 
-        // Redirect to avoid form resubmission issues 
-        // Defacto updated URL: admin.php?page=competitors-scoring&competitors_scores_updated=1
+        // Set a transient to show a success message
+        set_transient('competitors_scores_update_success', 'Scores successfully updated!', 10);
+
         wp_redirect(add_query_arg('competitors_scores_updated', '1', wp_get_referer()));
         exit;
     }
 }
-add_action('admin_post_competitors_score_update', 'handle_competitors_score_update');
+add_action('admin_post_competitors_score_update', 'handle_competitors_score_update_serialized');
+
+
+
+
+function show_competitors_scores_update_message() {
+    if ($message = get_transient('competitors_scores_update_success')) {
+        // Display the message
+        echo '<div class="notice notice-success is-dismissible"><p>' . esc_html($message) . '</p></div>';
+
+        // Delete the transient to ensure it's only shown once
+        delete_transient('competitors_scores_update_success');
+    }
+}
+
+// Hook this function to admin_notices to display the message in the WordPress admin
+add_action('admin_notices', 'show_competitors_scores_update_message');
