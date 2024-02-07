@@ -1,9 +1,16 @@
 /* General Style for Admin Table */
 .competitors-table {
-  background-color: #fff;
+  background-color: #f3f3f3;
   border-collapse: collapse;
+  color: #666;
   width: 100%;
 }
+
+/*
+.competitors-table tbody tr:nth-child(even) {
+  background-color: #fff; 
+}
+*/
 
 /* Table Header and Data Cells */
 .competitors-table th,
@@ -15,15 +22,21 @@
 
 /* Hover Effect */
 .competitors-table tr:hover,
-tr.competitors-header:hover {
+tr.competitors-header:hover,
+.competitors-table tr.selected-roll {
   background-color: #efe;
   opacity: 1;
 }
 
-/* Selected and Non-Selected Row Styles */
-.competitors-table {
-  background-color: #f3f3f3;
-  color: #666;
+/* Show the element when the parent tr is hovered over */
+.showonhover {
+  opacity: 0;
+  padding-left: 1em;
+}
+
+.competitors-header:hover .showonhover {
+  opacity: 1;
+  transition: opacity 0.5s ease;
 }
 
 .competitors-table .competitors-info,
