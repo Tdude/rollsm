@@ -62,9 +62,7 @@ function competitors_admin_page() {
 
 
 
-
 function judges_scoring_page() {
-
     if (!current_user_can('manage_options') && !current_user_can('competitors_judge')) {
         echo '<p>Access denied to scoring, dude. You dont seem to be The Judge.</p>';
         return;
@@ -100,6 +98,8 @@ function judges_scoring_page() {
     <tbody>
     HTML;
 
+    $grandTotal = 0;
+
     while ($competitors_query->have_posts()) {
         $competitors_query->the_post();
         $competitor_id = get_the_ID();
@@ -108,22 +108,37 @@ function judges_scoring_page() {
         echo render_competitor_info_row($competitor_id);
 
         $rolls = get_roll_names_and_max_scores(); // Ensure this function exists and returns an array
-
         $competitor_scores = get_post_meta($competitor_id, 'competitor_scores', true) ?: [];
         $selected_rolls = get_post_meta($competitor_id, 'selected_rolls', true) ?: [];
+
+        $competitorTotal = 0; // Initialize competitor total
 
         foreach ($rolls as $index => $roll) {
             $roll_scores = $competitor_scores[$index] ?? [];
             echo render_competitor_score_row($competitor_id, $index, $roll, $roll_scores, $selected_rolls);
+
+            // Directly calculate the total for this roll
+            $roll_total = ($roll_scores['left_score'] ?? 0) - ($roll_scores['left_deduct'] ?? 0) +
+                          ($roll_scores['right_score'] ?? 0) - ($roll_scores['right_deduct'] ?? 0);
+
+            $competitorTotal += $roll_total; // Add to competitor's total
         }
+
+        // Display the totals for this competitor
+        echo '<tr class="competitors-totals hidden" data-competitor="' . $competitor_id . '">
+        <td colspan="6"><b>Total</b></td><td><b>' . $competitorTotal . ' points</b></td></tr>';
+
+        $grandTotal += $competitorTotal; // Add to grand total
     }
 
+    // After all competitors are processed, display the Grand Total, not that anyone cares but nice statistics.
     echo <<<HTML
-    </tbody></table><i id="spinner"></i></div>
+    <tr class="grand-total" data-competitor="$competitor_id"><td colspan="6"><b>Grand Total</b> 
+    The total score for all contestants. It can be viewed as Judge or Competition Performance. Divide the Grand Total with number of contestants.</td><td><b> {$grandTotal} </b></td></tr>
+    </tbody></table><div id="spinner"><div></div><div></div></div></div>
     <p><input type="submit" value="Update Scores" class="button button-primary"></p>
     </form>
     HTML;
-
     wp_reset_postdata();
 }
 
@@ -153,8 +168,8 @@ function render_competitor_info_row($competitor_id) {
     // Assuming the times are stored as Unix timestamps or are otherwise directly comparable
     $start_time = $start_time_meta ? date('H:i:s', strtotime($start_time_meta)) : 'N/A';
     $stop_time = $stop_time_meta ? date('H:i:s', strtotime($stop_time_meta)) : 'N/A';
-    echo (' STRT: ' . $start_time);
-    echo (' STOP: ' . $stop_time);
+    // echo (' STRT: ' . $start_time);
+    // echo (' STOP: ' . $stop_time);
     
     // Calculate total time if both start and stop times are available
     if ($start_time_meta && $stop_time_meta) {
@@ -195,10 +210,10 @@ function render_competitor_score_row($competitor_id, $index, $roll, $scores, $se
         // Adjusted for 'competitor_scores' data structure to display empty if score is 0
         $value = isset($scores[$key]) && $scores[$key] !== 0 ? esc_attr($scores[$key]) : '';
         $input_name = "competitor_scores[$competitor_id][$index][$key]";
-        $row_contents .= "<td><input type=\"text\" class=\"score-input\" name=\"$input_name\" maxlength=\"2\" value=\"$value\"></td>";
+        $row_contents .= '<td><input type="text" class="score-input" name="' . $input_name . '" maxlength="2" value="' . $value . '"></td>';
     }
 
-    return "<tr class=\"competitors-scores $selectedClass hidden\" data-competitor=\"$competitor_id\">$row_contents</tr>";
+    return '<tr class="competitors-scores ' . $selectedClass . ' hidden" data-competitor="' . $competitor_id . '">' . $row_contents . '</tr>';
 }
 
 
