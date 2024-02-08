@@ -6,9 +6,11 @@ function echo_table_cell($content) {
 
 
 function competitors_admin_page() {
-    if (!current_user_can('edit_posts')) {
-        wp_die(__('Access denied.', 'competitors'));
+    if (!current_user_can('manage_options') && !current_user_can('competitors_judge')) {
+        echo '<p>Access denied to scoring, dude. You dont seem to be The Judge.</p>';
+        return;
     }
+    
     $args = array(
         'post_type' => 'competitors',
         'posts_per_page' => -1          
@@ -63,8 +65,9 @@ function competitors_admin_page() {
 
 
 function judges_scoring_page() {
-    if (!current_user_can('manage_options')) {
-        echo '<p>Access denied to scoring, dude.</p>';
+
+    if (!current_user_can('manage_options') && !current_user_can('competitors_judge')) {
+        echo '<p>Access denied to scoring, dude. You dont seem to be The Judge.</p>';
         return;
     }
 
@@ -78,10 +81,23 @@ function judges_scoring_page() {
     echo '<p>Click name rows to have a look-see.</p>';
     echo '<form action="' . esc_url(admin_url('admin-post.php')) . '" method="post">';
     wp_nonce_field('competitors_score_update_action', 'competitors_score_update_nonce');
-    echo '<input type="hidden" name="action" value="competitors_score_update">';
+    echo '<input type="hidden" name="action" value="competitors_score_update">';    
+    // Hidden inputs to store timer values
+    echo '<input type="hidden" name="start_time" id="start-time" value="">
+    <input type="hidden" name="stop_time" id="stop-time" value="">';
+
     echo '<p><input type="submit" value="Update Scores" class="button button-primary"></p>';
     echo '<table class="competitors-table" id="judges-scoring">';
     echo '<tbody>';
+
+        // Timer HTML
+        echo '<div id="timer">
+        <p>Timer: <span id="timer-display">00:00:00</span></p>
+        <button type="button button-secondary" id="start-timer">Start</button>
+        <button type="button button-secondary" id="stop-timer">Stop</button>
+        <button type="button button-secondary" id="reset-timer">Reset</button> <!-- Reset button added -->
+        </div>';
+
 
     while ($competitors_query->have_posts()) {
         $competitors_query->the_post();
@@ -114,7 +130,7 @@ function render_competitor_header_row($competitor_id) {
     // Heredoc syntax works fine
     return <<<HTML
         <tr class="competitors-header" data-competitor="$competitor_id">
-            <th colspan="2"><span id="close-details" class="dashicons dashicons-arrow-down-alt2"></span> $title (click to see scoresheet)</th>
+            <th colspan="2"><span id="close-details" class="dashicons dashicons-arrow-down-alt2"></span> $title <span class="showonhover">(click to see info and scoresheet)</span></th>
             <th width="7%">L</th><th width="7%">L-</th><th width="7%">R</th><th width="7%">R-</th><th width="7%">Sum</th>
         </tr>
     HTML;
@@ -164,10 +180,24 @@ function handle_competitors_score_update_serialized() {
         $_POST['action'] === 'competitors_score_update' &&
         check_admin_referer('competitors_score_update_action', 'competitors_score_update_nonce')) {
 
-        // Check and update scores for each competitor
+        // Additional handling for start and stop times
+        $start_time_global = isset($_POST['start_time']) ? sanitize_text_field($_POST['start_time']) : '';
+        $stop_time_global = isset($_POST['stop_time']) ? sanitize_text_field($_POST['stop_time']) : '';
+
         if (!empty($_POST['competitor_scores']) && is_array($_POST['competitor_scores'])) {
             foreach ($_POST['competitor_scores'] as $competitor_id => $rolls_scores) {
                 $competitor_id = intval($competitor_id); // Ensure $competitor_id is an integer
+
+                // Retrieve existing start time for this competitor, if any
+                $existing_start_time = get_post_meta($competitor_id, 'start_time', true);
+
+                // If there's no existing start time, save the new start time
+                if (empty($existing_start_time) && !empty($start_time_global)) {
+                    update_post_meta($competitor_id, 'start_time', $start_time_global);
+                }
+
+                // Always update the stop time
+                update_post_meta($competitor_id, 'stop_time', $stop_time_global);
 
                 // Initialize an array to hold all scores for serialization
                 $scores_array = [];
@@ -177,7 +207,7 @@ function handle_competitors_score_update_serialized() {
                     foreach ($score_types as $score_type => $score_value) {
                         $score_type = sanitize_key($score_type);
                         $sanitized_score_value = intval($score_value);
-                        
+
                         // Store scores in an array instead of creating a unique meta key
                         $scores_array[$roll_index][$score_type] = $sanitized_score_value;
                     }
@@ -197,7 +227,6 @@ function handle_competitors_score_update_serialized() {
             }
         }
 
-        // Set a transient to show a success message
         set_transient('competitors_scores_update_success', 'Scores successfully updated!', 10);
 
         wp_redirect(add_query_arg('competitors_scores_updated', '1', wp_get_referer()));
