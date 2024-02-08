@@ -2,10 +2,10 @@
 /**
  * Plugin Name: Competitors
  * Description:  A RollSM registering and scoreboard plugin.
- * Version: 0.61
+ * Version: 0.63
  * Author: Tdude
  */
-define('COMPETITORS_PLUGIN_VERSION', '0.6');
+define('COMPETITORS_PLUGIN_VERSION', '0.7');
 
 // Un-clutter color picker for all non-admins
 function remove_color_scheme_for_non_admins() {
@@ -400,8 +400,8 @@ function redirect_judge_after_login($user_login, $user) {
     if (user_can($user, 'competitors_judge')) {
         // Assuming 'competitors' is a custom post type and 'competitors-scoring' is a specific page for Judges
         // https://rollsm.se/wp-admin/edit.php?post_type=competitors&page=competitors-scoring
-        //wp_redirect(admin_url('edit.php?post_type=competitors&page=competitors-scoring')); // This should fckin work but doesnt!
-        wp_redirect(admin_url('/')); // redirects to /wp-admin
+        wp_redirect(admin_url('edit.php?post_type=competitors&page=competitors-scoring')); // This should fckin work but doesnt!
+        //wp_redirect(admin_url('/')); // redirects to /wp-admin
         
         exit;
     }
