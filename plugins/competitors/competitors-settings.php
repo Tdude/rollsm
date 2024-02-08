@@ -2,10 +2,20 @@
 /**
  * Plugin Name: Competitors
  * Description:  A RollSM registering and scoreboard plugin.
- * Version: 0.58
+ * Version: 0.61
  * Author: Tdude
  */
-define('COMPETITORS_PLUGIN_VERSION', '0.58');
+define('COMPETITORS_PLUGIN_VERSION', '0.6');
+
+// Un-clutter color picker for all non-admins
+function remove_color_scheme_for_non_admins() {
+    // Check if the current user is not an administrator
+    if (!current_user_can('manage_options')) {
+        // Remove the color scheme picker
+        remove_action('admin_color_scheme_picker', 'admin_color_scheme_picker');
+    }
+}
+add_action('admin_init', 'remove_color_scheme_for_non_admins');
 
 
  // Include admin and public page functionalities
@@ -45,9 +55,6 @@ add_action('admin_enqueue_scripts', 'competitors_enqueue_admin_scripts');
 
 
 
-
-
-
 // Register Custom Post Type
 function create_competitors_post_type() {
     register_post_type('competitors', array(
@@ -82,6 +89,22 @@ function competitors_deactivate() {
 register_deactivation_hook(__FILE__, 'competitors_deactivate');
 
 
+
+// This is bullshit but added just in case of sour admin privs. Runs on activation of plugin.
+function add_custom_capabilities() {
+    // Get the administrator role.
+    $role = get_role('administrator');
+
+    // Add custom capabilities if they don't already exist.
+    if (!$role->has_cap('edit_competitors')) {
+        $role->add_cap('edit_competitors', true);
+    }
+}
+// Hook into 'admin_init' or another appropriate action.
+add_action('admin_init', 'add_custom_capabilities');
+
+
+
 // Admin menu for judges and settings page. Order of the params is important. See https://developer.wordpress.org/reference/functions/add_menu_page/
 function competitors_add_admin_menu() {
     add_menu_page(
@@ -103,7 +126,7 @@ function competitors_add_submenu_settings() {
         'competitors-settings',        // Parent slug ('null' if hidden from menu)
         'Competitors personal data',   // Page title
         'Personal data',               // Menu title
-        'edit_posts',                  // Capability Author and up
+        'edit_competitors',            // Capability Judge and up
         'competitors-detailed-data',   // Menu slug (different from the parent slug)
         'competitors_admin_page'       // Callback function
     );
@@ -116,12 +139,13 @@ function competitors_add_submenu_scoring() {
         'competitors-settings',
         'Judges scoring submenu',
         'Judges scoring',
-        'edit_others_posts',
+        'edit_competitors', // Capability
         'competitors-scoring',
         'judges_scoring_page'     
     );
 }
 add_action('admin_menu', 'competitors_add_submenu_scoring');
+
 
 
 
@@ -304,83 +328,15 @@ function get_roll_names_and_max_scores() {
 
 
 
-
-
-
-// Add different organizers and staff access
-/*
-function create_custom_user_roles() {
-    add_role('competitor', 'Competitor', array('read' => true));
-    add_role('judge', 'Judge', array('read' => true));
-    add_role('staff', 'Staff', array('read' => true, 'edit_posts' => true, 'delete_posts' => true));
-}
-add_action('init', 'create_custom_user_roles');
-
-// Then let them access certain function
-function restrict_admin_pages_by_role() {
-    $current_user = wp_get_current_user();
-
-    if (!is_admin() || !isset($current_user->roles[0])) {
-        return;
-    }
-
-    $role = $current_user->roles[0];
-    $current_page = $_SERVER['REQUEST_URI'];
-
-    switch ($role) {
-        case 'competitor':
-            if (!preg_match('/post=' . $current_user->ID . '&action=edit/', $current_page)) {
-                wp_redirect(admin_url('index.php')); // Redirect Competitors to the dashboard or a specific page
-                exit;
-            }
-            break;
-        case 'judge':
-            if (strpos($current_page, 'page=competitors-scoring') === false) {
-                wp_redirect(admin_url('index.php')); // Redirect Judges
-                exit;
-            }
-            break;
-        case 'staff':
-            if (strpos($current_page, 'page=competitors-detailed-data') === false) {
-                wp_redirect(admin_url('index.php')); // Redirect Staff
-                exit;
-            }
-            break;
-    }
-}
-add_action('admin_init', 'restrict_admin_pages_by_role');
-*/
-
-
-
-
 function custom_back_button_shortcode($atts) {
     // Shortcode attributes with default values for URL and button text
-    // [back_button url="https://example.com" text="Go there or go Home"]
-    // [back_button text="Back to Previous Page"]
+    // [custom_button url="https://example.com" text="Go there or go Home"]
+    // [custom_button text="Back to Previous Page"]
 
     $attributes = shortcode_atts(array(
         'url' => '', // Default is empty, meaning no custom URL is provided
         'text' => 'Go Back', // Default button text
     ), $atts);
-
-    $css = '<style>
-                .custom-back-button {
-                    display: inline-block;
-                    padding: 10px 20px;
-                    background-color: white;
-                    color: black;
-                    border: 2px solid black;
-                    border-radius: 3px;;
-                    text-decoration: none;
-                    font-size: 16px;
-                    margin: 20px 0;
-                    cursor: pointer;
-                }
-                .custom-back-button:hover {
-                    background-color: #f8f8f8;
-                }
-            </style>';
 
     // Sanitize the button text to ensure it's safe to use
     $button_text = sanitize_text_field($attributes['text']);
@@ -395,7 +351,59 @@ function custom_back_button_shortcode($atts) {
         $button_html = '<a href="#" onclick="window.history.back(); return false;" class="custom-back-button">' . $button_text . '</a>';
     }
 
-    return $css . $button_html;
+    return $button_html;
 }
-add_shortcode('back_button', 'custom_back_button_shortcode');
+add_shortcode('custom_button', 'custom_back_button_shortcode');
 
+
+
+
+
+
+function add_custom_roles() {
+    remove_role('competitor');
+    remove_role('staff');
+    remove_role('judge');
+    remove_role('competitor_editor');
+    remove_role('competitor_staff');
+    remove_role('competitor_judge');
+
+    add_role(
+        'competitors_judge',
+        __('Judge'),
+        array(
+            'read' => true,
+            'edit_competitors' => true,
+            'read_competitors' => true,
+            // 'edit_others_posts' => true, // Include only if necessary for Judges.
+            // Additional capabilities can be added as needed.
+        )
+    );
+}
+add_action('init', 'add_custom_roles');
+
+
+function restrict_menu_items() {
+    if (current_user_can('competitors_judge')) {
+        // Remove unnecessary menu items for Judges
+        remove_menu_page('edit.php'); // Posts
+        remove_menu_page('edit-comments.php'); // Comments
+        remove_menu_page('upload.php'); // Media
+        remove_menu_page('tools.php'); // Tools
+        remove_menu_page('options-general.php'); // Settings
+        // Add or remove menu items as needed
+    }
+}
+add_action('admin_menu', 'restrict_menu_items');
+
+function redirect_judge_after_login($user_login, $user) {
+    if (user_can($user, 'competitors_judge')) {
+        // Assuming 'competitors' is a custom post type and 'competitors-scoring' is a specific page for Judges
+        // https://rollsm.se/wp-admin/edit.php?post_type=competitors&page=competitors-scoring
+        //wp_redirect(admin_url('edit.php?post_type=competitors&page=competitors-scoring')); // This should fckin work but doesnt!
+        wp_redirect(admin_url('/')); // redirects to /wp-admin
+        
+        exit;
+    }
+}
+add_action('wp_login', 'redirect_judge_after_login', 10, 2);
