@@ -63,7 +63,6 @@ function competitors_admin_page() {
 
 
 
-
 function judges_scoring_page() {
 
     if (!current_user_can('manage_options') && !current_user_can('competitors_judge')) {
@@ -77,27 +76,29 @@ function judges_scoring_page() {
         'order' => 'DESC',
     ]);
 
-    echo '<h1>Competitors Judges Scoring Page</h1>';
-    echo '<p>Click name rows to have a look-see.</p>';
-    echo '<form action="' . esc_url(admin_url('admin-post.php')) . '" method="post">';
-    wp_nonce_field('competitors_score_update_action', 'competitors_score_update_nonce');
-    echo '<input type="hidden" name="action" value="competitors_score_update">';    
-    // Hidden inputs to store timer values
-    echo '<input type="hidden" name="start_time" id="start-time" value="">
-    <input type="hidden" name="stop_time" id="stop-time" value="">';
+    $actionUrl = esc_url(admin_url('admin-post.php'));
+    $nonceField = wp_nonce_field('competitors_score_update_action', 'competitors_score_update_nonce', true, false);
 
-    echo '<p><input type="submit" value="Update Scores" class="button button-primary"></p>';
-    echo '<table class="competitors-table" id="judges-scoring">';
-    echo '<tbody>';
-
-        // Timer HTML
-        echo '<div id="timer">
+    // Using Heredoc syntax to clean up the echo statements. The ending HTML statement is sketchy. Do not indent passed the opening.
+    echo <<<HTML
+    <h1>Competitors Judges Scoring Page</h1>
+    <form action="{$actionUrl}" method="post">
+    {$nonceField}
+    <input type="hidden" name="action" value="competitors_score_update">
+    <input type="hidden" name="start_time" id="start-time" value="">
+    <input type="hidden" name="stop_time" id="stop-time" value="">
+    <p><input type="submit" value="Update Scores to show live" class="button button-primary"></p>
+    <div id="timer">
         <p>Timer: <span id="timer-display">00:00:00</span></p>
-        <button type="button button-secondary" id="start-timer">Start</button>
-        <button type="button button-secondary" id="stop-timer">Stop</button>
-        <button type="button button-secondary" id="reset-timer">Reset</button> <!-- Reset button added -->
-        </div>';
-
+        <button type="button" class="button-success" id="start-timer">Start</button>
+        <button type="button" class="button-warning" id="stop-timer">Stop</button>
+        <button type="button" class="button-danger" id="reset-timer">Reset</button>
+    </div>
+    <p>Click name rows to have a look-see. Phone is also ok to handle this.</p>
+    <div id="judges-scoring-container">
+    <table class="competitors-table" id="judges-scoring">
+    <tbody>
+    HTML;
 
     while ($competitors_query->have_posts()) {
         $competitors_query->the_post();
@@ -117,9 +118,12 @@ function judges_scoring_page() {
         }
     }
 
-    echo '</tbody></table>';
-    echo '<p><input type="submit" value="Update Scores" class="button button-primary"></p>';
-    echo '</form>';
+    echo <<<HTML
+    </tbody></table><i id="spinner"></i></div>
+    <p><input type="submit" value="Update Scores" class="button button-primary"></p>
+    </form>
+    HTML;
+
     wp_reset_postdata();
 }
 
@@ -141,16 +145,41 @@ function render_competitor_info_row($competitor_id) {
     $participation_class = esc_html(get_post_meta($competitor_id, 'participation_class', true));
     $speaker_info = esc_html(get_post_meta($competitor_id, 'speaker_info', true));
     $sponsors = esc_html(get_post_meta($competitor_id, 'sponsors', true));
+    
+    // Fetch start and stop times
+    $start_time_meta = get_post_meta($competitor_id, 'start_time', true);
+    $stop_time_meta = get_post_meta($competitor_id, 'stop_time', true);
+
+    // Assuming the times are stored as Unix timestamps or are otherwise directly comparable
+    $start_time = $start_time_meta ? date('H:i:s', strtotime($start_time_meta)) : 'N/A';
+    $stop_time = $stop_time_meta ? date('H:i:s', strtotime($stop_time_meta)) : 'N/A';
+    echo (' STRT: ' . $start_time);
+    echo (' STOP: ' . $stop_time);
+    
+    // Calculate total time if both start and stop times are available
+    if ($start_time_meta && $stop_time_meta) {
+        $total_seconds = strtotime($stop_time_meta) - strtotime($start_time_meta);
+        $hours = floor($total_seconds / 3600);
+        $minutes = floor(($total_seconds % 3600) / 60);
+        $seconds = $total_seconds % 60;
+        
+        // Format total time as H:i:s
+        $total_time = sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
+    } else {
+        $total_time = 'N/A';
+    }
 
     return <<<HTML
         <tr class="competitors-info hidden" data-competitor="$competitor_id">
             <td>$speaker_info</td>
             <td>$sponsors</td>
             <td colspan="3">$club</td>
-            <td colspan="2">$participation_class</td>
+            <td>$participation_class</td>
+            <td>Start: $start_time | Total: $total_time</td>
         </tr>
     HTML;
 }
+
 
 function render_competitor_score_row($competitor_id, $index, $roll, $scores, $selected_rolls) {
     $roll_name = esc_html($roll['name']);
@@ -227,7 +256,7 @@ function handle_competitors_score_update_serialized() {
             }
         }
 
-        set_transient('competitors_scores_update_success', 'Scores successfully updated!', 10);
+        set_transient('competitors_scores_update_success', 'Scores successfully updated! Here is where also the timer gets saved. Soon baby.', 10);
 
         wp_redirect(add_query_arg('competitors_scores_updated', '1', wp_get_referer()));
         exit;
