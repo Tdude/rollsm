@@ -6,14 +6,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const competitorId = this.dataset.competitor;
     
             // Close all rows except for the clicked competitor's rows
-            document.querySelectorAll('.competitors-scores, .competitors-info').forEach(row => {
+            document.querySelectorAll('.competitors-scores, .competitors-info, .grand-total, .competitors-totals').forEach(row => {
                 if (row.dataset.competitor !== competitorId) {
                     row.classList.add('hidden');
                 }
             });
     
             // Toggle visibility for the clicked competitor's scores and info rows
-            document.querySelectorAll(`.competitors-scores[data-competitor="${competitorId}"], .competitors-info[data-competitor="${competitorId}"]`).forEach(row => {
+            document.querySelectorAll(`.competitors-scores[data-competitor="${competitorId}"], .competitors-totals[data-competitor="${competitorId}"], .competitors-total[data-competitor="${competitorId}"], .competitors-info[data-competitor="${competitorId}"]`).forEach(row => {
                 row.classList.toggle('hidden');
             });
     
@@ -63,15 +63,20 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Calculate total score
-        let total = (left - left_deduct) + (right - right_deduct);
+        // Ensure deducts are not greater than their corresponding scores
+        left_deduct = Math.min(left_deduct, left);
+        right_deduct = Math.min(right_deduct, right);
+
+        // Calculate total score ensuring it's not below zero
+        let total = Math.max(0, (left - left_deduct) + (right - right_deduct));
 
         // Find the total score input for this row and update its value
         const totalInput = row.querySelector('input.score-input[name*="total"]');
         if (totalInput) {
-            totalInput.value = total;
+            totalInput.value = total >= 0 ? total : 0; // Additional check redundant due to Math.max above
         }
     }
+
 
 
 
@@ -175,27 +180,42 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 
+
+    // Timer in admin scores page.
     var timer = document.getElementById('timer');
+
     if (timer) {
         let timerStarted = false;
         let paused = true;
         let elapsedTime = 0;
+        let startTime = 0;
+        let tenths = 0;
         const timerDisplay = document.getElementById('timer-display');
         const startBtn = document.getElementById('start-timer');
         const stopBtn = document.getElementById('stop-timer');
         const resetBtn = document.getElementById('reset-timer');
+        const spinner = document.getElementById('spinner');
         let interval;
+
+        // Initially show the spinner
+        showSpinner();
 
         function updateTimerDisplay() {
             const hours = String(Math.floor(elapsedTime / 3600000)).padStart(2, '0');
             const minutes = String(Math.floor((elapsedTime % 3600000) / 60000)).padStart(2, '0');
             const seconds = String(Math.floor((elapsedTime % 60000) / 1000)).padStart(2, '0');
-            // Display tenths as fixed ".00" to simulate precision without actual tenths calculation
-            timerDisplay.textContent = `${hours}:${minutes}:${seconds}.00`;
+            timerDisplay.textContent = `${hours}:${minutes}:${seconds}.${tenths.toString().padStart(2, '0')}`;
+        }
+
+        function animateTenths() {
+            tenths = (tenths + 1) % 10;
+            updateTimerDisplay();
         }
 
         startBtn.addEventListener('click', function(e) {
-            e.preventDefault(); // Prevent any default button action
+            e.preventDefault();
+            hideSpinner(); // Hide the spinner when the timer starts
+
             if (!timerStarted) {
                 startTime = Date.now() - elapsedTime;
                 timerStarted = true;
@@ -203,16 +223,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 startBtn.textContent = 'Pause';
                 interval = setInterval(function() {
                     elapsedTime = Date.now() - startTime;
-                    updateTimerDisplay();
-                }, 1000); // Update every 1000 milliseconds (1 second)
+                    animateTenths();
+                }, 100);
             } else if (paused) {
                 startTime = Date.now() - elapsedTime;
                 paused = false;
                 startBtn.textContent = 'Pause';
                 interval = setInterval(function() {
                     elapsedTime = Date.now() - startTime;
-                    updateTimerDisplay();
-                }, 1000); // Continue updating every second
+                    animateTenths();
+                }, 100);
             } else {
                 clearInterval(interval);
                 paused = true;
@@ -224,7 +244,11 @@ document.addEventListener('DOMContentLoaded', function() {
             clearInterval(interval);
             paused = true;
             timerStarted = false;
+            // elapsedTime = 0; // Resets clock
+            tenths = 0; // Reset tenths
+            updateTimerDisplay();
             startBtn.textContent = 'Start';
+            //showSpinner(); // Show spinner when the timer is stopped
         });
 
         resetBtn.addEventListener('click', function() {
@@ -232,13 +256,22 @@ document.addEventListener('DOMContentLoaded', function() {
             paused = true;
             timerStarted = false;
             elapsedTime = 0;
+            tenths = 0; // Reset tenths
             updateTimerDisplay();
             startBtn.textContent = 'Start';
+            showSpinner(); // Show spinner on reset
         });
+
+        function showSpinner() {
+            spinner.classList.add('show');
+            spinner.classList.remove('hidden');
+        }
+
+        function hideSpinner() {
+            spinner.classList.add('hidden');
+            spinner.classList.remove('show');
+        }
     }
-
-
-
 
 });
     
