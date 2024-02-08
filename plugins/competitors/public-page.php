@@ -13,25 +13,18 @@ function competitors_form_html() {
             <legend>Personal info</legend>
             <label for="name">Name:</label>
             <input aria-label="Name" type="text" id="name" name="name"><br>
-
             <label for="email">Email:</label>
             <input aria-label="Email" type="text" id="email" name="email"><br>
-
             <label for="phone">Phone:</label>
             <input aria-label="Phone" type="text" id="phone" name="phone"><br>
-
             <label for="club">Club:</label>
             <input aria-label="Club" type="text" id="club" name="club"><br>
-
             <label for="license">License:</label>
             <input aria-label="License" type="checkbox" id="license" name="license"><br>
-
             <label for="sponsors">Sponsors:</label>
             <input aria-label="Sponsors" type="text" id="sponsors" name="sponsors"><br>
-
             <label for="speaker_info">Speaker Info:</label>
             <textarea aria-label="Speaker Info" id="speaker_info" name="speaker_info"></textarea><br>
-
             <label>Participation in Class:</label><br>
             <input aria-label="Participation Class - Open" type="radio" id="open" name="participation_class" value="open">
             <label for="open">Open (International participants)</label><br>
@@ -39,7 +32,6 @@ function competitors_form_html() {
             <label for="championship">Championship (Swedish club member and comp. <a href="https://rollsm.se/tavlingslicens-for-dig-utan-klubbtillhorighet/">license holder</a>)</label><br>
             <input aria-label="Participation Class - Amateur" type="radio" id="amateur" name="participation_class" value="amateur">
             <label for="amateur">Amateur (No license needed)</label><br>
-
             <input aria-label="Consent" type="checkbox" id="consent" name="consent">
             <label for="consent">I agree for you to save my data, publish results, photos etc. I also agree to have fun and be nice.</label><br>
         </fieldset>
@@ -58,7 +50,7 @@ function competitors_form_html() {
                     </th>
                     <th>Name of roll or maneuver. Uncheck the rolls you don't want to perform. You can change your mind during the event.</th>
                 </tr>
-                <?php 
+                <?php
                 // Assuming get_roll_names_and_max_scores() is already defined and returns an associative array
                 $rolls = get_roll_names_and_max_scores();
 
@@ -73,7 +65,6 @@ function competitors_form_html() {
                 }
 
                 ?>
-
             </table>
         </fieldset>
 
@@ -210,7 +201,7 @@ function competitors_scoring_list_page() {
     echo '</ul>';
     echo '</div>';
     echo '<div id="competitors-details-container"></div>';
-    
+
 }
 
 
@@ -237,10 +228,9 @@ add_action('wp_ajax_nopriv_load_competitor_details', 'load_competitor_details');
 
 function competitors_scoring_view_page($competitor_id = 0) {
     $rolls = get_roll_names_and_max_scores();
-    
+
     $competitor_scores = get_post_meta($competitor_id, 'competitor_scores', true);
     $selected_rolls_indexes = (array) get_post_meta($competitor_id, 'selected_rolls', true);
-    
     $noScoresYet = empty($competitor_scores);
     $scoresText = $noScoresYet ? " - Newly registered" : "";
     echo '<h3><a href="#" id="close-details" class="competitors-back-link"><i class="dashicons dashicons-arrow-right-alt2 arrow-back"></i>' . esc_html(get_the_title($competitor_id)) . $scoresText . '</a></h3>';
@@ -254,22 +244,28 @@ function competitors_scoring_view_page($competitor_id = 0) {
         $selectedClass = $isSelected ? 'selected-roll' : 'non-selected-roll';
 
         $scores = $competitor_scores[$index] ?? [];
-        // Adjust the display logic for scores to ensure zeros are not displayed unless explicitly entered
-        $displayScores = array_map(function($score) {
-            // Treat "0" values as unset, displaying them as empty strings
-            return ($score !== '' && $score !== 0) ? $score : '';
-        }, $scores);
+        $left_score = $scores['left_score'] ?? 0;
+        $left_deduct = $scores['left_deduct'] ?? 0;
+        $right_score = $scores['right_score'] ?? 0;
+        $right_deduct = $scores['right_deduct'] ?? 0;
 
-        $total = array_sum(array_values($displayScores)); // Sum the displayed scores for total calculation
+        // Calculate total ensuring deduct does not exceed score and total is not negative
+        $total_left = max($left_score - $left_deduct, 0);
+        $total_right = max($right_score - $right_deduct, 0);
+        $total = $total_left + $total_right;
 
+        // Add to grand total
+        $grand_total += $total;
+
+        // Display scores, replacing zeros with an empty string
         echo sprintf('<tr class="%s"><td>%s (%s)</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%d</td></tr>',
             esc_attr($selectedClass),
             esc_html($roll['name']),
             esc_html($roll['max_score']),
-            $displayScores['left_score'] ?? '',
-            $displayScores['left_deduct'] ?? '',
-            $displayScores['right_score'] ?? '',
-            $displayScores['right_deduct'] ?? '',
+            $left_score ? $left_score : '',
+            $left_deduct ? $left_deduct : '',
+            $right_score ? $right_score : '',
+            $right_deduct ? $right_deduct : '',
             $total
         );
     }
