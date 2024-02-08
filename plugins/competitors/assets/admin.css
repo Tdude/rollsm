@@ -1,21 +1,103 @@
-/* General Style for Admin Table */
-.competitors-table {
-  background-color: #f3f3f3;
-  border-collapse: collapse;
-  color: #666;
-  width: 100%;
+:root {
+  /* Base colors */
+  --primary: rgba(200, 60, 60, 1);
+  --primary-text-color: rgba(20, 20, 20, 1);
+  --border-radius-medium: 4px;
+
+  --info-color: rgba(4, 164, 204, 0.8);
+  --light: rgba(255, 255, 255, 1);
+  --light-gray: rgba(240, 240, 240, 0.6);
+  --gray: rgba(200, 200, 200, 0.7);
+  --light-success: rgba(238, 255, 238, 1);
+
+  /* Warning, Danger, Success button colors */
+  --warning: rgba(224, 170, 0, 1);
+  --danger: rgb(220, 53, 70);
+  --success: rgb(40, 170, 70);
+
+  /* Padding and margins */
+  --distance-small: 0.5em 1em;
+
+  /* Border */
+  --button-border: 1px solid rgba(255, 255, 255, 0);
+  --button-border-hover: 1px solid rgba(200, 80, 80, 0.8);
+
+  /* Overlay color for the spinner */
+  --semi-white: rgba(255, 255, 255, 0.4);
 }
 
-/*
-.competitors-table tbody tr:nth-child(even) {
-  background-color: #fff; 
+button,
+.button {
+  padding: var(--distance-small);
+  margin: 0.5em 0;
+  background-color: var(--primary);
+  color: var(--primary-text-color);
+  border: var(--button-border);
+  border-radius: var(--border-radius-medium);
+  cursor: pointer;
+  transition: background-color 0.3s ease;
 }
-*/
+
+button:hover,
+.button:hover {
+  background-color: darken(var(--primary), 20%);
+  border: var(--button-border-hover);
+}
+
+/* Primary, Success, Warning, Danger button styles */
+.button-primary {
+  background-color: var(--info-color);
+  color: var(--light);
+}
+
+.button-success {
+  background-color: var(--success);
+  color: var(--light);
+}
+
+.button-warning {
+  background-color: var(--warning);
+  color: var(--light);
+}
+
+.button-danger {
+  background-color: var(--primary);
+  color: var(--light);
+}
+
+/* Action button styles */
+.button-action {
+  background-color: var(--info-color);
+  color: var(--light);
+}
+
+.button-primary:hover,
+.button-success:hover,
+.button-warning:hover,
+.button-danger:hover,
+.button-action:hover {
+  color: darken(var(--primary-text-color), 100%);
+}
+
+/* General Style for Admin Table */
+.competitors-table {
+  background-color: var(--light-gray);
+  border-collapse: collapse;
+  color: darken(var(--gray, 20%));
+  width: 100%;
+  font-size: 1.15em;
+  line-height: 1.3em;
+}
+.competitors-table .competitors-info,
+.competitors-table tr.selected-roll {
+  background-color: #fff;
+  color: #000;
+}
 
 /* Table Header and Data Cells */
 .competitors-table th,
 .competitors-table td {
-  border: 1px solid #ddd;
+  border: 1px solid var(--gray);
   padding: 8px;
   text-align: left;
 }
@@ -23,9 +105,13 @@
 /* Hover Effect */
 .competitors-table tr:hover,
 tr.competitors-header:hover,
-.competitors-table tr.selected-roll {
-  background-color: #efe;
-  opacity: 1;
+.competitors-table tr.selected-roll:hover {
+  background-color: var(--light-success);
+  cursor: pointer;
+}
+.competitors-totals {
+  background-color: var(--light-success);
+  color: var(--primary-text-color);
 }
 
 /* Show the element when the parent tr is hovered over */
@@ -33,16 +119,18 @@ tr.competitors-header:hover,
   opacity: 0;
   padding-left: 1em;
 }
+/* + Button */
+.wp-admin .plus-button {
+  padding-left: 1em;
+}
+.wp-admin .plus-button:before {
+  content: "+";
+  font-weight: bold;
+}
 
 .competitors-header:hover .showonhover {
   opacity: 1;
   transition: opacity 0.5s ease;
-}
-
-.competitors-table .competitors-info,
-.competitors-table tr.selected-roll {
-  background-color: #fff;
-  color: #000;
 }
 
 /* Input Field Styling */
@@ -53,29 +141,8 @@ tr.competitors-header:hover,
   box-sizing: border-box;
 }
 
-/* Button Styling */
-.button-primary {
-  margin-top: 20px; /* Consistent spacing */
-  padding: 10px 20px; /* Comfortable padding */
-}
-
-/* Custom Button Styles */
-.wp-admin .custom-button {
-  margin-left: 20px;
-}
-
-.wp-admin .plus-button:before {
-  content: "+";
-  font-weight: bold;
-}
-
-/* Accordion View for Judges Scoring */
-.competitors-table tr,
-tr.competitors-header {
-  transition: opacity 0.5s ease;
-}
-
 /* Hidden Rows Initial State */
+.competitors-totals .hidden,
 .competitors-table .hidden {
   max-height: 0;
   opacity: 0;
@@ -83,25 +150,77 @@ tr.competitors-header {
   transition: max-height 0.5s ease, opacity 0.5s ease;
 }
 
-/* Visible Rows State */
-.competitors-info,
-.competitors-scores {
-  max-height: 1000px;
+#timer-display {
+  display: inline-block;
+  font-size: 1.5em;
+  line-height: 2em;
+  padding: var(--distance-small);
+  font-family: monospace;
+  border: 1px solid var(--primary-text-color);
+  border-raduis: 4px;
+  background-color: var(--light);
 }
 
-/* Header Styles */
-.wrap h1 {
-  font-size: 2em;
-  font-weight: bold;
+/* Spinner styles for loading indication */
+#judges-scoring-container {
+  position: relative; /* Reference point for the spinner */
 }
 
-/* Dashicons */
-.dashicons {
-  vertical-align: middle;
-  margin-right: 5px;
+#spinner.show {
+  display: flex;
+  opacity: 1;
+  pointer-events: all; /* Allow interaction when visible */
 }
 
-/* Back Link Styling */
-.competitors-back-link {
-  text-decoration: none;
+.hidden,
+#spinner.hidden {
+  display: none;
+  opacity: 0;
+}
+
+/* Unfortunate name for an overlay */
+#spinner {
+  background-color: rgba(255, 255, 255, 0.4);
+  display: none;
+  opacity: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none; /* Initially prevent interaction */
+}
+#spinner:before {
+  content: "";
+  position: absolute;
+  border: 60px solid transparent;
+  border-top-color: var(--light);
+  border-right-color: var(--light);
+  border-radius: 50%;
+  transform: rotate(-45deg);
+  animation: rotate 5s infinite reverse linear;
+  width: 120px;
+  height: 120px;
+}
+
+#spinner:after {
+  content: "";
+  position: absolute;
+  border: 60px solid transparent;
+  border-bottom-color: var(--primary);
+  border-left-color: var(--primary);
+  border-radius: 50%;
+  transform: rotate(-100deg);
+  animation: rotate 4s infinite linear;
+}
+
+@keyframes rotate {
+  0% {
+    transform: rotate(-45deg);
+  }
+  100% {
+    transform: rotate(315deg);
+  }
 }
