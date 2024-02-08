@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
+
     // Toggle visibility of score and info rows in admin
     document.querySelectorAll('.competitors-header').forEach(header => {
         header.addEventListener('click', function() {
@@ -103,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
  
-    if (document.querySelector('#settings-page')) {
+    if (document.getElementById('settings-page')) {
         const wrapper = document.getElementById('competitors_roll_names_wrapper');
         const addButton = document.getElementById('add_more_roll_names');
 
@@ -172,6 +173,71 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+
+    var timer = document.getElementById('timer');
+    if (timer) {
+        let timerStarted = false;
+        let paused = true;
+        let elapsedTime = 0;
+        const timerDisplay = document.getElementById('timer-display');
+        const startBtn = document.getElementById('start-timer');
+        const stopBtn = document.getElementById('stop-timer');
+        const resetBtn = document.getElementById('reset-timer');
+        let interval;
+
+        function updateTimerDisplay() {
+            const hours = String(Math.floor(elapsedTime / 3600000)).padStart(2, '0');
+            const minutes = String(Math.floor((elapsedTime % 3600000) / 60000)).padStart(2, '0');
+            const seconds = String(Math.floor((elapsedTime % 60000) / 1000)).padStart(2, '0');
+            // Display tenths as fixed ".00" to simulate precision without actual tenths calculation
+            timerDisplay.textContent = `${hours}:${minutes}:${seconds}.00`;
+        }
+
+        startBtn.addEventListener('click', function(e) {
+            e.preventDefault(); // Prevent any default button action
+            if (!timerStarted) {
+                startTime = Date.now() - elapsedTime;
+                timerStarted = true;
+                paused = false;
+                startBtn.textContent = 'Pause';
+                interval = setInterval(function() {
+                    elapsedTime = Date.now() - startTime;
+                    updateTimerDisplay();
+                }, 1000); // Update every 1000 milliseconds (1 second)
+            } else if (paused) {
+                startTime = Date.now() - elapsedTime;
+                paused = false;
+                startBtn.textContent = 'Pause';
+                interval = setInterval(function() {
+                    elapsedTime = Date.now() - startTime;
+                    updateTimerDisplay();
+                }, 1000); // Continue updating every second
+            } else {
+                clearInterval(interval);
+                paused = true;
+                startBtn.textContent = 'Continue';
+            }
+        });
+
+        stopBtn.addEventListener('click', function() {
+            clearInterval(interval);
+            paused = true;
+            timerStarted = false;
+            startBtn.textContent = 'Start';
+        });
+
+        resetBtn.addEventListener('click', function() {
+            clearInterval(interval);
+            paused = true;
+            timerStarted = false;
+            elapsedTime = 0;
+            updateTimerDisplay();
+            startBtn.textContent = 'Start';
+        });
+    }
+
+
 
 
 });
