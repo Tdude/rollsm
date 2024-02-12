@@ -2,96 +2,145 @@
   /* Base colors */
   --primary: rgba(200, 60, 60, 1);
   --primary-text-color: rgba(20, 20, 20, 1);
-  --border-radius-medium: 4px;
 
-  --info-color: rgba(4, 164, 204, 0.8);
-  --light: rgba(255, 255, 255, 1);
-  --light-gray: rgba(240, 240, 240, 0.6);
-  --gray: rgba(200, 200, 200, 0.7);
+  --charcoal: rgba(10, 9, 9, 1);
+  --white: rgba(255, 255, 255, 1);
+  --gray: rgba(205, 204, 203, 1);
+  --dark-gray: rgba(100, 100, 119, 1);
+  --light-gray: rgba(245, 245, 244, 1);
   --light-success: rgba(238, 255, 238, 1);
 
   /* Warning, Danger, Success button colors */
+  --info: rgba(4, 164, 204, 0.8);
   --warning: rgba(224, 170, 0, 1);
   --danger: rgb(220, 53, 70);
   --success: rgb(40, 170, 70);
 
-  /* Padding and margins */
-  --distance-small: 0.5em 1em;
+  --info-darker: rgba(4, 158, 198, 1);
+  --warning-darker: rgba(224, 170, 0, 1);
+  --danger-darker: rgb(220, 53, 70);
+  --success-darker: rgb(40, 170, 70);
 
+  --info-darkest: rgba(2, 154, 194, 1);
+  --warning-darkest: rgba(224, 170, 0, 1);
+  --danger-darkest: rgb(220, 53, 70);
+  --success-darkest: rgb(40, 170, 70);
+
+  /* Padding and margins */
+  --distance-small: 0.1em 0.3em;
+  --distance-medium: 0.5em 1em;
   /* Border */
+  --border-radius-small: 4px;
+  --border-radius-medium: 7px;
+
   --button-border: 1px solid rgba(255, 255, 255, 0);
-  --button-border-hover: 1px solid rgba(200, 80, 80, 0.8);
+  --button-border-hover: 1px solid rgba(200, 80, 80, 1);
 
   /* Overlay color for the spinner */
-  --semi-white: rgba(255, 255, 255, 0.4);
+  --semi-white: rgba(255, 255, 255, 0.5);
 }
 
-button,
-.button {
+#timer button,
+#timer .button {
   padding: var(--distance-small);
-  margin: 0.5em 0;
+  margin: 0;
   background-color: var(--primary);
-  color: var(--primary-text-color);
+  color: var(--white);
   border: var(--button-border);
-  border-radius: var(--border-radius-medium);
+  border-radius: var(--border-radius-small);
   cursor: pointer;
   transition: background-color 0.3s ease;
+  min-width: 80px;
+  text-align: center;
+}
+/* Apply to button siblings */
+#timer .button + #timer .button {
+  margin-left: 1em;
 }
 
-button:hover,
-.button:hover {
-  background-color: darken(var(--primary), 20%);
+#timer button:hover,
+#timer .button:hover {
   border: var(--button-border-hover);
 }
 
 /* Primary, Success, Warning, Danger button styles */
-.button-primary {
-  background-color: var(--info-color);
-  color: var(--light);
+#timer .button-primary {
+  background-color: var(--info);
+  color: var(--white);
 }
-
-.button-success {
+#timer .button-primary:hover {
+  background-color: var(--info-darker);
+  border-color: var(--info-darkest);
+}
+#timer .button-success {
   background-color: var(--success);
-  color: var(--light);
+  border-color: var(--success-darker);
+}
+#timer .button-success:hover {
+  background-color: var(--success-darker);
+  border-color: var(--success-darkest);
 }
 
-.button-warning {
+#timer .button-warning {
   background-color: var(--warning);
-  color: var(--light);
+  border-color: var(--warning-darker);
+}
+#timer .button-warning:hover {
+  background-color: var(--warning-darker);
+  border-color: var(--warning-darkest);
 }
 
-.button-danger {
-  background-color: var(--primary);
-  color: var(--light);
+#timer .button-danger {
+  background-color: var(--danger);
+  border-color: var(--danger-darker);
+}
+#timer .button-danger:hover {
+  background-color: var(--danger-darker);
+  border-color: var(--danger-darkest);
 }
 
 /* Action button styles */
-.button-action {
-  background-color: var(--info-color);
-  color: var(--light);
+#timer .button-action {
+  background-color: var(--info);
+  color: var(--white);
 }
 
-.button-primary:hover,
-.button-success:hover,
-.button-warning:hover,
-.button-danger:hover,
-.button-action:hover {
-  color: darken(var(--primary-text-color), 100%);
+#timer .button-primary:hover,
+#timer .button-success:hover,
+#timer .button-warning:hover,
+#timer .button-danger:hover,
+#timer .button-action:hover {
+  color: var(--primary-text-color);
 }
 
+#timer-display {
+  display: inline-block;
+  font-size: 1.5em;
+  line-height: 1.5em;
+  padding: var(--distance-medium);
+  font-family: monospace;
+  border: 1px solid var(--primary-text-color);
+  border-radius: var(--border-radius-medium);
+  background-color: var(--white);
+}
+
+b.larger-txt {
+  font-size: 110%;
+  color: var(--charcoal);
+}
 /* General Style for Admin Table */
 .competitors-table {
   background-color: var(--light-gray);
   border-collapse: collapse;
-  color: darken(var(--gray, 20%));
+  color: var(--dark-gray);
   width: 100%;
   font-size: 1.15em;
   line-height: 1.3em;
 }
 .competitors-table .competitors-info,
 .competitors-table tr.selected-roll {
-  background-color: #fff;
-  color: #000;
+  background-color: var(--white);
+  color: var(--charcoal);
 }
 
 /* Table Header and Data Cells */
@@ -111,7 +160,7 @@ tr.competitors-header:hover,
 }
 .competitors-totals {
   background-color: var(--light-success);
-  color: var(--primary-text-color);
+  color: var(--charcoal);
 }
 
 /* Show the element when the parent tr is hovered over */
@@ -150,17 +199,6 @@ tr.competitors-header:hover,
   transition: max-height 0.5s ease, opacity 0.5s ease;
 }
 
-#timer-display {
-  display: inline-block;
-  font-size: 1.5em;
-  line-height: 2em;
-  padding: var(--distance-small);
-  font-family: monospace;
-  border: 1px solid var(--primary-text-color);
-  border-raduis: 4px;
-  background-color: var(--light);
-}
-
 /* Spinner styles for loading indication */
 #judges-scoring-container {
   position: relative; /* Reference point for the spinner */
@@ -180,7 +218,7 @@ tr.competitors-header:hover,
 
 /* Unfortunate name for an overlay */
 #spinner {
-  background-color: rgba(255, 255, 255, 0.4);
+  background-color: var(--semi-white);
   display: none;
   opacity: 0;
   position: absolute;
@@ -196,8 +234,8 @@ tr.competitors-header:hover,
   content: "";
   position: absolute;
   border: 60px solid transparent;
-  border-top-color: var(--light);
-  border-right-color: var(--light);
+  border-top-color: var(--white);
+  border-right-color: var(--white);
   border-radius: 50%;
   transform: rotate(-45deg);
   animation: rotate 5s infinite reverse linear;
