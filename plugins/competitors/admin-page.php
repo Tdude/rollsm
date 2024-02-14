@@ -11,11 +11,35 @@ function competitors_admin_page() {
         return;
     }
 
+    /* interesting take on WP meta
     $args = array(
         'post_type' => 'competitors',
+        'meta_key' => '_competitors_custom_order',
+        'orderby' => 'meta_value_num',
+        'meta_query' => [
+            'relation' => 'OR',
+            [
+                'key' => '_competitors_custom_order',
+                'compare' => 'EXISTS',
+            ],
+            [
+                'key' => '_competitors_custom_order',
+                'compare' => 'NOT EXISTS'
+            ]
+        ],
+        'order' => 'DESC',
         'posts_per_page' => -1          
     );
     $competitors_query = new WP_Query($args);
+    */
+
+    $competitors_query = new WP_Query([
+        'post_type' => 'competitors',
+        'meta_key' => '_competitors_custom_order',
+        'orderby' => 'meta_value_num',
+        'order' => 'DESC',
+        'posts_per_page' => -1,
+    ]);
 
     if ($competitors_query->have_posts()) {
         // Links within the plugin
@@ -69,12 +93,16 @@ function judges_scoring_page() {
 
     $competitors_query = new WP_Query([
         'post_type' => 'competitors',
-        'posts_per_page' => -1,
+        'meta_key' => '_competitors_custom_order',
+        'orderby' => 'meta_value_num',
         'order' => 'DESC',
+        'posts_per_page' => -1,
     ]);
 
     $actionUrl = esc_url(admin_url('admin-post.php'));
     $nonceField = wp_nonce_field('competitors_score_update_action', 'competitors_score_update_nonce', true, false);
+    $admin_email = get_option('admin_email');
+    $admin_email_link = 'Please contact the Admin: ' . esc_html($admin_email);
 
     echo <<<HTML
     <h1>Judges Scoring Page</h1>
@@ -83,67 +111,80 @@ function judges_scoring_page() {
     <input type="hidden" name="action" value="competitors_score_update">
     <p><input type="submit" value="Save scores" class="button button-primary save-scores"></p>
     <div id="timer">
-        <p>Timer<br><span id="timer-display">00:00:00</span></p>
+        <span><b>Timer</b></span><span id="timer-display">00:00:00</span>
         <button type="button" class="button button-success" id="start-timer">Start</button>
         <button type="button" class="button button-danger" id="reset-timer">Reset</button>
     </div>
-    <p>Click name rows to have a look-see. Start timer to...start timer. Clicking the name row (with the arrow) ALWAYS resets the timer. Timing for a particular competitor is saved when you click "Stop" and then "Save scores". Phone is also ok to handle this.</p>
+    <p>Clicking any competitor name row <b><i>always resets the timer</i></b>. Timing for a particular competitor is saved when you click "Pause" or "Save scores". This is live score timing. <b><i>There is no going back to adjust!</i></b> If you resave (or change) a competitor's score and save it, the timing for that competitor will be reset. You have been warned. If there is any <i>simple</i> logic you need, {$admin_email_link}.</p>
     <div id="judges-scoring-container">
     <table class="competitors-table" id="judges-scoring">
     <tbody>
     HTML;
 
     $grandTotal = 0;
+    $totalRollsPerformed = 0;
+    $validScoresCount = 0; // Initialize a counter for valid (non-zero, non-empty) scores
 
     while ($competitors_query->have_posts()) {
         $competitors_query->the_post();
         $competitor_id = get_the_ID();
-
-        // Generate timing fields for each competitor
-        echo <<<HTML
+        $rolls = get_roll_names_and_max_scores(); // from settings
+        $competitor_scores = get_post_meta($competitor_id, 'competitor_scores', true) ?: [];
+        $selected_rolls = get_post_meta($competitor_id, 'selected_rolls', true) ?: [];
+        $competitorTotal = 0;
+        $tempHTML = $layoutHTML = '';
+        // Generate timing fields for each competitor updated by js
+        $tempHTML .= <<<HTML
         <input type="hidden" name="start_time[{$competitor_id}]" id="start-time-{$competitor_id}" value="">
         <input type="hidden" name="stop_time[{$competitor_id}]" id="stop-time-{$competitor_id}" value="">
         HTML;
-
-        echo render_competitor_header_row($competitor_id);
-        echo render_competitor_info_row($competitor_id);
-
-        $rolls = get_roll_names_and_max_scores(); // Ensure this function exists and returns an array
-        $competitor_scores = get_post_meta($competitor_id, 'competitor_scores', true) ?: [];
-        $selected_rolls = get_post_meta($competitor_id, 'selected_rolls', true) ?: [];
-
-        $competitorTotal = 0; // Initialize competitor total
-
+    
         foreach ($rolls as $index => $roll) {
             $roll_scores = $competitor_scores[$index] ?? [];
-            echo render_competitor_score_row($competitor_id, $index, $roll, $roll_scores, $selected_rolls);
-
-            // Directly calculate the total for this roll
+            // Directly calculate the total points for this roll
             $roll_total = ($roll_scores['left_score'] ?? 0) - ($roll_scores['left_deduct'] ?? 0) +
                           ($roll_scores['right_score'] ?? 0) - ($roll_scores['right_deduct'] ?? 0);
-
-            $competitorTotal += $roll_total; // Add to competitor's total
+    
+            if (!empty($roll_total) && $roll_total != 0) {
+                $competitorTotal += $roll_total;
+                $totalRollsPerformed++;
+            }
+    
+            // Append score row to temporary HTML
+            $tempHTML .= render_competitor_score_row($competitor_id, $index, $roll, $roll_scores, $selected_rolls);
         }
-
-        // Display the totals for this competitor
-        echo '<tr class="competitors-totals hidden" data-competitor="' . $competitor_id . '">
+    
+        // Append header and info rows with the updated competitorTotal to temporary HTML
+        $layoutHTML .= render_competitor_header_row($competitor_id, $competitorTotal);
+        $layoutHTML .= render_competitor_info_row($competitor_id);
+        $layoutHTML .= $tempHTML;
+        // Now append the total row
+        $layoutHTML .= '<tr class="competitors-totals hidden" data-competitor="' . $competitor_id . '">
         <td colspan="6"><b>Total</b></td><td><b>' . $competitorTotal . ' points</b></td></tr>';
-
-        $grandTotal += $competitorTotal; // Add to grand total
+        // Check if competitorTotal is non-zero
+        if ($competitorTotal > 0) {
+            $grandTotal += $competitorTotal;
+            $validScoresCount++;
+        }
+        // Output the stored HTML
+        echo $layoutHTML;
     }
 
-    // Average score if there are contestants
-    $numberOfContestants = $competitors_query->post_count;
-    $averageScore = $numberOfContestants > 0 ? $grandTotal / $numberOfContestants : 0;
-    // Format to two decimals
-    $averageScoreFormatted = number_format($averageScore, 2, '.', '');
+
+    // Calculate averages based on valid scores rather than total number of contestants
+    $averageScore = $validScoresCount > 0 ? $grandTotal / $validScoresCount : 0;
+    $averageRolls = $validScoresCount > 0 ? $totalRollsPerformed / $validScoresCount : 0;
+    // Format to n decimals
+    $averageScoreFormatted = number_format($averageScore, 1, '.', '');
+    $averageRollsFormatted = number_format($averageRolls, 1, '.', '');
 
     // After all competitors are processed, display the Grand Total and the average score
     echo <<<HTML
     </tbody></table><table class="competitors-table"><tbody><tr class="competitors-totals grand-total" data-competitor="$competitor_id">
-    <td colspan="6"><b>Grand Total Score</b> (Avg: <b>{$averageScoreFormatted}</b> per contestant)</td>
-    <td><b>{$grandTotal}</b></td></tr></tbody></table>
-    <div id="spinner" class=""></div>
+    <td colspan="3"><b>Rolls performed</b> (Avg: <b>{$averageRollsFormatted}</b>  per competitor)</td>
+    <td colspan="3"><b>Grand Total Score</b> (Avg: <b>{$averageScoreFormatted}</b> points per competitor)</td>
+    <td width="7%"><b>{$grandTotal}</b></td></tr></tbody></table>
+    <div id="spinner" class="hidden"></div>
     <p><input type="submit" value="Save scores" class="button button-primary save-scores"></p>
     </form>
     HTML;
@@ -151,16 +192,18 @@ function judges_scoring_page() {
 
 
 
-function render_competitor_header_row($competitor_id) {
+function render_competitor_header_row($competitor_id, $competitorTotal) {
     $title = get_the_title($competitor_id);
-    // Heredoc syntax works fine
+    // Now using $competitorTotal in the heredoc output
     return <<<HTML
         <tr class="competitors-header" data-competitor="$competitor_id">
-            <th colspan="2"><span id="close-details" class="dashicons dashicons-arrow-down-alt2"></span><b class="larger-txt"> $title</b> <span class="showonhover">(click to see info and scoresheet)</span></th>
-            <th width="7%">L</th><th width="7%">L-</th><th width="7%">R</th><th width="7%">R-</th><th width="7%">Sum</th>
+            <th colspan="6"><span id="close-details" class="dashicons dashicons-arrow-down-alt2"></span><b class="larger-txt"> $title</b> <span class="showonhover">(click to see info and scoresheet)</span></th>
+            <th width="7%">$competitorTotal points</th>
         </tr>
     HTML;
 }
+
+
 
 function render_competitor_info_row($competitor_id) {
     $club = esc_html(get_post_meta($competitor_id, 'club', true));
@@ -197,6 +240,7 @@ function render_competitor_info_row($competitor_id) {
             <td>$participation_class</td>
             <td>Start: $start_time | Total: $total_time</td>
         </tr>
+        <tr class="th-columns hidden" data-competitor="$competitor_id"><th colspan="2">Maneuver</th><th width="7%">L</th><th width="7%">L-</th><th width="7%">R</th><th width="7%">R-</th><th></th></tr>
     HTML;
 }
 
@@ -228,6 +272,7 @@ function handle_competitors_score_update_serialized() {
         check_admin_referer('competitors_score_update_action', 'competitors_score_update_nonce')) {
 
         if (!empty($_POST['competitor_scores']) && is_array($_POST['competitor_scores'])) {
+            echo $competitor_id;
             foreach ($_POST['competitor_scores'] as $competitor_id => $rolls_scores) {
                 $competitor_id = intval($competitor_id);
 
@@ -255,6 +300,7 @@ function handle_competitors_score_update_serialized() {
                     }
                 }
                 // Update the 'competitor_scores' meta for the competitor with the new scores array
+                //error_log(print_r($scores_array, true);
                 update_post_meta($competitor_id, 'competitor_scores', $scores_array);
             }
         }
