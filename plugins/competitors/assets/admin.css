@@ -40,18 +40,32 @@
   --semi-white: rgba(255, 255, 255, 0.5);
 }
 
+#timer {
+  align-items: center;
+  background-color: var(--light-success);
+  border: 1px solid var(--gray);
+  display: flex;
+  flex-wrap: wrap; /* Allow items to wrap */
+  justify-content: space-evenly;
+  margin-top: 1em;
+  padding: 1em;
+  flex-direction: row; /* Default to horizontal layout */
+}
+
 #timer button,
 #timer .button {
+  flex: 0 1 6em;
   padding: var(--distance-small);
   margin: 0;
   background-color: var(--primary);
   color: var(--white);
   border: var(--button-border);
   border-radius: var(--border-radius-small);
+  min-width: 6em;
   cursor: pointer;
   transition: background-color 0.3s ease;
-  min-width: 80px;
   text-align: center;
+  width: auto;
 }
 /* Apply to button siblings */
 #timer .button + #timer .button {
@@ -115,13 +129,29 @@
 
 #timer-display {
   display: inline-block;
-  font-size: 1.5em;
-  line-height: 1.5em;
+  font-size: 2em;
   padding: var(--distance-medium);
+  margin: 1em 0;
   font-family: monospace;
   border: 1px solid var(--primary-text-color);
   border-radius: var(--border-radius-medium);
   background-color: var(--white);
+}
+
+/* Adjust flex-direction on smaller screens */
+@media (max-width: 600px) {
+  #timer {
+    flex-direction: column; /* Stack items vertically on small screens */
+  }
+  #timer button,
+  #timer .button {
+    margin-top: 10px; /* Add some space between stacked items */
+  }
+  /* Adjust the first button's margin-top for consistency */
+  #timer button:first-child,
+  #timer .button:first-child {
+    margin-top: 0;
+  }
 }
 
 b.larger-txt {
@@ -204,32 +234,30 @@ tr.competitors-header:hover,
   position: relative; /* Reference point for the spinner */
 }
 
-#spinner.show {
-  display: flex;
-  opacity: 1;
-  pointer-events: all; /* Allow interaction when visible */
-}
-
-.hidden,
-#spinner.hidden {
-  display: none;
-  opacity: 0;
-}
-
-/* Unfortunate name for an overlay */
 #spinner {
   background-color: var(--semi-white);
-  display: none;
+  display: none; /* Controlled by JS */
   opacity: 0;
-  position: absolute;
-  top: 0;
+  justify-content: center;
+  align-items: center;
   left: 0;
   right: 0;
   bottom: 0;
-  justify-content: center;
-  align-items: center;
-  pointer-events: none; /* Initially prevent interaction */
+  z-index: 10;
+  pointer-events: none !important; /* Prevent interaction */
+  transition: opacity 0.5s ease; /* Smooth appearance */
 }
+
+#spinner.show {
+  display: flex;
+  opacity: 1;
+}
+
+.hidden {
+  display: none;
+  opacity: 0;
+}
+
 #spinner:before {
   content: "";
   position: absolute;
@@ -238,7 +266,7 @@ tr.competitors-header:hover,
   border-right-color: var(--white);
   border-radius: 50%;
   transform: rotate(-45deg);
-  animation: rotate 5s infinite reverse linear;
+  animation: rotate 5s infinite reverse cubic-bezier(0.59, 0.23, 0.4, 0.79);
   width: 120px;
   height: 120px;
 }
@@ -251,7 +279,7 @@ tr.competitors-header:hover,
   border-left-color: var(--primary);
   border-radius: 50%;
   transform: rotate(-100deg);
-  animation: rotate 4s infinite linear;
+  animation: rotate 4s infinite cubic-bezier(0.59, 0.23, 0.4, 0.79);
 }
 
 @keyframes rotate {
@@ -261,4 +289,8 @@ tr.competitors-header:hover,
   100% {
     transform: rotate(315deg);
   }
+}
+
+#wpfooter {
+  position: relative;
 }
