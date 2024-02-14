@@ -4,11 +4,12 @@ function competitors_form_html() {
     ob_start(); 
     // Form HTML for public part ?>
 
-    <form action="<?php echo admin_url('admin-post.php'); ?>" method="post">
+    <form id="competitors-registration-form" action="<?php echo admin_url('admin-post.php'); ?>" method="post">
         <input type="hidden" name="action" value="competitors_form_submit">
 
         <h2>Registration RollSM 2024</h2>
-        <p>Remember to submit your registration at the <a href="#submit-button">bottom of the page</a>.</p>
+        <p>Remember to submit your registration at the <a href="#submitbutton">bottom of the page</a>.</p>
+
         <fieldset>
             <legend>Personal info</legend>
             <label for="name">Name:</label>
@@ -68,8 +69,13 @@ function competitors_form_html() {
             </table>
         </fieldset>
 
-        <a name="submit-button"></a>
-        <input type="submit" value="Submit"><?php
+        <div id="validation-message" class="hidden alert danger">
+        <span class="closebtn">&times;</span>
+        <strong>Oops!</strong> You have to fill in all the data!
+        </div>
+
+        <a name="submitbutton"></a>
+        <input type="submit" value="Submit" id="submit-button"><?php
         wp_nonce_field('competitors_form_submission', 'competitors_nonce');
         ?>
     </form>
@@ -138,6 +144,7 @@ function handle_competitors_form_submission() {
                 'consent' => $consent,
                 'competitor_scores' => array(), // Initialize competitor_scores for future updates
                 'selected_rolls' => $selected_rolls_indexes,
+                '_competitors_custom_order' => 0,
             ),
         );
 
@@ -164,18 +171,18 @@ add_action('admin_post_nopriv_competitors_form_submit', 'handle_competitors_form
 
 
 
-// For the public part we have a shortcode to show this in the page: [competitors_scoring]
+// For the public part we have a shortcode to show this in the page: [competitors_scoring_public]
 function competitors_scoring_shortcode() {
     ob_start();
     competitors_scoring_list_page(); // The initial list
     return ob_get_clean();
 }
-add_shortcode('competitors_scoring', 'competitors_scoring_shortcode');
+add_shortcode('competitors_scoring_public', 'competitors_scoring_shortcode');
 
 
 
 
-// Names list on the public side. Its clickable and opens load_competitor_details with ajax, which works.
+// Names list on the public side. Its clickable and opens load_competitor_details with ajax.
 function competitors_scoring_list_page() {
     if ($message = get_transient('competitors_scores_updated')) {
         echo '<div id="message" class="updated notice is-dismissible"><p>' . esc_html($message) . '</p></div>';
@@ -185,24 +192,60 @@ function competitors_scoring_list_page() {
     $args = [
         'post_type' => 'competitors',
         'posts_per_page' => -1,
-        'orderby' => 'meta_value_num',
-        'order' => 'DESC',
     ];
 
     $competitors_query = new WP_Query($args);
+    $competitors_data = [];
 
-    echo '<div id="competitors-list"><i id="spinner"></i>';
-    echo '<h2>List of competitors</h2>';
-    echo '<ul class="competitors-table">';
     while ($competitors_query->have_posts()) {
         $competitors_query->the_post();
-        echo '<li class="competitors-list-item" data-competitor-id="' . get_the_ID() . '">' . get_the_title() . '</li>';
+        $competitor_id = get_the_ID();
+        $competitors_club = get_post_meta($competitor_id, 'club', true);
+        $competitor_scores = get_post_meta($competitor_id, 'competitor_scores', true) ?: [];
+        $competitorTotal = 0;
+
+        // Retrieve roll names and max scores from settings
+        $rolls = get_roll_names_and_max_scores(); // Assuming this function returns the required structure
+
+        foreach ($rolls as $index => $roll) {
+            $roll_scores = $competitor_scores[$index] ?? [];
+
+            // Calculate the total points for this roll, taking into account scores and deductions
+            $roll_total = ($roll_scores['left_score'] ?? 0) - ($roll_scores['left_deduct'] ?? 0) +
+                          ($roll_scores['right_score'] ?? 0) - ($roll_scores['right_deduct'] ?? 0);
+
+            $competitorTotal += $roll_total;
+        }
+
+        // Collect competitor ID, total scores, and title
+        $competitors_data[] = [
+            'ID' => $competitor_id,
+            'total' => $competitorTotal,
+            'title' => get_the_title(),
+            'club' => $competitors_club,
+        ];
     }
-    echo '</ul>';
-    echo '</div>';
-    echo '<div id="competitors-details-container"></div>';
+
+    // Sort competitors by total scores DESC
+    usort($competitors_data, function($a, $b) {
+        return $b['total'] <=> $a['total'];
+    });
+
+    echo "<div id=\"competitors-list\"><div id=\"spinner\"></div><h2>List of competitors</h2><ul class=\"competitors-table\">";
+
+    foreach ($competitors_data as $competitor) {
+        $clubInfo = !empty($competitor['club']) ? " - {$competitor['club']}" : "";
+        $displayString = <<<HTML
+        <li class="competitors-list-item" data-competitor-id="{$competitor['ID']}"><b>{$competitor['title']}</b>{$clubInfo} - {$competitor['total']} poäng</li>
+        HTML;
+
+        echo $displayString;
+    }
+
+    echo "</ul><div id=\"competitors-details-container\"></div></div>";
 
 }
+
 
 
 
