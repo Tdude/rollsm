@@ -2,10 +2,10 @@
 /**
  * Plugin Name: Competitors
  * Description:  A RollSM registering and scoreboard plugin.
- * Version: 0.63
+ * Version: 0.72
  * Author: Tdude
  */
-define('COMPETITORS_PLUGIN_VERSION', '0.7');
+define('COMPETITORS_PLUGIN_VERSION', '0.72');
 
 // Un-clutter color picker for all non-admins
 function remove_color_scheme_for_non_admins() {
@@ -71,12 +71,105 @@ function create_competitors_post_type() {
 add_action('init', 'create_competitors_post_type');
 
 
+
+// Experiment! Add meta box
+/* 
+USE LIKE SO:
+$args = array(
+    'post_type' => 'competitors',
+    'orderby' => 'meta_value_num', // Use 'meta_value' if your custom order field is non-numeric.
+    'meta_key' => 'competitors_custom_order', // Adjust this to your custom field's actual key.
+    'order' => 'ASC', // Or 'DESC'
+    'posts_per_page' => -1 // Retrieve all posts.
+);
+$query = new WP_Query($args);
+*/
+
+
+
+// Register Custom Meta Box, Save Custom Order, and Display in Admin List
+function competitors_custom_order_setup() {
+    // Add Meta Box
+    add_action('add_meta_boxes', function() {
+        add_meta_box(
+            'competitors_custom_order',
+            __('Custom Order', 'competitors-plugin'),
+            'competitors_custom_order_meta_box_callback',
+            'competitors',
+            'side',
+            'high'
+        );
+    });
+
+    // Meta Box Display Callback
+    function competitors_custom_order_meta_box_callback($post) {
+        wp_nonce_field('competitors_custom_order_save', 'competitors_custom_order_nonce');
+        $value = get_post_meta($post->ID, '_competitors_custom_order', true);
+        echo '<label for="competitors_custom_order_field">' . __('Order', 'competitors-plugin') . '</label> ';
+        echo '<input type="number" id="competitors_custom_order_field" name="competitors_custom_order_field" value="' . esc_attr($value) . '" size="25" />';
+    }
+
+    // Save Meta Box Content and Quick Edit Data
+    add_action('save_post', function($post_id) {
+        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
+        if (!isset($_POST['competitors_custom_order_nonce']) || !wp_verify_nonce($_POST['competitors_custom_order_nonce'], 'competitors_custom_order_save')) return;
+        if (!current_user_can('edit_post', $post_id)) return;
+        if (isset($_POST['competitors_custom_order_field'])) {
+            $custom_order = sanitize_text_field($_POST['competitors_custom_order_field']);
+            update_post_meta($post_id, '_competitors_custom_order', $custom_order);
+        }
+    });
+
+    // Add Custom Column to Admin List
+    add_filter('manage_competitors_posts_columns', function($columns) {
+        $columns['custom_order'] = __('Order prio', 'competitors-plugin');
+        return $columns;
+    });
+
+    // Populate Custom Column with Custom Order Value
+    add_action('manage_competitors_posts_custom_column', function($column, $post_id) {
+        if ($column == 'custom_order') {
+            $order = get_post_meta($post_id, '_competitors_custom_order', true);
+            echo esc_html($order);
+        }
+    }, 10, 2);
+}
+
+// Initialize the setup
+competitors_custom_order_setup();
+
+// Extra for saving order in listing directly from Quick Edit. @Todo: refactor if possible
+function competitors_save_custom_order($post_id) {
+    // Check if this is a Quick Edit save by verifying the DOING_AJAX constant and the action
+    if (defined('DOING_AJAX') && DOING_AJAX && isset($_POST['action']) && $_POST['action'] == 'inline-save') {
+        // Quick Edit save logic
+        if (isset($_POST['competitors_custom_order'])) {
+            $custom_order = sanitize_text_field($_POST['competitors_custom_order']);
+            update_post_meta($post_id, '_competitors_custom_order', $custom_order);
+        }
+    } else {
+        // Standard Edit Form save logic
+        if (!isset($_POST['competitors_custom_order_nonce']) || !wp_verify_nonce($_POST['competitors_custom_order_nonce'], 'competitors_custom_order_save')) return;
+        if (!current_user_can('edit_post', $post_id)) return;
+        if (isset($_POST['competitors_custom_order_field'])) {
+            $custom_order = sanitize_text_field($_POST['competitors_custom_order_field']);
+            update_post_meta($post_id, '_competitors_custom_order', $custom_order);
+        }
+    }
+}
+add_action('save_post_competitors', 'competitors_save_custom_order');
+
+
+
+
+
 // Flush rewrite rules on plugin activation
 function competitors_activate() {
     create_competitors_post_type(); // Ensure CPT is registered
     flush_rewrite_rules(); // Then flush rewrite rules
 }
 register_activation_hook(__FILE__, 'competitors_activate');
+
 
 
 // On deactivation
@@ -148,8 +241,6 @@ add_action('admin_menu', 'competitors_add_submenu_scoring');
 
 
 
-
-
 // Display the settings page content
 function competitors_settings_page() {
     if (!current_user_can('manage_options')) {
@@ -169,7 +260,6 @@ function competitors_settings_page() {
     submit_button();
     echo '</form></div>';
 }
-
 
 
 // Register a new setting and sections for the "Competitors" page
@@ -249,7 +339,6 @@ function competitors_text_field_render() {
 }
 
 
-
 // Handle form submission for removing a row
 function competitors_remove_row_ajax() {
     // Verify the nonce for security
@@ -327,7 +416,6 @@ function get_roll_names_and_max_scores() {
 }
 
 
-
 function custom_back_button_shortcode($atts) {
     // Shortcode attributes with default values for URL and button text
     // [custom_button url="https://example.com" text="Go there or go Home"]
@@ -354,9 +442,6 @@ function custom_back_button_shortcode($atts) {
     return $button_html;
 }
 add_shortcode('custom_button', 'custom_back_button_shortcode');
-
-
-
 
 
 
