@@ -6,52 +6,70 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.competitors-header').forEach(header => {
             header.addEventListener('click', function() {
                 const competitorId = this.getAttribute('data-competitor');
+                const spinner = document.getElementById('spinner');
 
-                // Close sections of other competitors
+                // Toggle visibility for other competitors' sections
                 document.querySelectorAll('.competitors-header').forEach(otherHeader => {
                     if (otherHeader.getAttribute('data-competitor') !== competitorId) {
-                        document.querySelectorAll(`.competitors-info[data-competitor="${otherHeader.getAttribute('data-competitor')}"], .competitors-scores[data-competitor="${otherHeader.getAttribute('data-competitor')}"], .competitors-totals[data-competitor="${otherHeader.getAttribute('data-competitor')}"]:not(.grand-total)`).forEach(row => {
+                        document.querySelectorAll(`.th-columns[data-competitor="${otherHeader.getAttribute('data-competitor')}"], .competitors-info[data-competitor="${otherHeader.getAttribute('data-competitor')}"], .competitors-scores[data-competitor="${otherHeader.getAttribute('data-competitor')}"], .competitors-totals[data-competitor="${otherHeader.getAttribute('data-competitor')}"]:not(.grand-total)`).forEach(row => {
                             row.classList.add('hidden');
                         });
                     }
                 });
-        
-                // Toggle visibility for the clicked competitor's sections, explicitly excluding the grand-total row
-                const rowsToToggle = document.querySelectorAll(`.competitors-scores[data-competitor="${competitorId}"], .competitors-info[data-competitor="${competitorId}"], .competitors-totals[data-competitor="${competitorId}"]:not(.grand-total)`);
-                
-                let anyRowVisible = false; // Assume no rows initially
+
+                // Toggle visibility for the clicked competitor's sections
+                const rowsToToggle = document.querySelectorAll(`.th-columns[data-competitor="${competitorId}"], .competitors-scores[data-competitor="${competitorId}"], .competitors-info[data-competitor="${competitorId}"], .competitors-totals[data-competitor="${competitorId}"]:not(.grand-total)`);
+                let anyRowVisible = false;
                 rowsToToggle.forEach(row => {
                     row.classList.toggle('hidden');
-
                     if (!row.classList.contains('hidden')) {
-                        anyRowVisible = true; // If any row is visible, update the flag
+                        anyRowVisible = true;
                     }
                 });
-                // Toggle icon direction, keeping the grand-total row always visible
+
+                // Calculate and set spinner position and size
+                if (anyRowVisible) {
+                    const firstRow = rowsToToggle[0];
+                    const lastRow = rowsToToggle[rowsToToggle.length - 1];
+                    // Assuming the spinner's top offset calculation within the event listener:
+                    const containerRect = document.getElementById('judges-scoring-container').getBoundingClientRect();
+                    const firstRowRect = firstRow.getBoundingClientRect();
+                    const lastRowRect = lastRow.getBoundingClientRect();
+
+                    // Calculate the top position relative to the container, not the viewport
+                    const topPosition = firstRowRect.top - containerRect.top;
+
+                    // The total height needs to cover from the top of the first row to the bottom of the last row
+                    const totalHeight = lastRowRect.bottom - firstRowRect.top;
+
+                    // Apply styles to the spinner based on these calculations
+                    spinner.style.position = 'absolute';
+                    spinner.style.top = `${topPosition}px`;
+                    spinner.style.height = `${totalHeight}px`;
+                    spinner.style.left = '0';
+                    spinner.style.right = '0';
+
+                } else {
+                    hideSpinner(); // If no rows are visible
+                }
+
+                // Toggle icon direction
                 toggleIcons(this);
             });
         });
 
-        // Add event listener to all .competitor-scores inputs
-        /*
-        document.querySelectorAll('.score-input').forEach(input => {
-            input.addEventListener('click', () => {
-                // Show the spinner when any .score-input input is clicked
-                showSpinner();
-            });
-        });
-        */
-
         function showSpinner() {
-            spinner.classList.add('show');
+            const spinner = document.getElementById('spinner');
             spinner.classList.remove('hidden');
-            //console.log("showSpinner triggered");
+            spinner.classList.add('show');
+            spinner.style.display = 'flex'; // Ensure spinner is visible
         }
-    
+
         function hideSpinner() {
+            const spinner = document.getElementById('spinner');
             spinner.classList.add('hidden');
             spinner.classList.remove('show');
-            //console.log("hideSPinner triggered ");
+            spinner.style.display = 'none'; // Hide spinner
         }
 
         function toggleIcons(clickedHeader) {
@@ -62,7 +80,6 @@ document.addEventListener('DOMContentLoaded', function() {
             clickedHeader.querySelector('.dashicons').classList.toggle('dashicons-arrow-down-alt2');
             clickedHeader.querySelector('.dashicons').classList.toggle('dashicons-arrow-up-alt2');
         }
-
     }
 
 
@@ -122,31 +139,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 var rowsArray = Array.from(table.querySelectorAll('tbody tr')); // Corrected to select all data rows
                 var index = Array.from(table.querySelectorAll('th')).indexOf(this);
                 var asc = !(this.asc = !this.asc);
-        
+
                 rowsArray.sort(function(rowA, rowB) {
                     var cellA = rowA.querySelectorAll('td')[index].textContent;
                     var cellB = rowB.querySelectorAll('td')[index].textContent;
                     var isNumericA = !isNaN(parseFloat(cellA)) && isFinite(cellA);
                     var isNumericB = !isNaN(parseFloat(cellB)) && isFinite(cellB);
-        
+
                     return isNumericA && isNumericB ? cellA - cellB : cellA.localeCompare(cellB);
                 });
-        
+
                 if (asc) { rowsArray.reverse(); }
-        
+
                 rowsArray.forEach(function(row) { table.querySelector('tbody').appendChild(row); });
             });
         });
     }
 
 
-    // Ajax add/remove rows in settings page
+    // Settings page AJAX add/remove rows
     if (document.getElementById('settings-page')) {
         const wrapper = document.getElementById('competitors_roll_names_wrapper');
         const addButton = document.getElementById('add_more_roll_names');
 
         if (!wrapper || !addButton) {
-            // Exit if required elements are not found
+            // Exit if elements not found
             return;
         }
 
@@ -216,7 +233,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('timer')) {
         var timer = document.getElementById('timer');
         var saveScoresBtn = document.querySelector('.save-scores');
-        var form = document.querySelector('form'); 
+        var form = document.querySelector('form');
 
         if (timer) {
             let timerStarted = false;
@@ -238,6 +255,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     // Optionally, manually submit the form here if default submission was prevented
                     form.submit();
+                    showSpinner();
                 });
             }
             function stopTimerAndUpdateStopTime() {
@@ -250,7 +268,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 updateTimerDisplay();
                 startBtn.textContent = 'Start';
-                showSpinner();
             }
             // Listen for clicks on competitor headers to set the currentCompetitorId
             document.querySelectorAll('.competitors-header').forEach(header => {
@@ -270,7 +287,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateTimerDisplay();
                 startBtn.textContent = 'Start';
                 showSpinner();
-            
                 if (currentCompetitorId) {
                     document.getElementById(`start-time-${currentCompetitorId}`).value = '';
                     document.getElementById(`stop-time-${currentCompetitorId}`).value = '';
@@ -307,7 +323,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     timerStarted = true;
                     paused = false;
                     startBtn.textContent = 'Pause';
-
                     if (elapsedTime === 0) {
                         let startTime = new Date().toISOString();
                         document.getElementById(`start-time-${currentCompetitorId}`).value = startTime;
@@ -337,4 +352,32 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+});
+
+
+// "Quick edit" custom order in Admin list view
+jQuery(document).ready(function($) {
+    $(document).on('click', '.editinline', function() {
+
+        var postID = $(this).closest('tr').attr('id');
+        postID = postID.replace("post-", "");
+
+        var customOrderValue = $('#post-' + postID).find('.column-custom_order').text();
+        // Clear any previously added custom order fields to avoid duplicates in list
+        $('.competitors-custom-order-field').remove();
+        // Ensure the Quick Edit row is fully visible before appending
+        setTimeout(function() {
+            // Find the right spot for the custom order field
+            var $lastField = $('.inline-edit-row').filter(':visible').find('.inline-edit-col .inline-edit-group:last');
+
+            // If your Quick Edit form layout differs, you might need to adjust the above selector
+            var customOrderField =  '<div class="inline-edit-group competitors-custom-order-field">' +
+                                    '<label><span class="title">Order</span>' +
+                                    '<span class="input-text-wrap"><input type="number" name="competitors_custom_order" value="' + customOrderValue.trim() + '">' +
+                                    '</span></label></div>';
+
+            // Append or prepend based on your layout needs
+            $lastField.after(customOrderField);
+        }, 150); // A slight delay to ensure the Quick Edit form is fully rendered
+    });
 });
