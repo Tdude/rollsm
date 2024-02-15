@@ -35,14 +35,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     const containerRect = document.getElementById('judges-scoring-container').getBoundingClientRect();
                     const firstRowRect = firstRow.getBoundingClientRect();
                     const lastRowRect = lastRow.getBoundingClientRect();
-
                     // Calculate the top position relative to the container, not the viewport
                     const topPosition = firstRowRect.top - containerRect.top;
-
-                    // The total height needs to cover from the top of the first row to the bottom of the last row
+                    // Cover from top of first row to bottom of last row
                     const totalHeight = lastRowRect.bottom - firstRowRect.top;
-
                     // Apply styles to the spinner based on these calculations
+                    showSpinner(); // Here is where it should be for clicking rows
                     spinner.style.position = 'absolute';
                     spinner.style.top = `${topPosition}px`;
                     spinner.style.height = `${totalHeight}px`;
@@ -63,6 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
             spinner.classList.remove('hidden');
             spinner.classList.add('show');
             spinner.style.display = 'flex'; // Ensure spinner is visible
+            console.log("Show");
         }
 
         function hideSpinner() {
@@ -70,6 +69,7 @@ document.addEventListener('DOMContentLoaded', function() {
             spinner.classList.add('hidden');
             spinner.classList.remove('show');
             spinner.style.display = 'none'; // Hide spinner
+            console.log("Hide");
         }
 
         function toggleIcons(clickedHeader) {
@@ -247,7 +247,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const resetBtn = document.getElementById('reset-timer');
             if (saveScoresBtn) {
                 saveScoresBtn.addEventListener('click', function(e) {
-                    // Optionally, prevent default form submission to ensure stop time is updated before submitting
+                    // Prevent default form submission to ensure stop time is updated before submitting
                     e.preventDefault();
                     // Stop the timer and update the stop time just before submission
                     if (timerStarted && !paused) {
@@ -255,7 +255,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     // Optionally, manually submit the form here if default submission was prevented
                     form.submit();
-                    showSpinner();
                 });
             }
             function stopTimerAndUpdateStopTime() {
@@ -268,14 +267,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 updateTimerDisplay();
                 startBtn.textContent = 'Start';
+                showSpinner();
             }
             // Listen for clicks on competitor headers to set the currentCompetitorId
             document.querySelectorAll('.competitors-header').forEach(header => {
                 header.addEventListener('click', function() {
-                    //hideSpinner();
                     currentCompetitorId = this.getAttribute('data-competitor');
                     resetTimerDisplayAndData(); // Reset when a new competitor is selected
-                    console.log(`Current Competitor ID: ${currentCompetitorId}`);
+                    // console.log(`Current Competitor ID: ${currentCompetitorId}`);
                 });
             });
 
@@ -286,7 +285,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 elapsedTime = 0;
                 updateTimerDisplay();
                 startBtn.textContent = 'Start';
-                showSpinner();
+                // Dont trigger spinner here. It loops.
                 if (currentCompetitorId) {
                     document.getElementById(`start-time-${currentCompetitorId}`).value = '';
                     document.getElementById(`stop-time-${currentCompetitorId}`).value = '';
@@ -303,12 +302,10 @@ document.addEventListener('DOMContentLoaded', function() {
             resetBtn.addEventListener('click', function() {
                 var resetConfirmed = confirm("Are you sure you want to reset the timer?");
                 if (resetConfirmed) {
-                    resetTimerDisplayAndData(); // Call the function directly after confirmation
-                    // alert("Timer has been reset.");
+                    resetTimerDisplayAndData();
                 } else {
                     // Logic for when reset is canceled; potentially continue the timer.
-                    console.log("Timer reset canceled."); // Handle as preferred.
-                    // Continue timer logic here if needed, similar to previous examples.
+                    console.log("Timer reset canceled.");
                 }
             });
 
@@ -327,18 +324,18 @@ document.addEventListener('DOMContentLoaded', function() {
                         let startTime = new Date().toISOString();
                         document.getElementById(`start-time-${currentCompetitorId}`).value = startTime;
                     }
-
                     interval = setInterval(function() {
                         elapsedTime += 100;
                         updateTimerDisplay();
                     }, 100);
+                    hideSpinner();
                 } else if (!paused) {
                     clearInterval(interval);
                     paused = true;
                     startBtn.textContent = 'Continue';
-                    // Capture the pause time, similar to stop time
                     let pauseTime = new Date().toISOString();
                     document.getElementById(`stop-time-${currentCompetitorId}`).value = pauseTime;
+                    showSpinner();
                 } else {
                     paused = false;
                     startBtn.textContent = 'Pause';
@@ -346,8 +343,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         elapsedTime += 100;
                         updateTimerDisplay();
                     }, 100);
-                }
-                hideSpinner('startBtn called');
+                    hideSpinner();
+                } 
             });
         }
     }
