@@ -11,28 +11,6 @@ function competitors_admin_page() {
         return;
     }
 
-    /* interesting take on WP meta
-    $args = array(
-        'post_type' => 'competitors',
-        'meta_key' => '_competitors_custom_order',
-        'orderby' => 'meta_value_num',
-        'meta_query' => [
-            'relation' => 'OR',
-            [
-                'key' => '_competitors_custom_order',
-                'compare' => 'EXISTS',
-            ],
-            [
-                'key' => '_competitors_custom_order',
-                'compare' => 'NOT EXISTS'
-            ]
-        ],
-        'order' => 'DESC',
-        'posts_per_page' => -1          
-    );
-    $competitors_query = new WP_Query($args);
-    */
-
     $competitors_query = new WP_Query([
         'post_type' => 'competitors',
         'meta_key' => '_competitors_custom_order',
@@ -91,13 +69,26 @@ function judges_scoring_page() {
         return;
     }
 
-    $competitors_query = new WP_Query([
+    $args = array(
         'post_type' => 'competitors',
         'meta_key' => '_competitors_custom_order',
         'orderby' => 'meta_value_num',
+        'meta_query' => [
+            'relation' => 'OR',
+            [
+                'key' => '_competitors_custom_order',
+                'compare' => 'EXISTS',
+            ],
+            [
+                'key' => '_competitors_custom_order',
+                'compare' => 'NOT EXISTS'
+            ]
+        ],
         'order' => 'DESC',
-        'posts_per_page' => -1,
-    ]);
+        'posts_per_page' => -1
+    );
+    $competitors_query = new WP_Query($args);
+    
 
     $actionUrl = esc_url(admin_url('admin-post.php'));
     $nonceField = wp_nonce_field('competitors_score_update_action', 'competitors_score_update_nonce', true, false);
@@ -105,17 +96,18 @@ function judges_scoring_page() {
     $admin_email_link = 'Please contact the Admin: ' . esc_html($admin_email);
 
     echo <<<HTML
-    <h1>Judges Scoring Page</h1>
-    <form action="{$actionUrl}" method="post">
+    <h1 class="distance-large">Judges Scoring Page</h1>
+    <form action="{$actionUrl}" method="post" id="scoring-form">
     {$nonceField}
     <input type="hidden" name="action" value="competitors_score_update">
-    <p><input type="submit" value="Save scores" class="button button-primary save-scores"></p>
     <div id="timer">
-        <span><b>Timer</b></span><span id="timer-display">00:00:00</span>
-        <button type="button" class="button button-success" id="start-timer">Start</button>
-        <button type="button" class="button button-danger" id="reset-timer">Reset</button>
+    <button type="button" class="button button-success" id="start-timer" title="Start timer before scoring competitors!">Start</button>
+    <button type="button" class="button button-danger" id="reset-timer" title="This button and changing competitor resets Timer">Reset</button>
+    <span><b>Timer</b></span><span id="timer-display">00:00:00</span>
+    <input type="submit" value="Save scores" class="button button-primary save-scores" title="Saves scores and time, resets Timer">
     </div>
-    <p>Clicking any competitor name row <b><i>always resets the timer</i></b>. Timing for a particular competitor is saved when you click "Pause" or "Save scores". This is live score timing. <b><i>There is no going back to adjust!</i></b> If you resave (or change) a competitor's score and save it, the timing for that competitor will be reset. You have been warned. If there is any <i>simple</i> logic you need, {$admin_email_link}.</p>
+    <p>Clicking any competitor name row <b><i>always resets the timer</i></b>. Timing for a particular competitor can be Paused or saved when you click "Save scores". This is live score timing. <b><i>There is no going back to adjust!</i></b>
+     If you resave a competitor's score, the timing for that competitor will be reset. If you change competitor view, timing will reset. Do not mess around. You have now been warned. If there is any <i>simple</i> logic you need, {$admin_email_link}.</p>
     <div id="judges-scoring-container">
     <table class="competitors-table" id="judges-scoring">
     <tbody>
@@ -181,11 +173,11 @@ function judges_scoring_page() {
     // After all competitors are processed, display the Grand Total and the average score
     echo <<<HTML
     </tbody></table><table class="competitors-table"><tbody><tr class="competitors-totals grand-total" data-competitor="$competitor_id">
-    <td colspan="3"><b>Rolls performed</b> (Avg: <b>{$averageRollsFormatted}</b>  per competitor)</td>
+    <td colspan="3"><b>Rolls to perform</b> (Avg: <b>{$averageRollsFormatted}</b>  per competitor)</td>
     <td colspan="3"><b>Grand Total Score</b> (Avg: <b>{$averageScoreFormatted}</b> points per competitor)</td>
     <td width="7%"><b>{$grandTotal}</b></td></tr></tbody></table>
     <div id="spinner" class="hidden"></div>
-    <p><input type="submit" value="Save scores" class="button button-primary save-scores"></p>
+    <p><input type="submit" value="Save scores" class="button button-primary save-scores" title="Saves scores and time, resets Timer. Just like the button on top."></p>
     </form>
     HTML;
 }
@@ -196,7 +188,7 @@ function render_competitor_header_row($competitor_id, $competitorTotal) {
     $title = get_the_title($competitor_id);
     // Now using $competitorTotal in the heredoc output
     return <<<HTML
-        <tr class="competitors-header" data-competitor="$competitor_id">
+        <tr class="competitors-header" data-competitor="$competitor_id" title="Clicking here always resets Timer. Careful!">
             <th colspan="6"><span id="close-details" class="dashicons dashicons-arrow-down-alt2"></span><b class="larger-txt"> $title</b> <span class="showonhover">(click to see info and scoresheet)</span></th>
             <th width="7%">$competitorTotal points</th>
         </tr>
@@ -247,12 +239,9 @@ function render_competitor_info_row($competitor_id) {
 function render_competitor_score_row($competitor_id, $index, $roll, $scores, $selected_rolls) {
     $roll_name = esc_html($roll['name']);
     $max_score = isset($roll['max_score']) ? esc_html($roll['max_score']) : 'N/A';
-    
     $isSelected = in_array($index, $selected_rolls, true);
     $selectedClass = $isSelected ? 'selected-roll' : '';
-    
     $row_contents = "<td colspan=\"2\">$roll_name ($max_score)</td>";
-
     $score_keys = ['left_score', 'left_deduct', 'right_score', 'right_deduct', 'total'];
     foreach ($score_keys as $key) {
         // Adjusted for 'competitor_scores' data structure to display empty if score is 0
@@ -272,7 +261,7 @@ function handle_competitors_score_update_serialized() {
         check_admin_referer('competitors_score_update_action', 'competitors_score_update_nonce')) {
 
         if (!empty($_POST['competitor_scores']) && is_array($_POST['competitor_scores'])) {
-            echo $competitor_id;
+            //echo $competitor_id;
             foreach ($_POST['competitor_scores'] as $competitor_id => $rolls_scores) {
                 $competitor_id = intval($competitor_id);
 
