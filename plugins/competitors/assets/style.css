@@ -9,6 +9,22 @@
   --light-gray: rgba(240, 240, 240, 0.6);
   --gray: rgba(200, 200, 200, 0.7);
   --light-success: rgba(238, 255, 238, 1);
+
+  /* Warning, Danger, Success button colors */
+  --info: rgba(4, 164, 204, 0.8);
+  --warning: rgba(224, 170, 0, 1);
+  --danger: rgb(220, 53, 70);
+  --success: rgb(40, 170, 70);
+
+  --info-darker: rgba(4, 158, 198, 1);
+  --warning-darker: rgba(224, 170, 0, 1);
+  --danger-darker: rgb(220, 53, 70);
+  --success-darker: rgb(30, 150, 50);
+
+  --info-darkest: rgba(2, 154, 194, 1);
+  --warning-darkest: rgba(224, 170, 0, 1);
+  --danger-darkest: rgb(220, 53, 70);
+  --success-darkest: rgb(20, 140, 40);
 }
 
 /* The Competitor plugin's public styles */
@@ -140,28 +156,42 @@ th {
   }
 }
 
-.entry-content input[type="submit"],
-.custom-back-button {
+.button {
   font-size: 1.2em;
   font-weight: bold;
   max-width: 200px !important; /* temp setting */
   text-align: center;
-  background-color: var(--primary);
   color: var(--light);
   padding: 10px 24px;
-  border: 1px solid var(--primary-darker);
   border-radius: 4px;
+  border-width: 1px;
+  border-style: solid;
   cursor: pointer;
   transition: background-color 0.3s ease, color 0.3s ease;
   text-decoration: none;
   display: block;
   margin: 20px 0;
 }
+
+.custom-back-button {
+  background-color: var(--primary);
+  color: var(--light);
+  border: 1px solid var(--primary-darker);
+}
 /* Unified hover effect */
-.entry-content input[type="submit"]:hover,
+
 .custom-back-button:hover {
   background-color: var(--primary-darker);
   border: 1px solid var(--primary-darkest);
+}
+
+.button-success {
+  background-color: var(--success) !important;
+  border: 1px solid var(--success-darker) !important;
+}
+.button-success:hover {
+  background-color: var(--success-darker) !important;
+  border: 1px solid var(--success-darkest) !important;
 }
 
 /* Dashicons dashicons-arrow-left-alt2 arrow-back */
@@ -202,4 +232,15 @@ th {
 
 .closebtn:hover {
   color: black;
+}
+
+.extra-visible {
+  border: 1px var(--primary);
+  background-color: var(--light-gray);
+  padding: 1em;
+  margin: 1em 0;
+  border-radius: 5px;
+}
+.extra-visible label {
+  font-size: 1em;
 }
