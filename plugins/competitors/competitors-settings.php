@@ -2,10 +2,10 @@
 /**
  * Plugin Name: Competitors
  * Description:  A RollSM registering and scoreboard plugin.
- * Version: 0.72
+ * Version: 0.75
  * Author: Tdude
  */
-define('COMPETITORS_PLUGIN_VERSION', '0.72');
+define('COMPETITORS_PLUGIN_VERSION', '0.75');
 
 // Un-clutter color picker for all non-admins
 function remove_color_scheme_for_non_admins() {
@@ -84,8 +84,6 @@ $args = array(
 );
 $query = new WP_Query($args);
 */
-
-
 
 // Register Custom Meta Box, Save Custom Order, and Display in Admin List
 function competitors_custom_order_setup() {
@@ -433,10 +431,10 @@ function custom_back_button_shortcode($atts) {
     if (!empty($attributes['url'])) {
         // Sanitize the URL to ensure it's safe to use
         $url = esc_url($attributes['url']);
-        $button_html = '<a href="' . $url . '" class="custom-back-button">' . $button_text . '</a>';
+        $button_html = '<a href="' . $url . '" class="button custom-back-button">' . $button_text . '</a>';
     } else {
         // Use JavaScript to go back if no URL is provided
-        $button_html = '<a href="#" onclick="window.history.back(); return false;" class="custom-back-button">' . $button_text . '</a>';
+        $button_html = '<a href="#" onclick="window.history.back(); return false;" class="button custom-back-button">' . $button_text . '</a>';
     }
 
     return $button_html;
@@ -492,3 +490,20 @@ function redirect_judge_after_login($user_login, $user) {
     }
 }
 add_action('wp_login', 'redirect_judge_after_login', 10, 2);
+
+
+
+// Add custom footer text in WP Admin
+function wp_custom_admin_footer() {
+    $version_text = 'This WP Competitors plugin is version: ' . COMPETITORS_PLUGIN_VERSION . ' and still in Beta. If you have encountered bugs or have ideas on how to do it better, don\'t be a stranger!';
+    echo 'Thank you for creating friendly rolling events with the Competitors plugin. You can reach the developer on Insta @tdudesthlm or on my site <a href="https://rugd.se/">RUGD.se</a>. ' . $version_text;
+}
+add_filter('admin_footer_text', 'wp_custom_admin_footer');
+
+function wp_code_helper_custom_admin_version_footer( $text ) {
+    $custom_text = 'WP ';
+
+
+    return $custom_text . $text ;
+}
+add_filter('update_footer', 'wp_code_helper_custom_admin_version_footer', 11);
