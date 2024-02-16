@@ -20,24 +20,28 @@ function competitors_form_html() {
             <input aria-label="Phone" type="text" id="phone" name="phone"><br>
             <label for="club">Club:</label>
             <input aria-label="Club" type="text" id="club" name="club"><br>
-            <label for="license">License:</label>
-            <input aria-label="License" type="checkbox" id="license" name="license"><br>
-            <label for="sponsors">Sponsors:</label>
+            <div class="extra-visible">
+                <input aria-label="License agreement" type="checkbox" id="license" name="license" required>
+                <label for="license">License: Read more about <a href="/tavlingslicens-for-dig-utan-klubbtillhorighet/">licensing rules here</a>.</label>
+            </div>
+             <label for="sponsors">Sponsors:</label>
             <input aria-label="Sponsors" type="text" id="sponsors" name="sponsors"><br>
             <label for="speaker_info">Speaker Info:</label>
             <textarea aria-label="Speaker Info" id="speaker_info" name="speaker_info"></textarea><br>
             <label>Participation in Class:</label><br>
             <input aria-label="Participation Class - Open" type="radio" id="open" name="participation_class" value="open">
             <label for="open">Open (International participants)</label><br>
-            <input aria-label="Participation Class - Championship" type="radio" id="championship" name="participation_class" value="championship">
-            <label for="championship">Championship (Swedish club member and comp. <a href="https://rollsm.se/tavlingslicens-for-dig-utan-klubbtillhorighet/">license holder</a>)</label><br>
+            <input aria-label="Participation Class - Championship" type="radio" id="championship" name="participation_class" value="championship" checked>
+            <label for="championship">Championship (Swedish club member and comp. <a href="/tavlingslicens-for-dig-utan-klubbtillhorighet/">license holder</a>)</label><br>
             <input aria-label="Participation Class - Amateur" type="radio" id="amateur" name="participation_class" value="amateur">
             <label for="amateur">Amateur (No license needed)</label><br>
-            <input aria-label="Consent" type="checkbox" id="consent" name="consent">
-            <label for="consent">I agree for you to save my data, publish results, photos etc. I also agree to have fun and be nice.</label><br>
+            <div class="extra-visible">
+                <input aria-label="Consent" type="checkbox" id="consent" name="consent">
+                <label for="consent">I agree for you to save my data, publish results, photos etc. I also agree to have fun and be nice.</label>
+            </div>
         </fieldset>
 
-        <p class="pt-1">According to The Rules you get 30 min to perform your rolls. To save time and make for a better comp, 
+        <p class="pt-1">According to <a href="https://kanot.com/grenar/havskajak/tavling/gronlandsroll">The Rules</a> you get 30 min to perform your rolls. However, to save time and make for a better comp, 
             please let us know if there are rolls you will not try to perform, ie. uncheck some boxes. 
             You can change your mind on the water, we just need a hint for time planning!</p>
        
