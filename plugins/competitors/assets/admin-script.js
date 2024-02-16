@@ -228,14 +228,36 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Prevent a judge to accidentally hit Enter and falsely save timing
+    var form = document.getElementById('scoring-form');
+    if (form) {
+        form.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                alert("Do NOT hit the Enter key. Click the buttons \"Save Score\" if you want to save! This will now neither reset the Timer nor save. Oh-key-do-key?");
+                return false;
+            }
+        });
+    }
 
-    // Timer/buttons/overlay mess in admin, judges scores page. Headache.
+
+    // Timer/buttons/overlay mess in admin, judges scores page.
     if (document.getElementById('timer')) {
-        var timer = document.getElementById('timer');
-        var saveScoresBtn = document.querySelector('.save-scores');
-        var form = document.querySelector('form');
+        const timer = document.getElementById('timer');
+        const saveScoresBtn = document.querySelector('.save-scores');
+        const form = document.querySelector('form');
+        const originalOffsetTop = timer.offsetTop;
 
         if (timer) {
+            // Fix timer at top of window
+            window.addEventListener('scroll', function() {
+                if (window.scrollY > 50) {
+                    timer.classList.add('fixed-timer');
+                } else {
+                    timer.classList.remove('fixed-timer');
+                }
+            });
+            
             let timerStarted = false;
             let paused = true;
             let elapsedTime = 0;
@@ -247,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const resetBtn = document.getElementById('reset-timer');
             if (saveScoresBtn) {
                 saveScoresBtn.addEventListener('click', function(e) {
-                    // Prevent default form submission to ensure stop time is updated before submitting
+                    // Prevent default form submission here too to ensure stop time is updated before submitting
                     e.preventDefault();
                     // Stop the timer and update the stop time just before submission
                     if (timerStarted && !paused) {
