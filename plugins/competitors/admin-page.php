@@ -6,8 +6,8 @@ function echo_table_cell($content) {
 
 
 function competitors_admin_page() {
-    if (!current_user_can('manage_options') && !current_user_can('competitors_judge')) {
-        echo '<p>Access denied to scoring, dude. You dont seem to be The Judge.</p>';
+    if (!current_user_can('manage_options') && !current_user_can('edit_competitors')) {
+        echo '<h2>\(o_o)/</h2><p>Access denied to scoring, dude. You dont seem to be The Judge.</p>';
         return;
     }
 
@@ -24,7 +24,7 @@ function competitors_admin_page() {
         // echo '<a href="' . esc_url(admin_url('admin.php?page=my_custom_page')) . '">Go to My Custom Page</a>';
 
         echo '<h1>Competitors Data</h1>';
-        // Go to similar function but public. This is a temp WP "page"
+        // Go to similar function but public. This is a temp WP "page" and you will have to adjust the URL.
         $page_slug = 'test-results-list-page';
         echo '<p>Click on headers to sort. This enables quick grouping and planning. <a href="' . esc_url(site_url('/' . $page_slug . '/')) . '">Public page</a> for this data.</p>';
         echo '<table class="competitors-table" id="sortable-table">';
@@ -55,7 +55,7 @@ function competitors_admin_page() {
         }
         echo '</tbody></table>';
     } else {
-        echo '<p>No competitors found.</p>';
+        echo '<h2>\(o_o)/</h2><p>No competitors found! </p>';
     }
     wp_reset_postdata();
 
@@ -88,7 +88,12 @@ function judges_scoring_page() {
         'posts_per_page' => -1
     );
     $competitors_query = new WP_Query($args);
-    
+
+    // Check if there are no competitors
+    if (!$competitors_query->have_posts()) {
+        echo '<h2>\(o_o)/</h2><p>Looks like there are no competitors to score right now. Please add some competitors or check back later.</p>';
+        return; // Exit the function early
+    }
 
     $actionUrl = esc_url(admin_url('admin-post.php'));
     $nonceField = wp_nonce_field('competitors_score_update_action', 'competitors_score_update_nonce', true, false);
@@ -101,10 +106,11 @@ function judges_scoring_page() {
     {$nonceField}
     <input type="hidden" name="action" value="competitors_score_update">
     <div id="timer">
+    <span class="hideonsmallscreens"><b>Timer</b></span>
     <button type="button" class="button button-success" id="start-timer" title="Start timer before scoring competitors!">Start</button>
+    <input type="submit" value="Save scores" class="button button-primary save-scores hideonsmallscreens" title="Saves scores and time, resets Timer">
+    <span id="timer-display">00:00:00</span>          
     <button type="button" class="button button-danger" id="reset-timer" title="This button and changing competitor resets Timer">Reset</button>
-    <span><b>Timer</b></span><span id="timer-display">00:00:00</span>
-    <input type="submit" value="Save scores" class="button button-primary save-scores" title="Saves scores and time, resets Timer">
     </div>
     <p>Clicking any competitor name row <b><i>always resets the timer</i></b>. Timing for a particular competitor can be Paused or saved when you click "Save scores". This is live score timing. <b><i>There is no going back to adjust!</i></b>
      If you resave a competitor's score, the timing for that competitor will be reset. If you change competitor view, timing will reset. Do not mess around. You have now been warned. If there is any <i>simple</i> logic you need, {$admin_email_link}.</p>
@@ -116,7 +122,7 @@ function judges_scoring_page() {
     $grandTotal = 0;
     $totalRollsPerformed = 0;
     $validScoresCount = 0; // Initialize a counter for valid (non-zero, non-empty) scores
-
+    
     while ($competitors_query->have_posts()) {
         $competitors_query->the_post();
         $competitor_id = get_the_ID();
@@ -152,7 +158,7 @@ function judges_scoring_page() {
         $layoutHTML .= $tempHTML;
         // Now append the total row
         $layoutHTML .= '<tr class="competitors-totals hidden" data-competitor="' . $competitor_id . '">
-        <td colspan="6"><b>Total</b></td><td><b>' . $competitorTotal . ' points</b></td></tr>';
+        <td colspan="5"><b>Total</b></td><td><b>' . $competitorTotal . ' points</b></td></tr>';
         // Check if competitorTotal is non-zero
         if ($competitorTotal > 0) {
             $grandTotal += $competitorTotal;
@@ -172,10 +178,10 @@ function judges_scoring_page() {
 
     // After all competitors are processed, display the Grand Total and the average score
     echo <<<HTML
-    </tbody></table><table class="competitors-table"><tbody><tr class="competitors-totals grand-total" data-competitor="$competitor_id">
-    <td colspan="3"><b>Rolls to perform</b> (Avg: <b>{$averageRollsFormatted}</b>  per competitor)</td>
+    <tr class="competitors-totals grand-total" data-competitor="$competitor_id">
+    <td colspan="2"><b>Rolls to perform</b> (Avg: <b>{$averageRollsFormatted}</b>  per competitor)</td>
     <td colspan="3"><b>Grand Total Score</b> (Avg: <b>{$averageScoreFormatted}</b> points per competitor)</td>
-    <td width="7%"><b>{$grandTotal}</b></td></tr></tbody></table>
+    <td><b>{$grandTotal}</b></td></tr></tbody></table>
     <div id="spinner" class="hidden"></div>
     <p><input type="submit" value="Save scores" class="button button-primary save-scores" title="Saves scores and time, resets Timer. Just like the button on top."></p>
     </form>
@@ -189,7 +195,7 @@ function render_competitor_header_row($competitor_id, $competitorTotal) {
     // Now using $competitorTotal in the heredoc output
     return <<<HTML
         <tr class="competitors-header" data-competitor="$competitor_id" title="Clicking here always resets Timer. Careful!">
-            <th colspan="6"><span id="close-details" class="dashicons dashicons-arrow-down-alt2"></span><b class="larger-txt"> $title</b> <span class="showonhover">(click to see info and scoresheet)</span></th>
+            <th colspan="5"><span id="close-details" class="dashicons dashicons-arrow-down-alt2"></span><b class="larger-txt"> $title</b> <span class="showonhover">(click to see info and scoresheet)</span></th>
             <th width="7%">$competitorTotal points</th>
         </tr>
     HTML;
@@ -226,13 +232,30 @@ function render_competitor_info_row($competitor_id) {
 
     return <<<HTML
         <tr class="competitors-info hidden" data-competitor="$competitor_id">
-            <td>$speaker_info</td>
-            <td>$sponsors</td>
-            <td colspan="3">$club</td>
-            <td>$participation_class</td>
-            <td>Start: $start_time | Total: $total_time</td>
+            <td colspan="6">
+                <table>
+                    <tbody>
+                        <tr>
+                            <th>Speaker Info</th>
+                            <th width="7%">Sponsors</th>
+                            <th width="7%">Club</th>
+                            <th width="7%">Class</th>
+                            <th width="7%">Start time</th>
+                            <th width="7%">Total time</th>
+                        </tr>
+                        <tr>
+                            <td>$speaker_info</td>
+                            <td>$sponsors</td>
+                            <td>$club</td>
+                            <td>$participation_class</td>
+                            <td>$start_time</td>
+                            <td>$total_time</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
         </tr>
-        <tr class="th-columns hidden" data-competitor="$competitor_id"><th colspan="2">Maneuver</th><th width="7%">L</th><th width="7%">L-</th><th width="7%">R</th><th width="7%">R-</th><th></th></tr>
+        <tr class="th-columns hidden" data-competitor="$competitor_id"><th>Maneuver</th><th width="7%">L</th><th width="7%">L-</th><th width="7%">R</th><th width="7%">R-</th><th width="7%">Sum</th></tr>
     HTML;
 }
 
@@ -241,7 +264,7 @@ function render_competitor_score_row($competitor_id, $index, $roll, $scores, $se
     $max_score = isset($roll['max_score']) ? esc_html($roll['max_score']) : 'N/A';
     $isSelected = in_array($index, $selected_rolls, true);
     $selectedClass = $isSelected ? 'selected-roll' : '';
-    $row_contents = "<td colspan=\"2\">$roll_name ($max_score)</td>";
+    $row_contents = "<td>$roll_name ($max_score)</td>";
     $score_keys = ['left_score', 'left_deduct', 'right_score', 'right_deduct', 'total'];
     foreach ($score_keys as $key) {
         // Adjusted for 'competitor_scores' data structure to display empty if score is 0
