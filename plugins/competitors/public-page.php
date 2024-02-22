@@ -79,7 +79,7 @@ function competitors_form_html() {
         </div>
 
         <a name="submitbutton"></a>
-        <input type="submit" value="Submit" id="submit-button"><?php
+        <input type="submit" value="Submit" id="submit-button" class="button button-success"><?php
         wp_nonce_field('competitors_form_submission', 'competitors_nonce');
         ?>
     </form>
@@ -165,7 +165,7 @@ function handle_competitors_form_submission() {
         exit;
 
     } else {
-        error_log('Form submission failed. Nonce verification failed or required fields are missing.');
+        error_log('Form submission failed. Nonce verification failed or required fields are missing. Solly \(o_o)/ ');
     }
 }
 
@@ -188,11 +188,13 @@ add_shortcode('competitors_scoring_public', 'competitors_scoring_shortcode');
 
 // Names list on the public side. Its clickable and opens load_competitor_details with ajax.
 function competitors_scoring_list_page() {
+    // Display success message if available
     if ($message = get_transient('competitors_scores_updated')) {
         echo '<div id="message" class="updated notice is-dismissible"><p>' . esc_html($message) . '</p></div>';
         delete_transient('competitors_scores_updated');
     }
 
+    // Query to fetch all competitors
     $args = [
         'post_type' => 'competitors',
         'posts_per_page' => -1,
@@ -201,54 +203,49 @@ function competitors_scoring_list_page() {
     $competitors_query = new WP_Query($args);
     $competitors_data = [];
 
-    while ($competitors_query->have_posts()) {
-        $competitors_query->the_post();
-        $competitor_id = get_the_ID();
-        $competitors_club = get_post_meta($competitor_id, 'club', true);
-        $competitor_scores = get_post_meta($competitor_id, 'competitor_scores', true) ?: [];
-        $competitorTotal = 0;
+    if ($competitors_query->have_posts()) {
+        while ($competitors_query->have_posts()) {
+            $competitors_query->the_post();
+            $competitor_id = get_the_ID();
+            $competitors_club = get_post_meta($competitor_id, 'club', true);
+            $competitor_scores = get_post_meta($competitor_id, 'competitor_scores', true) ?: [];
+            $competitorTotal = 0;
 
-        // Retrieve roll names and max scores from settings
-        $rolls = get_roll_names_and_max_scores(); // Assuming this function returns the required structure
+            $rolls = get_roll_names_and_max_scores(); // Assuming this returns the required structure
 
-        foreach ($rolls as $index => $roll) {
-            $roll_scores = $competitor_scores[$index] ?? [];
+            foreach ($rolls as $index => $roll) {
+                $roll_scores = $competitor_scores[$index] ?? [];
+                $roll_total = max(0, ($roll_scores['left_score'] ?? 0) - ($roll_scores['left_deduct'] ?? 0) +
+                                      ($roll_scores['right_score'] ?? 0) - ($roll_scores['right_deduct'] ?? 0));
+                $competitorTotal += $roll_total;
+            }
 
-            // Calculate the total points for this roll, taking into account scores and deductions
-            $roll_total = ($roll_scores['left_score'] ?? 0) - ($roll_scores['left_deduct'] ?? 0) +
-                          ($roll_scores['right_score'] ?? 0) - ($roll_scores['right_deduct'] ?? 0);
-
-            $competitorTotal += $roll_total;
+            $competitors_data[] = [
+                'ID' => $competitor_id,
+                'total' => $competitorTotal,
+                'title' => get_the_title(),
+                'club' => $competitors_club,
+            ];
         }
-
-        // Collect competitor ID, total scores, and title
-        $competitors_data[] = [
-            'ID' => $competitor_id,
-            'total' => $competitorTotal,
-            'title' => get_the_title(),
-            'club' => $competitors_club,
-        ];
+        wp_reset_postdata(); // Reset global post data
     }
 
-    // Sort competitors by total scores DESC
+    // Sort competitors by total scores in descending order
     usort($competitors_data, function($a, $b) {
         return $b['total'] <=> $a['total'];
     });
 
+    // Begin rendering the list of competitors
     echo "<div id=\"competitors-list\"><div id=\"spinner\"></div><h2>List of competitors</h2><ul class=\"competitors-table\">";
 
     foreach ($competitors_data as $competitor) {
-        $clubInfo = !empty($competitor['club']) ? " - {$competitor['club']}" : "";
-        $displayString = <<<HTML
-        <li class="competitors-list-item" data-competitor-id="{$competitor['ID']}"><b>{$competitor['title']}</b>{$clubInfo} - {$competitor['total']} poäng</li>
-        HTML;
-
-        echo $displayString;
+        $clubInfo = !empty($competitor['club']) ? " - " . esc_html($competitor['club']) : "";
+        echo '<li class="competitors-list-item" data-competitor-id="' . esc_attr($competitor['ID']) . '"><b>' . esc_html($competitor['title']) . '</b>' . $clubInfo . ' - ' . esc_html($competitor['total']) . ' points</li>';
     }
 
     echo "</ul><div id=\"competitors-details-container\"></div></div>";
-
 }
+
 
 
 
