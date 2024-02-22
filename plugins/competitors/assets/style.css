@@ -1,12 +1,13 @@
 /* Accomodate for various css templates in WP */
 :root {
-  --primary: rgba(210, 60, 60, 1);
-  --primary-darker: rgba(190, 50, 50, 1);
-  --primary-darkest: rgba(180, 30, 30, 1);
-  --primary-text-color: rgba(20, 20, 20, 1);
+  --primary: rgb(210, 60, 60, 1);
+  --primary-darker: rgb(190, 50, 50, 1);
+  --primary-darkest: rgb(180, 30, 30, 1);
+  --primary-text-color: rgb(20, 20, 20, 1);
   --info-color: rgba(4, 164, 204, 0.8);
   --light: rgba(255, 255, 255, 1);
-  --light-gray: rgba(240, 240, 240, 0.6);
+  --light-transparent: rgba(255, 255, 255, 0.5);
+  --light-gray: rgba(240, 240, 240, 0.5);
   --gray: rgba(200, 200, 200, 0.7);
   --light-success: rgba(238, 255, 238, 1);
 
@@ -28,8 +29,12 @@
 }
 
 /* The Competitor plugin's public styles */
+pre {
+  background-color: var(--light-gray);
+}
 
-label {
+label,
+#competitors-registration-form label {
   padding: 0.5em;
   display: inline-block;
 }
@@ -45,15 +50,26 @@ input[type="checkbox"] {
 }
 
 /* List styles for displaying competitors */
+div.competitors-table {
+  min-width: 50rem;
+}
+
 ul.competitors-table {
   column-width: 20em;
   list-style-type: none;
   padding: 0;
+  counter-reset: item-counter; /* makes an ul to an ol for fun */
 }
 
 li.competitors-list-item {
   padding: 10px;
   border-bottom: 1px solid #ddd;
+  counter-increment: item-counter;
+}
+
+li.competitors-list-item::before {
+  content: counter(item-counter) ". "; /* Display the counter before the item text */
+  margin-right: 0.5em;
 }
 
 li.competitors-list-item:hover,
@@ -111,7 +127,7 @@ th {
 
 /* Spinner is also overlay */
 #spinner {
-  background-color: rgba(255, 255, 255, 0.4);
+  background-color: var(--light-transparent);
   display: none;
   opacity: 0;
   position: absolute;
@@ -243,4 +259,8 @@ th {
 }
 .extra-visible label {
   font-size: 1em;
+}
+/* Some sites have decor in their a headers as well */
+.competitors-back-link {
+  text-decoration: none;
 }
