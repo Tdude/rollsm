@@ -42,30 +42,34 @@
 }
 
 .fixed-timer {
-  transform: translateX(-50%);
-  right: 0;
-  opacity: 1;
+  position: sticky; /* Assuming you want the sticky behavior to apply here */
+  top: 20px;
+  left: 50%;
+  transform: translateX(
+    -50%
+  ); /* Adjusts the element to be centered relative to its left 50% starting point */
+  width: 600px; /* Your fixed width */
   z-index: 99;
+  opacity: 1;
+}
+@media (max-width: 700px) {
+  .fixed-timer {
+    width: 90%;
+    padding: 0.5em;
+  }
 }
 
 #timer {
-  transition: opacity 0.5s ease, transform 0.5s ease;
+  display: flex;
   align-items: center;
+  justify-content: space-evenly;
+  flex-wrap: wrap;
+  flex-direction: row;
   background-color: var(--light-success);
   border: 1px solid var(--gray);
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-evenly;
   padding: 1em;
-  flex-direction: row;
-  /* Below are changes for fixed Timer container. The "fixed-timer" comes as class above from JS on scroll */
-  position: fixed;
-  padding: 0 1em 1em;
   height: 70px;
-  width: 600px;
-  z-index: 99;
-  top: 20px;
-  right: 0;
+  transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
 #timer button,
@@ -77,11 +81,13 @@
   color: var(--white);
   border: var(--button-border);
   border-radius: var(--border-radius-small);
-  min-width: 7em;
+
   cursor: pointer;
   transition: background-color 0.3s ease;
   text-align: center;
+  min-width: 7em;
   width: auto;
+  max-height: 3em;
 }
 /* Apply to button siblings */
 #timer .button + #timer .button {
@@ -154,21 +160,51 @@
   background-color: var(--white);
 }
 
-/* Adjust flex-direction on smaller screens */
-@media (max-width: 600px) {
+/* Flex-direction on smaller screens */
+@media (max-width: 700px) {
   #timer {
     flex-direction: column;
     width: 100%;
+    height: auto;
+    padding: 1em 0;
+    align-items: center; /* Children centered horizontally */
     transform: translateX(0%);
+    top: 0;
+    right: 0;
+    left: 0;
   }
+
+  #reset-timer {
+    order: -1; /* Reset button above all other flex items */
+    margin-top: 1em;
+  }
+
+  #start-timer {
+    order: 1; /* Start button is below the timer display but above the save button */
+  }
+
+  #timer-display {
+    order: 0; /* Timer display is at the top */
+    margin: 0 auto;
+    width: auto;
+  }
+
   #timer button,
   #timer .button {
-    margin-top: 10px; /* Add some space between stacked items */
+    width: auto;
+    margin: 10px auto;
+    text-align: center;
   }
-  /* Adjust the first button's margin-top for consistency */
-  #timer button:first-child,
-  #timer .button:first-child {
-    margin-top: 0;
+
+  .hideonsmallscreens {
+    display: none !important;
+  }
+
+  .fixed-timer {
+    position: sticky;
+    bottom: 0;
+    transform: translateX(0%);
+    width: 100%;
   }
 }
 
@@ -197,6 +233,26 @@ b.larger-txt {
   border: 1px solid var(--gray);
   padding: 8px;
   text-align: left;
+}
+
+/* Specific styles for the inner table within .competitors-info row to remove borders */
+.competitors-info table {
+  border-collapse: collapse;
+}
+.competitors-info table th,
+.competitors-info table td {
+  border: 1px solid var(--gray);
+  border-top: none;
+  border-bottom: none;
+}
+.competitors-info table th:first-child,
+.competitors-info table td:first-child {
+  border-left: none; /* Removes the left border from the first cell */
+}
+
+.competitors-info table th:last-child,
+.competitors-info table td:last-child {
+  border-right: none; /* Removes the right border from the last cell */
 }
 
 /* Hover Effect */
@@ -315,4 +371,19 @@ tr.competitors-header:hover,
 
 .distance-large {
   margin: var(--distance-large);
+}
+
+/* Admin text layout */
+.two-cols {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.two-cols div:first-child {
+  flex: 1;
+  padding-right: 2rem;
+}
+
+.two-cols div:nth-child(2) {
+  flex: 1;
 }
