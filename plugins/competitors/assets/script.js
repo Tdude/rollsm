@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", function() {
-/*
+
     const registrationForm = document.getElementById('competitors-registration-form');
     if (registrationForm) {
         registrationForm.addEventListener('submit', function(event) {
@@ -46,7 +46,7 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         });
     }
-*/
+
 
 
 
