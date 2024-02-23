@@ -8,3 +8,4 @@ Wordpress plugin to handle competitor registrations. When a competitor has regis
 
 ## You can help
 The original developer is a Greenland rolling enthusiast. If you have opinions, suggestions or just want to connect, don't be a stranger!
+This plugin's [OG lives here](https://rollsm.se/competitors-display-page/).
