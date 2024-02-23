@@ -1,11 +1,12 @@
 <?php
 /**
  * Plugin Name: Competitors
- * Description:  A RollSM competition registering and scoreboard plugin.
- * Version: 0.78
+ * Description:  For RollSM, A Greenland Rolling Championships registering and scoreboard plugin with live scores.
+ * Version: 0.79
  * Author: <a href="https://klickomaten.com">Tibor Berki</a>
  */
-define('COMPETITORS_PLUGIN_VERSION', '0.78');
+
+define('COMPETITORS_PLUGIN_VERSION', '0.79');
 
 
 /**
@@ -155,7 +156,7 @@ add_action('save_post_competitors', 'save_competitors_custom_order');
 
 /**
  * Flushes rewrite rules on plugin activation/deactivation to ensure custom post type URLs work correctly.
- * Also adds a default page upon activation to help the not so savvy to "roll" :)
+ * Also adds a default page on activation to help the not so savvy to "roll" :)
  */
 function flush_rewrite_rules_on_activation() {
     // Ensure CPT is registered
@@ -193,14 +194,14 @@ function flush_rewrite_rules_on_activation() {
         update_option('competitors_numeric_values', $points_values);
     }
 
-    // Create a default page for this plugin if it doesn't exist
+    // Create a default Wordpress page for this plugin if it doesn't exist
     $default_page_title = 'Default Competitors Display Page';
-    $default_page_slug = 'competitors-display-page'; // Define the slug here
+    $default_page_slug = 'competitors-display-page'; // Defines the URL slug
 
     if (null === get_page_by_title($default_page_title)) {
         // Start output buffering
         ob_start();
-        // Include the external PHP file
+        // Include a file to get content to prefill with
         include(plugin_dir_path(__FILE__) . '/assets/default-content.php');
         // Get the content from the buffer and clean it
         $external_content = ob_get_clean();
@@ -370,12 +371,12 @@ function initialize_competitors_settings() {
     register_setting(
         'competitors_settings', // Option group
         'competitors_numeric_values', // Option name
-        'competitors_numeric_values_sanitize' // Optional: Custom sanitize callback
+        'competitors_numeric_values_sanitize' // Optional: sanitize callback
     );
     
     add_settings_section(
         'competitors_custom_values_section', // ID
-        __('Custom Values for roll names. One roll name on each row. Add rows with +.', 'competitors'), // Title
+        __('Custom Values for roll names. One roll name on each row. Add rows with +.', 'competitors'), // Title w. instruction
         'competitors_settings_section_callback', // Callback
         'competitors_settings' // Page
     );
@@ -391,9 +392,8 @@ function initialize_competitors_settings() {
 add_action('admin_init', 'initialize_competitors_settings');
 
 
-// Callback function for the settings section description
 
-
+// Callback function for the settings section description. Dodgy URL below but we try for now.
 function competitors_settings_section_callback() {
     $external_url = 'https://www.qajaqusa.org/content.aspx?page_id=22&club_id=349669&module_id=345648';
 
@@ -405,7 +405,7 @@ function competitors_settings_section_callback() {
     echo '</div>';
     echo '<div>';
     echo __('There is a default page <a href="' . site_url('/competitors-display-page') . '">created here</a> for your convenience, which you can use, edit or delete. ', 'competitors');
-    echo __('Over at Qajaq USA there is an <a href="'. esc_url($external_url) . '" target="_blank" rel="noopener noreferrer">excellent page</a> but with dodgy links where you can learn the roll names in Inuit. Go to "QAANNAT KATTUFFIAT" > "GREENLAND CHAMPIONSHIP" and have a look at that page.', 'competitors');
+    echo __('Over at Qajaq USA there is an <a href="'. esc_url($external_url) . '" target="_blank" rel="noopener noreferrer">excellent page</a> but with dodgy links where you can learn the roll names in Inuit. If the link is a no-go u go to "QAANNAT KATTUFFIAT" > "GREENLAND CHAMPIONSHIP" and have a look at that page.', 'competitors');
     echo '</div>';
     echo '</div>';
 }
@@ -574,7 +574,6 @@ add_shortcode('custom_button', 'custom_back_button_shortcode');
 
 
 
-
 /**
  * Adds custom roles and capabilities specific to the Competitors plugin.
  * Removes old or unused roles and adds a new role for 'competitors_judge' with specific capabilities.
@@ -593,14 +592,15 @@ function setup_competitors_roles_and_capabilities() {
         $admin_role->add_cap('edit_competitors', true);
     }
 }
-// Ideally, you'd run this once, for instance, on plugin activation.
+// Ideally, you'd run this once, like on plugin activation.
 add_action('init', 'setup_competitors_roles_and_capabilities');
 
 
 
 /**
- * Restricts access to certain admin menu items for users with the 'competitors_judge' role.
+ * Restricts access and hides menu links to certain admin menu items for users with the 'competitors_judge' role.
  * Intended to simplify the WordPress admin menu for these users by removing unnecessary items.
+ * If you dont like it, just use the WP default user capabilities.
  */
 function restrict_menu_items() {
     if (current_user_can('competitors_judge')) {
@@ -620,17 +620,9 @@ add_action('admin_menu', 'restrict_menu_items');
 
 
 /**
- * Redirects the user to the 'competitors-scoring' admin page based on a transient flag set upon login.
- *
- * This function checks for a transient flag specific to the logged-in user, indicating they should be redirected
- * to the 'competitors-scoring' page, a behavior initiated by the `redirect_judge_after_login` function.
- * If the flag is present, the function performs the redirection and then deletes the transient to prevent
- * repeated redirections on subsequent admin area accesses. This approach ensures the redirection occurs
- * only once, immediately after the user logs in, enhancing navigation efficiency for users with
- * the 'edit_competitors' capability.
- *
+ * Redirects the user to the 'competitors-scoring' admin page based on a transient flag set on login.
  * The redirection is intended for users who can edit competitors, typically those with the 'competitors_judge'
- * role or equivalent capabilities, guiding them directly to relevant content in the admin dashboard.
+ * role or equivalent to get to relevant content in the admin dashboard. Sometimes it actually works too...
  */
 function redirect_judge_to_specific_page() {
     $user = wp_get_current_user();
@@ -644,13 +636,8 @@ function redirect_judge_to_specific_page() {
 add_action('admin_init', 'redirect_judge_to_specific_page', 9999);
 
 /**
- * Handles a one-time redirection to a specific admin page for users with the 'edit_competitors' capability after login.
- *
- * This function sets a transient flag for users who have the capability to edit competitors,
- * indicating that they should be redirected to the 'competitors-scoring' page upon their next access to the admin area.
- * The transient is used to ensure that the redirection occurs only once immediately after login,
- * enhancing the user experience by directing them to a relevant page based on their role capabilities.
- *
+ * The Transient is used to ensure that the redirection occurs only once immediately after login,
+ * upping the user experience by directing them to a relevant page based on their role capabilities.
  * @param string $user_login The username used to log in.
  * @param WP_User $user The WP_User object representing the logged-in user.
  */
