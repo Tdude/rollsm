@@ -28,7 +28,7 @@
   --success-darkest: rgb(20, 140, 40);
 }
 
-/* The Competitor plugin's public styles */
+/* The Competitor plugin's public form styles */
 pre {
   background-color: var(--light-gray);
 }
@@ -39,14 +39,29 @@ label,
   display: inline-block;
 }
 
+#competitors-registration-form fieldset {
+  background-color: var(--light-gray);
+}
+
 .lbl-checkbox,
 input[type="checkbox"] {
   vertical-align: middle;
   margin-right: 0.5em;
 }
 
-.pt-1 {
-  padding-top: 1em;
+input[type="submit"] {
+  margin: 1em 0;
+}
+
+.extra-visible {
+  border: 1px solid var(--primary);
+  background-color: var(--light-gray);
+  padding: 1em .5em;
+  margin: 1em 0;
+  border-radius: 5px;
+}
+.extra-visible label {
+  font-size: 1em;
 }
 
 /* List styles for displaying competitors */
@@ -78,7 +93,11 @@ li.competitors-list-item.current {
   cursor: pointer;
 }
 
-/* Highlight for selected-roll rows. Im kinda lazy, stupid, non-logical [insert denominating phrase here] and this should be refactored. */
+th {
+  font-weight: 400;
+}
+
+/* Highlight for selected-roll rows. */
 tr.selected-roll {
   background-color: var(--light);
   color: #000;
@@ -90,11 +109,25 @@ tr.non-selected-roll {
   transition: background-color 0.3s ease;
 }
 
+/* Utility nice-to-haves */
+.pt-1 {
+  padding-top: 1em;
+}
+
+.i-b {
+  display: inline-block;
+}
+
 .arrow-back {
   margin: 0 0.7em 0 0;
   height: 1em;
   font-size: 1.2em;
   vertical-align: text-bottom;
+}
+
+.hidden {
+  display: none;
+  opacity: 0;
 }
 
 .fade-inout {
@@ -112,17 +145,9 @@ tr.non-selected-roll {
   }
 }
 
-th {
-  font-weight: 400;
-}
-
-.hidden {
-  display: none;
-  opacity: 0;
-}
-
+/* Spinner stuff. First the reference ID to be positioned absolute against */
 #competitors-list {
-  position: relative; /* Reference for the spinner */
+  position: relative;
 }
 
 /* Spinner is also overlay */
@@ -139,6 +164,8 @@ th {
   align-items: center;
   pointer-events: none;
 }
+
+/* The before/after make for a Greenland flag rolling effect. */
 #spinner:before {
   content: "";
   position: absolute;
@@ -194,7 +221,6 @@ th {
   color: var(--light);
   border: 1px solid var(--primary-darker);
 }
-/* Unified hover effect */
 
 .custom-back-button:hover {
   background-color: var(--primary-darker);
@@ -202,12 +228,13 @@ th {
 }
 
 .button-success {
-  background-color: var(--success) !important;
-  border: 1px solid var(--success-darker) !important;
+  background-color: var(--success) !important; /* temp setting */
+  border: 1px solid var(--success-darker) !important; /* temp setting */
 }
+
 .button-success:hover {
-  background-color: var(--success-darker) !important;
-  border: 1px solid var(--success-darkest) !important;
+  background-color: var(--success-darker) !important; /* temp setting */
+  border: 1px solid var(--success-darkest) !important; /* temp setting */
 }
 
 /* Dashicons dashicons-arrow-left-alt2 arrow-back */
@@ -225,7 +252,7 @@ th {
 .alert {
   padding: 2em;
   background-color: var(--light-gray);
-  color: white;
+  color: black;
   opacity: 1;
   transition: opacity 0.6s;
   margin-bottom: 1em;
@@ -250,17 +277,7 @@ th {
   color: black;
 }
 
-.extra-visible {
-  border: 1px var(--primary);
-  background-color: var(--light-gray);
-  padding: 1em;
-  margin: 1em 0;
-  border-radius: 5px;
-}
-.extra-visible label {
-  font-size: 1em;
-}
-/* Some sites have decor in their a headers as well */
+/* Some sites have decor in their anchor headers */
 .competitors-back-link {
   text-decoration: none;
 }
