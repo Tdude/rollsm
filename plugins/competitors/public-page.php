@@ -22,22 +22,24 @@ function competitors_form_html() {
             <input aria-label="Club" type="text" id="club" name="club"><br>
             <div class="extra-visible">
                 <input aria-label="License agreement" type="checkbox" id="license" name="license" required>
-                <label for="license">License: Read more about <a href="/tavlingslicens-for-dig-utan-klubbtillhorighet/">licensing rules here</a>.</label>
+                <label for="license">I have a competition license! (Read more about <a href="/tavlingslicens-for-dig-utan-klubbtillhorighet/">licensing rules here</a>)</label>
             </div>
-             <label for="sponsors">Sponsors:</label>
+            <label for="sponsors">My Sponsors:</label>
             <input aria-label="Sponsors" type="text" id="sponsors" name="sponsors"><br>
             <label for="speaker_info">Speaker Info:</label>
             <textarea aria-label="Speaker Info" id="speaker_info" name="speaker_info"></textarea><br>
-            <label>Participation in Class:</label><br>
-            <input aria-label="Participation Class - Open" type="radio" id="open" name="participation_class" value="open">
-            <label for="open">Open (International participants)</label><br>
-            <input aria-label="Participation Class - Championship" type="radio" id="championship" name="participation_class" value="championship" checked>
-            <label for="championship">Championship (Swedish club member and comp. <a href="/tavlingslicens-for-dig-utan-klubbtillhorighet/">license holder</a>)</label><br>
-            <input aria-label="Participation Class - Amateur" type="radio" id="amateur" name="participation_class" value="amateur">
-            <label for="amateur">Amateur (No license needed)</label><br>
+            <div>
+                <label>Participation in Class:</label><br>
+                <input aria-label="Participation Class - Open" type="radio" id="open" class="i-b" name="participation_class" value="open">
+                <label for="open" class="i-b">Open (International participants)</label><br>
+                <input aria-label="Participation Class - Championship" type="radio" id="championship" class="i-b" name="participation_class" value="championship" checked>
+                <label for="championship" class="i-b">Championship (Swedish club member and comp. <a href="/tavlingslicens-for-dig-utan-klubbtillhorighet/">license holder</a>)</label><br>
+                <input aria-label="Participation Class - Amateur" type="radio" id="amateur" class="i-b" name="participation_class" value="amateur">
+                <label for="amateur" class="i-b">Amateur (No license needed)</label><br>
+            </div>
             <div class="extra-visible">
                 <input aria-label="Consent" type="checkbox" id="consent" name="consent">
-                <label for="consent">I agree for you to save my data, publish results, photos etc. I also agree to have fun and be nice.</label>
+                <label for="consent">I agree for you to save my data, publish results, photos etc. I also agree to have fun and play nice.</label>
             </div>
         </fieldset>
 
@@ -50,8 +52,8 @@ function competitors_form_html() {
             <table>
                 <tr>
                     <th>
-                        <input type="checkbox" id="check_all" checked />
-                        <label for="check_all">Check/uncheck All</label>
+                        <input type="checkbox" id="check_all" title="Uncheck or check all boxes" checked />
+                        <label for="check_all">All</label>
                     </th>
                     <th>Name of roll or maneuver. Uncheck the rolls you don't want to perform. You can change your mind during the event.</th>
                 </tr>
@@ -67,15 +69,13 @@ function competitors_form_html() {
                     // Display the roll name with the max score if available, otherwise display 'N/A'
                     echo '<td>' . esc_html($roll['name']) . (isset($roll['max_score']) ? esc_html($roll['max_score']) : '') . '</td>';
                     echo '</tr>';
-                }
-
-                ?>
+                } ?>
             </table>
         </fieldset>
 
         <div id="validation-message" class="hidden alert danger">
-        <span class="closebtn">&times;</span>
-        <strong>Oops!</strong> You have to fill in all the data!
+            <span class="closebtn">&times;</span>
+            <strong>Oops!</strong> You have to fill in all the data!
         </div>
 
         <a name="submitbutton"></a>
@@ -98,7 +98,7 @@ function sanitize_phone_number($phone) {
     $digitsOnly = preg_replace('/[^\d]/', '', $cleaned);
     // Check if numbers exceed whatever
     if (strlen($digitsOnly) > 15) {
-        return 'Error: is this number really correct?';
+        return '\(o_o)/ Error: is this number really correct?';
     }
     return $cleaned;
 }
@@ -154,7 +154,7 @@ function handle_competitors_form_submission() {
 
         $competitor_id = wp_insert_post($competitor_data);
         if ($competitor_id == 0) {
-            error_log('Error in creating post.');
+            error_log('\(o_o)/ Error in creating post.');
             return;
         } else {
             error_log('Post created with ID: ' . $competitor_id);
