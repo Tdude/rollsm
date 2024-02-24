@@ -67,20 +67,24 @@ Distributed under the GNU License. See `LICENSE` for more information.
 
 Competitor scoring details opens without page reload
 ![Competitor score](plugins/screenshots/Screenshot%202024-02-24%20at%2023.33.32.png "Competitor score")
+
 Total score added together live
 ![Competitor score total](plugins/screenshots/Screenshot%202024-02-24%20at%2023.33.39.png "Competitor score total")
 
 
 ### Registration Form
 ![Registration Form](plugins/screenshots/Screenshot%202024-02-24%20at%2023.34.15.png "Registration Form Screenshot")
+
 And a lot of rolls...
 ![Registration Form](plugins/screenshots/Screenshot%202024-02-24%20at%2023.34.27.png "Registration Form Screenshot")
 
 
 ### Admin Settings Interface
 ![Admin Settings Interface](plugins/screenshots/Screenshot%202024-02-24%20at%2023.37.27.png "Admin Settings Interface Screenshot")
+
 Competitors details
 ![Competitors details](plugins/screenshots/Screenshot%202024-02-24%20at%2023.37.44.png "Competitors details")
+
 Order by clicking on table headers
 ![Competitors details ordered by club](plugins/screenshots/Screenshot%202024-02-24%20at%2023.37.57.png "Competitors details ordered by club")
 
@@ -88,11 +92,19 @@ Order by clicking on table headers
 ### Scoreboard Display
 You can't start scoring competitor's rolls without starting the timer. Here are the different cases screenshot
 ![Scoreboard participant listing](plugins/screenshots/Screenshot%202024-02-24%20at%2023.38.14.png "Scoreboard participant listing")
-![Can't score without timer running](plugins/screenshots/Screenshot%202024-02-24%20at%2023.38.14.png "Can't score without timer running")
+
+Can't score without timer running
+![Can't score without timer running](plugins/screenshots/Screenshot%202024-02-24%20at%2023.38.23.png "Can't score without timer running")
 ![Timer running](plugins/screenshots/Screenshot%202024-02-24%20at%2023.38.28.png "Timer running")
+
+Can't score with paused timer
 ![Paused timer can't score](plugins/screenshots/Screenshot%202024-02-24%20at%2023.39.23.png "Paused timer can't score")
+
+Timer value is saved with scores
 ![Timer is saved with scoring](plugins/screenshots/Screenshot%202024-02-24%20at%2023.39.33.png "Timer is saved with scoring")
-![Great success](plugins/screenshots/Screenshot%202024-02-24%20at%2023.39.33.png "Great success")
+
+Latest timing saved. Great success!
+![Great success](plugins/screenshots/Screenshot%202024-02-24%20at%2023.39.55.png "Great success")
 
 
 ### Admin registration of participants 
