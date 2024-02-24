@@ -54,3 +54,21 @@ Distributed under the GNU License. See `LICENSE` for more information.
 - WordPress
 - Contributors & Supporters
 
+
+
+## Screenshots
+
+### Default page (created for you on install)
+![Screenshot](screenshots/Screenshot%202024-02-24%20at%2023.30.27.png "Default page explaining text")
+
+
+
+### Registration Form
+![Registration Form]( "Registration Form Screenshot")
+
+### Admin Scoring Interface
+![Admin Scoring Interface](images/screenshots/ "Admin Scoring Interface Screenshot")
+
+### Scoreboard Display
+![Scoreboard Display](images/screenshots/ "Scoreboard Display Screenshot")
+
