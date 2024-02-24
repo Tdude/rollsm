@@ -59,7 +59,7 @@ Distributed under the GNU License. See `LICENSE` for more information.
 ## Screenshots
 
 ### Default page (created for you on install)
-![Screenshot](screenshots/Screenshot%202024-02-24%20at%2023.30.27.png "Default page explaining text")
+![Screenshot](plugins/screenshots/Screenshot%202024-02-24%20at%2023.30.27.png "Default page explaining text")
 
 
 
