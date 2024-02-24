@@ -36,21 +36,22 @@ pre {
 label,
 #competitors-registration-form label {
   padding: 0.5em;
-  display: inline-block;
 }
 
 #competitors-registration-form fieldset {
-  background-color: var(--light-gray);
+  background-color: var(--light-transparent);
 }
 
-.lbl-checkbox,
-input[type="checkbox"] {
-  vertical-align: middle;
-  margin-right: 0.5em;
-}
 
 input[type="submit"] {
   margin: 1em 0;
+}
+
+.lbl-checkbox,
+input[type="checkbox"],
+.extra-visible input[type="checkbox"] {
+  vertical-align: inherit;
+  top: 0;
 }
 
 .extra-visible {
@@ -199,21 +200,22 @@ tr.non-selected-roll {
   }
 }
 
-.button {
-  font-size: 1.2em;
+.button,
+#submit-button {
+  font-size: 1em;
   font-weight: bold;
-  max-width: 200px !important; /* temp setting */
+  max-width: 20em;
   text-align: center;
   color: var(--light);
-  padding: 10px 24px;
   border-radius: 4px;
   border-width: 1px;
   border-style: solid;
   cursor: pointer;
-  transition: background-color 0.3s ease, color 0.3s ease;
   text-decoration: none;
   display: block;
-  margin: 20px 0;
+  margin: 1em 0;
+  padding: .7em 1em;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .custom-back-button {
