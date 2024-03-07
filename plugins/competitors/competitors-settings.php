@@ -3,7 +3,7 @@
  * Plugin Name: Competitors
  * Description:  For RollSM, A Greenland Rolling Championships registering and scoreboard plugin with live scores.
  * Version: 0.79
- * Author: <a href="https://klickomaten.com">Tibor Berki</a>
+ * Author: <a href="https://klickomaten.com">Tibor Berki</a>. /Tdude @Github.
  */
 
 define('COMPETITORS_PLUGIN_VERSION', '0.79');
@@ -41,6 +41,7 @@ function enqueue_competitors_public_scripts() {
     wp_localize_script('competitors_scoring_view_page', 'competitorsAjax', array(
         'ajaxurl' => admin_url('admin-ajax.php'), // Ensure exact same, "ajaxurl" and "nonce", param names in the JS.
         'nonce' => wp_create_nonce('competitors_nonce')
+        
     ));
 }
 add_action('wp_enqueue_scripts', 'enqueue_competitors_public_scripts');
@@ -464,23 +465,23 @@ function handle_ajax_row_removal_for_competitors() {
         $roll_names = is_array($roll_names) ? $roll_names : [];
         $points_values = is_array($points_values) ? $points_values : [];
 
-        $itemRemoved = false;
+        $item_removed = false;
 
         if (isset($roll_names[$index])) {
             unset($roll_names[$index]);
             $roll_names = array_values($roll_names);
             update_option('competitors_custom_values', $roll_names);
-            $itemRemoved = true;
+            $item_removed = true;
         }
 
         if (isset($points_values[$index])) {
             unset($points_values[$index]);
             $points_values = array_values($points_values);
             update_option('competitors_numeric_values', $points_values);
-            $itemRemoved = true;
+            $item_removed = true;
         }
 
-        if ($itemRemoved) {
+        if ($item_removed) {
             wp_send_json_success(['message' => 'Row removed successfully']);
         } else {
             wp_send_json_error(['message' => 'Index not found']);
