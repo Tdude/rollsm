@@ -8,7 +8,7 @@ function competitors_form_html() {
         <input type="hidden" name="action" value="competitors_form_submit">
 
         <h2>Registration RollSM 2024</h2>
-        <p>Remember to submit your registration at the <a href="#submitbutton">bottom of the page</a>.</p>
+        <p>Remember to submit your registration at the <a href="#submitbutton-anchor">bottom of the page</a>.</p>
 
         <fieldset>
             <legend>Personal info</legend>
@@ -38,14 +38,12 @@ function competitors_form_html() {
                 <label for="amateur" class="i-b">Amateur (No license needed)</label><br>
             </div>
             <div class="extra-visible">
-                <input aria-label="Consent" type="checkbox" id="consent" name="consent">
+                <input aria-label="Consent" type="checkbox" id="consent" name="consent" value="yes" required>
                 <label for="consent">I agree for you to save my data, publish results, photos etc. I also agree to have fun and play nice.</label>
             </div>
         </fieldset>
 
-        <p class="pt-1">According to <a href="https://kanot.com/grenar/havskajak/tavling/gronlandsroll">The Rules</a> you get 30 min to perform your rolls. However, to save time and make for a better comp, 
-            please let us know if there are rolls you will not try to perform, ie. uncheck some boxes. 
-            You can change your mind on the water, we just need a hint for time planning!</p>
+        <p class="pt-1">According to <a href="https://kanot.com/grenar/havskajak/tavling/gronlandsroll">The Rules</a> you get 30 min to perform your rolls. However, to save time and make for a better comp, please let us know if there are rolls you will not try to perform, ie. uncheck some boxes. You can change your mind on the water, we just need a hint for time planning!</p>
        
         <fieldset>
             <legend>Performing Rolls</legend>
@@ -63,11 +61,11 @@ function competitors_form_html() {
 
                 // Add checkboxes for each roll
                 foreach ($rolls as $index => $roll) {
-                    echo '<tr>';
+                    echo '<tr class="clickable-row">';
                     // Adjust the name attribute to include the index explicitly
                     echo '<td><input type="checkbox" class="roll-checkbox" checked id="roll_' . ($index + 1) . '" name="selected_rolls[' . $index . ']"></td>';
                     // Display the roll name with the max score if available, otherwise display 'N/A'
-                    echo '<td>' . esc_html($roll['name']) . (isset($roll['max_score']) ? esc_html($roll['max_score']) : '') . '</td>';
+                    echo '<td>' . esc_html($roll['name']) . ' ' . (isset($roll['max_score']) ? esc_html($roll['max_score']) : '') . '</td>';
                     echo '</tr>';
                 } ?>
             </table>
@@ -75,10 +73,10 @@ function competitors_form_html() {
 
         <div id="validation-message" class="hidden alert danger">
             <span class="closebtn">&times;</span>
-            <strong>Oops!</strong> You have to fill in all the data!
+            <strong><span class="mega-text">\(o_o)/</span> Oops!</strong> You have to fill in all the data!
         </div>
 
-        <a name="submitbutton"></a>
+        <a name="submitbutton-anchor"></a>
         <input type="submit" value="Submit" id="submit-button" class="button button-success"><?php
         wp_nonce_field('competitors_form_submission', 'competitors_nonce');
         ?>
@@ -91,86 +89,138 @@ add_shortcode('competitors_form_public', 'competitors_form_html');
 
 
 
+
+
+// WP doesn't have this. Regex for dummies, like me :)
 function sanitize_phone_number($phone) {
-    // Allowing country codes and number formatting characters
+    // Removes all characters except digits, spaces, plus, parentheses, hyphen/minus, and dots.
     $cleaned = preg_replace('/[^\+\d\s\(\)-\.]/', '', $phone);
-    // Remove non-digits to count the digits only
-    $digitsOnly = preg_replace('/[^\d]/', '', $cleaned);
-    // Check if numbers exceed whatever
-    if (strlen($digitsOnly) > 15) {
-        return '\(o_o)/ Error: is this number really correct?';
+    // Removes all non-digit characters, leaving only numbers.
+    $digits_only = preg_replace('/[^\d]/', '', $cleaned);
+    // How many digits does your country allow?
+    if (strlen($digits_only) > 15) {
+        // To indicate an error
+        return null;
     }
     return $cleaned;
 }
 
 
-
-function handle_competitors_form_submission() {
-    error_log('Form submission initiated.');
-
-    if (isset($_POST['competitors_nonce'], $_POST['name'], $_POST['email']) && 
-        wp_verify_nonce($_POST['competitors_nonce'], 'competitors_form_submission') && 
-        $_SERVER['REQUEST_METHOD'] === 'POST') {
-        
-        $name = sanitize_text_field($_POST['name']);
-        $email = sanitize_email($_POST['email']);
-        if (!is_email($email)) {
-            error_log('Invalid email: ' . $email);
-            return;
-        }
-
-        // Sanitize other inputs
-        $phone = sanitize_text_field($_POST['phone']);
-        $club = sanitize_text_field($_POST['club']);
-        $sponsors = sanitize_text_field($_POST['sponsors']);
-        $speaker_info = sanitize_textarea_field($_POST['speaker_info']);
-        $participation_class = sanitize_text_field($_POST['participation_class']);
-        $license = isset($_POST['license']) ? 'yes' : 'no';
-        $consent = isset($_POST['consent']) ? 'yes' : 'no';
-
-        // Sanitization for selected rolls - ensuring array structure is maintained
-        $selected_rolls = isset($_POST['selected_rolls']) ? $_POST['selected_rolls'] : [];
-        $selected_rolls_indexes = array_map('intval', array_keys($selected_rolls));
-
-        // Prepare data for insertion, initializing competitor_scores as an empty array for future updates
-        $competitor_data = array(
-            'post_title'    => wp_strip_all_tags($name),
-            'post_status'   => 'publish',
-            'post_type'     => 'competitors',
-            'meta_input'    => array(
-                'email' => $email,
-                'phone' => $phone,
-                'club' => $club,
-                'sponsors' => $sponsors,
-                'speaker_info' => $speaker_info,
-                'participation_class' => $participation_class,
-                'license' => $license,
-                'consent' => $consent,
-                'competitor_scores' => array(), // Initialize competitor_scores for future updates
-                'selected_rolls' => $selected_rolls_indexes,
-                '_competitors_custom_order' => 0,
-            ),
-        );
-
-        $competitor_id = wp_insert_post($competitor_data);
-        if ($competitor_id == 0) {
-            error_log('\(o_o)/ Error in creating post.');
-            return;
-        } else {
-            error_log('Post created with ID: ' . $competitor_id);
-            set_transient('competitors_form_submitted', 'Thanks for saving, this will be fun!', 10);
-        }
-
-        wp_redirect(home_url('/thank-you'));
-        exit;
-
-    } else {
-        error_log('Form submission failed. Nonce verification failed or required fields are missing. Solly \(o_o)/ ');
-    }
+function is_valid_name($name) {
+    // Use the 'u' modifier for Unicode support, and \p{L} to match any letter. Spaces, hyphen/minus and apostrophe characters are allowed.
+    return preg_match('/^[\p{L}\s\-\']+$/u', $name); // Now allows letters (including accented ones), spaces, hyphens, and apostrophes
 }
 
-add_action('admin_post_competitors_form_submit', 'handle_competitors_form_submission');
-add_action('admin_post_nopriv_competitors_form_submit', 'handle_competitors_form_submission');
+
+
+function handle_competitors_form_submission() {
+    // Initial log for debugging purposes.
+    error_log('Form submission initiated.');
+    // Check for nonce and required fields.
+   /* if (!isset($_POST['competitors_nonce'], $_POST['name'], $_POST['email'], $_POST['phone']) ||
+        !wp_verify_nonce($_POST['competitors_nonce'], 'competitors_form_submission')) {
+        error_log('Form submission failed. Nonce verification failed or required fields are missing.');
+        wp_send_json_error(['message' => '\(o_o)/ Error: Form submission failed, please try again!']);
+        return;
+    }
+    */
+
+    // Check for nonce field existence.
+    if (!isset($_POST['competitors_nonce'])) {
+        error_log('\(o_o)/ Nonce field is missing.');
+        wp_send_json_error(['message' => '\(o_o)/ Error: Nonce field is missing.']);
+        return;
+    }
+
+    // Check nonce validity.
+    if (!wp_verify_nonce($_POST['competitors_nonce'], 'competitors_nonce')) {
+        error_log('\(o_o)/ Nonce verification failed.');
+        wp_send_json_error(['message' => '\(o_o)/ Error: Nonce verification failed.']);
+        return;
+    }
+
+    // Check for each required field separately.
+    $required_fields = ['name', 'email', 'phone'];
+    foreach ($required_fields as $field) {
+        if (!isset($_POST[$field])) {
+            error_log("\(o_o)/ Required field {$field} is missing.");
+            wp_send_json_error(['message' => "\(o_o)/ Error: Required field {$field} is missing."]);
+            return;
+        }
+    }
+
+
+
+    // Sanitize and validate inputs.
+    $name = sanitize_text_field($_POST['name']);
+    $email = sanitize_email($_POST['email']);
+    $phone = sanitize_phone_number($_POST['phone']);
+    $consent = isset($_POST['consent']) && $_POST['consent'] === 'yes' ? 'yes' : 'no';
+
+    // Validate inputs.
+    if ($phone === null) {
+        wp_send_json_error(['message' => '\(o_o)/ Error: please check your phone number!']);
+        return;
+    }
+    if (!is_valid_name($name)) {
+        wp_send_json_error(['message' => '\(o_o)/ Error: please write your name!']);
+        return;
+    }
+    if (!is_email($email)) {
+        wp_send_json_error(['message' => '\(o_o)/ Error: please check the email address!']);
+        return;
+    }
+    // Require consent checkbox to be checked
+    if ($consent !== 'yes') {
+        wp_send_json_error(['message' => '\(o_o)/ Error: You must agree to the terms to proceed.']);
+        return;
+    }
+
+    // Additional sanitization for other fields.
+    $club = sanitize_text_field($_POST['club']);
+    $sponsors = sanitize_text_field($_POST['sponsors']);
+    $speaker_info = sanitize_textarea_field($_POST['speaker_info']);
+    $participation_class = sanitize_text_field($_POST['participation_class']);
+    $license = isset($_POST['license']) ? 'yes' : 'no';
+    $selected_rolls = isset($_POST['selected_rolls']) ? array_map('intval', array_keys($_POST['selected_rolls'])) : [];
+
+    // Prepare and insert post...
+    $competitor_data = [
+        'post_title'    => wp_strip_all_tags($name),
+        'post_status'   => 'publish',
+        'post_type'     => 'competitors',
+        'meta_input'    => [
+            'email' => $email,
+            'phone' => $phone,
+            'club' => $club,
+            'sponsors' => $sponsors,
+            'speaker_info' => $speaker_info,
+            'participation_class' => $participation_class,
+            'license' => $license,
+            'consent' => $consent,
+            'competitor_scores' => [],
+            'selected_rolls' => $selected_rolls,
+            '_competitors_custom_order' => 0,
+        ],
+    ];
+
+    $competitor_id = wp_insert_post($competitor_data);
+    if ($competitor_id == 0) {
+        error_log('\(o_o)/ Error in creating post.');
+        wp_send_json_error(['message' => '\(o_o)/ Error in creating post.']);
+        return;
+    }
+
+    // Successful submission.
+    error_log('Post created with ID: ' . $competitor_id);
+    wp_send_json_success(['message' => 'Thanks for saving, this will be fun!']);
+}
+
+// Register AJAX actions for logged-in and non-logged-in users.
+add_action('wp_ajax_competitors_form_submit', 'handle_competitors_form_submission');
+add_action('wp_ajax_nopriv_competitors_form_submit', 'handle_competitors_form_submission');
+
+
 
 
 
@@ -207,9 +257,9 @@ function competitors_scoring_list_page() {
         while ($competitors_query->have_posts()) {
             $competitors_query->the_post();
             $competitor_id = get_the_ID();
-            $competitors_club = get_post_meta($competitor_id, 'club', true);
+            $competitor_club = get_post_meta($competitor_id, 'club', true);
             $competitor_scores = get_post_meta($competitor_id, 'competitor_scores', true) ?: [];
-            $competitorTotal = 0;
+            $competitor_total_score = 0;
 
             $rolls = get_roll_names_and_max_scores(); // Assuming this returns the required structure
 
@@ -217,14 +267,14 @@ function competitors_scoring_list_page() {
                 $roll_scores = $competitor_scores[$index] ?? [];
                 $roll_total = max(0, ($roll_scores['left_score'] ?? 0) - ($roll_scores['left_deduct'] ?? 0) +
                                       ($roll_scores['right_score'] ?? 0) - ($roll_scores['right_deduct'] ?? 0));
-                $competitorTotal += $roll_total;
+                $competitor_total_score += $roll_total;
             }
 
             $competitors_data[] = [
                 'ID' => $competitor_id,
-                'total' => $competitorTotal,
+                'total' => $competitor_total_score,
                 'title' => get_the_title(),
-                'club' => $competitors_club,
+                'club' => $competitor_club,
             ];
         }
         wp_reset_postdata(); // Reset global post data
@@ -236,14 +286,14 @@ function competitors_scoring_list_page() {
     });
 
     // Begin rendering the list of competitors
-    echo "<div id=\"competitors-list\"><div id=\"spinner\"></div><h2>List of competitors</h2><ul class=\"competitors-table\">";
+    echo '<div id="competitors-list"><div id="spinner"></div><h2>List of competitors</h2><ul class="competitors-table">';
 
     foreach ($competitors_data as $competitor) {
-        $clubInfo = !empty($competitor['club']) ? " - " . esc_html($competitor['club']) : "";
-        echo '<li class="competitors-list-item" data-competitor-id="' . esc_attr($competitor['ID']) . '"><b>' . esc_html($competitor['title']) . '</b>' . $clubInfo . ' - ' . esc_html($competitor['total']) . ' points</li>';
+        $club_info = !empty($competitor['club']) ? " - " . esc_html($competitor['club']) : "";
+        echo '<li class="competitors-list-item" data-competitor-id="' . esc_attr($competitor['ID']) . '"><b>' . esc_html($competitor['title']) . '</b>' . $club_info . ' - ' . esc_html($competitor['total']) . ' points</li>';
     }
 
-    echo "</ul><div id=\"competitors-details-container\"></div></div>";
+    echo '</ul><div id="competitors-details-container"></div></div>';
 }
 
 
@@ -275,17 +325,17 @@ function competitors_scoring_view_page($competitor_id = 0) {
 
     $competitor_scores = get_post_meta($competitor_id, 'competitor_scores', true);
     $selected_rolls_indexes = (array) get_post_meta($competitor_id, 'selected_rolls', true);
-    $noScoresYet = empty($competitor_scores);
-    $scoresText = $noScoresYet ? " - Newly registered" : "";
-    echo '<h3><a href="#" id="close-details" class="competitors-back-link"><i class="dashicons dashicons-arrow-right-alt2 arrow-back"></i>' . esc_html(get_the_title($competitor_id)) . $scoresText . '</a></h3>';
+    $no_scores_yet = empty($competitor_scores);
+    $scores_text = $no_scores_yet ? " - Newly registered" : "";
+    echo '<h3><a href="#" id="close-details" class="competitors-back-link"><i class="dashicons dashicons-arrow-right-alt2 arrow-back"></i>' . esc_html(get_the_title($competitor_id)) . $scores_text . '</a></h3>';
 
     echo '<table class="competitors-table"><tr><th>Roll Name</th><th>Left Score</th><th>Left Deduct</th><th>Right Score</th><th>Right Deduct</th><th>Total</th></tr>';
 
     $grand_total = 0;
 
     foreach ($rolls as $index => $roll) {
-        $isSelected = in_array($index, $selected_rolls_indexes, true);
-        $selectedClass = $isSelected ? 'selected-roll' : 'non-selected-roll';
+        $is_selected = in_array($index, $selected_rolls_indexes, true);
+        $selected_class = $is_selected ? 'selected-roll' : 'non-selected-roll';
 
         $scores = $competitor_scores[$index] ?? [];
         $left_score = $scores['left_score'] ?? 0;
@@ -303,7 +353,7 @@ function competitors_scoring_view_page($competitor_id = 0) {
 
         // Display scores, replacing zeros with an empty string
         echo sprintf('<tr class="%s"><td>%s (%s)</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%d</td></tr>',
-            esc_attr($selectedClass),
+            esc_attr($selected_class),
             esc_html($roll['name']),
             esc_html($roll['max_score']),
             $left_score ? $left_score : '',
@@ -314,5 +364,5 @@ function competitors_scoring_view_page($competitor_id = 0) {
         );
     }
 
-    echo "<tr><td colspan='5'><b>Grand Total</b></td><td><b>{$grand_total}</b></td></tr></table>";
+    echo '<tr><td colspan="5"><b>Grand Total</b></td><td><b>' . $grand_total . '</b></td></tr></table>';
 }
