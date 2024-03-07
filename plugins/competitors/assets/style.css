@@ -5,11 +5,13 @@
   --primary-darkest: rgb(180, 30, 30, 1);
   --primary-text-color: rgb(20, 20, 20, 1);
   --info-color: rgba(4, 164, 204, 0.8);
-  --light: rgba(255, 255, 255, 1);
-  --light-transparent: rgba(255, 255, 255, 0.5);
-  --light-gray: rgba(240, 240, 240, 0.5);
-  --gray: rgba(200, 200, 200, 0.7);
-  --light-success: rgba(238, 255, 238, 1);
+  --white: rgb(255, 255, 255);
+  --gray: rgb(180, 180, 180);
+  --black: rgb(0, 0, 0);
+  --black-semi: rgba(0, 0, 0, .5);
+  --transp-light: rgba(255, 255, 255, 0.5);
+  --gray-light: rgba(240, 240, 240, 0.5);
+  --success-light: rgb(238, 255, 238);
 
   /* Warning, Danger, Success button colors */
   --info: rgba(4, 164, 204, 0.8);
@@ -17,52 +19,57 @@
   --danger: rgb(220, 53, 70);
   --success: rgb(40, 170, 70);
 
-  --info-darker: rgba(4, 158, 198, 1);
+  --info-darker: rgb(4, 158, 198);
   --warning-darker: rgba(224, 170, 0, 1);
   --danger-darker: rgb(220, 53, 70);
   --success-darker: rgb(30, 150, 50);
 
-  --info-darkest: rgba(2, 154, 194, 1);
-  --warning-darkest: rgba(224, 170, 0, 1);
+  --info-darkest: rgb(2, 154, 194);
+  --warning-darkest: rgb(224, 170, 0);
   --danger-darkest: rgb(220, 53, 70);
   --success-darkest: rgb(20, 140, 40);
 }
 
 /* The Competitor plugin's public form styles */
 pre {
-  background-color: var(--light-gray);
+  background-color: var(--gray-light);
 }
 
-label,
 #competitors-registration-form label {
-  padding: 0.5em;
+  padding: 0.5rem;
 }
 
 #competitors-registration-form fieldset {
-  background-color: var(--light-transparent);
+  background-color: var(--transp-light);
 }
 
-
-input[type="submit"] {
-  margin: 1em 0;
+#competitors-registration-form input,
+#competitors-registration-form textarea {
+  border-color: var(--gray);
 }
 
-.lbl-checkbox,
-input[type="checkbox"],
-.extra-visible input[type="checkbox"] {
+#competitors-registration-form input[type="submit"] {
+  margin: 1rem 0;
+}
+
+#competitors-registration-form .lbl-checkbox,
+#competitors-registration-form input[type="checkbox"],
+#competitors-registration-form .extra-visible input[type="checkbox"] {
   vertical-align: inherit;
   top: 0;
 }
 
-.extra-visible {
-  border: 1px solid var(--primary);
-  background-color: var(--light-gray);
-  padding: 1em .5em;
-  margin: 1em 0;
+#competitors-registration-form .border-danger,
+#competitors-registration-form .extra-visible {
+  border: 1px solid var(--success);
+  background-color: var(--gray-light);
+  padding: 1rem .5rem;
+  margin: 1rem 0;
   border-radius: 5px;
 }
-.extra-visible label {
-  font-size: 1em;
+
+#competitors-registration-form .border-danger {
+  border: 1px solid var(--danger);
 }
 
 /* List styles for displaying competitors */
@@ -71,7 +78,7 @@ div.competitors-table {
 }
 
 ul.competitors-table {
-  column-width: 20em;
+  column-width: 20rem;
   list-style-type: none;
   padding: 0;
   counter-reset: item-counter; /* makes an ul to an ol for fun */
@@ -85,12 +92,12 @@ li.competitors-list-item {
 
 li.competitors-list-item::before {
   content: counter(item-counter) ". "; /* Display the counter before the item text */
-  margin-right: 0.5em;
+  margin-right: 0.5rem;
 }
 
 li.competitors-list-item:hover,
 li.competitors-list-item.current {
-  background-color: var(--light-gray);
+  background-color: var(--gray-light);
   cursor: pointer;
 }
 
@@ -100,35 +107,34 @@ th {
 
 /* Highlight for selected-roll rows. */
 tr.selected-roll {
-  background-color: var(--light);
-  color: #000;
+  background-color: var(--white);
+  color: var(--black);
 }
 /* Styles for non-selected or default rows. Yeah. */
 tr.non-selected-roll {
-  background-color: var(--light-gray);
+  background-color: var(--gray-light);
   color: var(--primary-text-color);
   transition: background-color 0.3s ease;
 }
 
 /* Utility nice-to-haves */
+.mega-text {
+  font-size: 5rem;
+  display: block;
+  margin: .5rem 1rem;
+}
+
 .pt-1 {
-  padding-top: 1em;
+  padding-top: 1rem;
 }
 
 .i-b {
   display: inline-block;
 }
 
-.arrow-back {
-  margin: 0 0.7em 0 0;
-  height: 1em;
-  font-size: 1.2em;
-  vertical-align: text-bottom;
-}
-
 .hidden {
   display: none;
-  opacity: 0;
+/*  opacity: 0;*/
 }
 
 .fade-inout {
@@ -153,7 +159,7 @@ tr.non-selected-roll {
 
 /* Spinner is also overlay */
 #spinner {
-  background-color: var(--light-transparent);
+  background-color: var(--transp-light);
   display: none;
   opacity: 0;
   position: absolute;
@@ -171,8 +177,8 @@ tr.non-selected-roll {
   content: "";
   position: absolute;
   border: 60px solid transparent;
-  border-top-color: var(--light);
-  border-right-color: var(--light);
+  border-top-color: var(--white);
+  border-right-color: var(--white);
   border-radius: 50%;
   transform: rotate(-65deg);
   animation: rotate 5s infinite reverse cubic-bezier(0.59, 0.23, 0.4, 0.79);
@@ -200,27 +206,36 @@ tr.non-selected-roll {
   }
 }
 
-.button,
+#competitors-registration-form .button,
 #submit-button {
-  font-size: 1em;
   font-weight: bold;
-  max-width: 20em;
+  text-shadow: 1px 1px 1px var(--black-semi);
+  max-width: 100%;
   text-align: center;
-  color: var(--light);
-  border-radius: 4px;
+  color: var(--white);
+  border-radius: 5px;
   border-width: 1px;
   border-style: solid;
   cursor: pointer;
   text-decoration: none;
   display: block;
   margin: 1em 0;
-  padding: .7em 1em;
+  padding: 1em;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#competitors-registration-form .clickable-row {
+  cursor: pointer;
+}
+#competitors-registration-form .clickable-row:hover {
+  background-color: var(--gray-light);
+  color: var(--black-semi);
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .custom-back-button {
   background-color: var(--primary);
-  color: var(--light);
+  color: var(--white);
   border: 1px solid var(--primary-darker);
 }
 
@@ -242,7 +257,12 @@ tr.non-selected-roll {
 /* Dashicons dashicons-arrow-left-alt2 arrow-back */
 .dashicons.arrow-back {
   vertical-align: middle;
-  margin-bottom: 5px;
+}
+
+.arrow-back {
+  margin: 0 1rem 0 0;
+  font-size: 2rem;
+  line-height: 1rem;
 }
 
 .validation-error {
@@ -252,31 +272,34 @@ tr.non-selected-roll {
 
 /* Form validation error box */
 .alert {
-  padding: 2em;
-  background-color: var(--light-gray);
+  padding: 2rem;
+  background-color: var(--gray-light);
   color: black;
   opacity: 1;
   transition: opacity 0.6s;
-  margin-bottom: 1em;
+  margin-bottom: 1rem;
 }
 
 .alert.danger {
-  background-color: var(--primary);
+  background-color: var(--danger);
 }
 
 .closebtn {
-  margin-left: 15px;
-  color: white;
+  margin-left: 1rem;
+  padding: .5rem;
+  color: var(--white);
+  border-radius: 50%;
   font-weight: bold;
   float: right;
-  font-size: 22px;
-  line-height: 20px;
+  font-size: 2rem;
+  line-height: 2rem;
   cursor: pointer;
   transition: 0.3s;
 }
 
 .closebtn:hover {
   color: black;
+  background-color: var(--danger-darker);
 }
 
 /* Some sites have decor in their anchor headers */
