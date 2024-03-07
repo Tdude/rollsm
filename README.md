@@ -59,16 +59,55 @@ Distributed under the GNU License. See `LICENSE` for more information.
 ## Screenshots
 
 ### Default page (created for you on install)
-![Screenshot](screenshots/Screenshot%202024-02-24%20at%2023.30.27.png "Default page explaining text")
+![Screenshot](plugins/screenshots/Screenshot%202024-02-24%20at%2023.30.27.png "Default page explaining text")
 
+
+### List of competitors (public)
+![List of competitors](plugins/screenshots/Screenshot%202024-02-24%20at%2023.32.32.png "List of competitors")
+
+Competitor scoring details opens without page reload
+![Competitor score](plugins/screenshots/Screenshot%202024-02-24%20at%2023.33.32.png "Competitor score")
+
+Total score added together live
+![Competitor score total](plugins/screenshots/Screenshot%202024-02-24%20at%2023.33.39.png "Competitor score total")
 
 
 ### Registration Form
-![Registration Form]( "Registration Form Screenshot")
+![Registration Form](plugins/screenshots/Screenshot%202024-02-24%20at%2023.34.15.png "Registration Form Screenshot")
 
-### Admin Scoring Interface
-![Admin Scoring Interface](images/screenshots/ "Admin Scoring Interface Screenshot")
+And a lot of rolls...
+![Registration Form](plugins/screenshots/Screenshot%202024-02-24%20at%2023.34.27.png "Registration Form Screenshot")
+
+
+### Admin Settings Interface
+![Admin Settings Interface](plugins/screenshots/Screenshot%202024-02-24%20at%2023.37.27.png "Admin Settings Interface Screenshot")
+
+Competitors details
+![Competitors details](plugins/screenshots/Screenshot%202024-02-24%20at%2023.37.44.png "Competitors details")
+
+Order by clicking on table headers
+![Competitors details ordered by club](plugins/screenshots/Screenshot%202024-02-24%20at%2023.37.57.png "Competitors details ordered by club")
+
 
 ### Scoreboard Display
-![Scoreboard Display](images/screenshots/ "Scoreboard Display Screenshot")
+You can't start scoring competitor's rolls without starting the timer. Here are the different cases screenshot
+![Scoreboard participant listing](plugins/screenshots/Screenshot%202024-02-24%20at%2023.38.14.png "Scoreboard participant listing")
 
+Can't score without timer running
+![Can't score without timer running](plugins/screenshots/Screenshot%202024-02-24%20at%2023.38.23.png "Can't score without timer running")
+![Timer running](plugins/screenshots/Screenshot%202024-02-24%20at%2023.38.28.png "Timer running")
+
+Can't score with paused timer
+![Paused timer can't score](plugins/screenshots/Screenshot%202024-02-24%20at%2023.39.23.png "Paused timer can't score")
+
+Timer value is saved with scores
+![Timer is saved with scoring](plugins/screenshots/Screenshot%202024-02-24%20at%2023.39.33.png "Timer is saved with scoring")
+
+Latest timing saved. Great success!
+![Great success](plugins/screenshots/Screenshot%202024-02-24%20at%2023.39.55.png "Great success")
+
+
+### Admin registration of participants 
+Individual edit for easy manual registration. Ie. on premise for queuing competitors. With order quick edit possibility. 
+![Quick edit for order of participants](plugins/screenshots/Screenshot%202024-02-24%20at%2023.42.09.png "Quick edit for order of participants")
+![Enter or update all competitor's details](plugins/screenshots/Screenshot%202024-02-24%20at%2023.43.16.png "Enter or update all competitor's details")
