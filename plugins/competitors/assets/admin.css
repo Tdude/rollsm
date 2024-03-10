@@ -57,6 +57,10 @@
     width: 90%;
     padding: 0.5em;
   }
+  #wpcontent {
+      padding-left: .5rem;
+      padding-right: .5rem;
+  }
 }
 
 #timer {
@@ -255,6 +259,20 @@ b.larger-txt {
   border-right: none; /* Removes the right border from the last cell */
 }
 
+.competitors-info td.overflow-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+}
+
+.competitors-info td.overflow-ellipsis:hover {
+  overflow: visible;
+  white-space: normal;
+  cursor: pointer;
+}
+
+
 /* Hover Effect */
 .competitors-table tr:hover,
 tr.competitors-header:hover,
@@ -310,25 +328,28 @@ tr.competitors-header:hover,
 
 #spinner {
   background-color: var(--semi-white);
-  display: none; /* Controlled by JS */
-  opacity: 0;
+  display: flex;
   justify-content: center;
   align-items: center;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 1;
-  pointer-events: none !important; /* Prevent interaction */
-  transition: opacity 0.5s ease; /* Smooth appearance */
+  z-index: 9;
+  height: auto;
+  /*pointer-events: none !important;*/ /* Prevent interaction */
+  visibility: hidden;
+  opacity: 0;
+  transition: all 0.5s ease;
 }
 
+/* If you get problems, just use display: none|flex without transition */
 #spinner.show {
-  display: flex;
   opacity: 1;
+  visibility: visible;
 }
 
 .hidden {
-  display: none;
+  visibility: hidden;
   opacity: 0;
 }
 
@@ -365,8 +386,44 @@ tr.competitors-header:hover,
   }
 }
 
-#wpfooter {
-  position: relative;
+#message-overlay {
+position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: var(--danger);
+    font-size: 5rem;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    text-align: center;
+    animation: blinker 1s linear infinite;
+}
+
+@keyframes blinker {
+  50% {
+    opacity: 0;
+  }
+}
+
+.hidden {
+  display: none;
+  opacity: 0;
+}
+
+.fade-inout {
+  transition: opacity 0.5s ease, all 0.5s ease;
+  opacity: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.fade-inout.show {
+  display: flex;
+  opacity: 1;
+  height: auto;
 }
 
 .distance-large {
