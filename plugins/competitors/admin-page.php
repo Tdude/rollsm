@@ -10,6 +10,7 @@ function competitors_admin_page() {
         echo '<h2>\(o_o)/</h2><p>Access denied to scoring, dude. You dont seem to be The Judge.</p>';
         return;
     }
+    render_admin_page_header(); // For nav tabs
 
     $competitors_query = new WP_Query([
         'post_type' => 'competitors',
@@ -58,9 +59,7 @@ function competitors_admin_page() {
         echo '<h2>\(o_o)/</h2><p>No competitors found! </p>';
     }
     wp_reset_postdata();
-
 }
-
 
 
 function judges_scoring_page() {
@@ -68,6 +67,7 @@ function judges_scoring_page() {
         echo '<p>Access denied to scoring, dude. You dont seem to be The Judge.</p>';
         return;
     }
+    render_admin_page_header(); // For nav tabs
 
     $args = array(
         'post_type' => 'competitors',
@@ -91,7 +91,7 @@ function judges_scoring_page() {
 
     // Check if there are no competitors
     if (!$competitors_query->have_posts()) {
-        $no_competitors_message = esc_html__('Looks like there are no competitors to score right now. Please add some competitors or check back later.', 'text-domain');
+        $no_competitors_message = esc_html__('Looks like there are no competitors to score right now. Please add some competitors or check back later.', 'competitors');
         echo "<h2>\\(o_o)/</h2><p>{$no_competitors_message}</p>";
         return; // Exit the function early
     }
@@ -99,16 +99,16 @@ function judges_scoring_page() {
     $action_url = esc_url(admin_url('admin-post.php'));
     $nonce_field = wp_nonce_field('competitors_score_update_action', 'competitors_score_update_nonce', true, false);
     $admin_email = get_option('admin_email');
-    $contact_admin = esc_html__('Please contact the Admin:', 'text-domain');
+    $contact_admin = esc_html__('Please contact the Admin for feedback: ', 'competitors');
     $admin_email_link = "{$contact_admin} " . esc_html($admin_email);
 
     // Localizing static strings
-    $judges_scoring_page_title = esc_html__('Judges Scoring Page', 'text-domain');
-    $timer_label = esc_html__('Timer', 'text-domain');
-    $start_button_title = esc_attr__('Start timer before scoring competitors!', 'text-domain');
-    $save_scores_button_title = esc_attr__('Saves scores and time, resets Timer', 'text-domain');
-    $reset_button_title = esc_attr__('This button and changing competitor resets Timer', 'text-domain');
-    $clicking_info = wp_kses_post(__('Clicking any competitor name row <b><i>always resets the timer</i></b>. Timing for a particular competitor can be Paused or saved when you click "Save scores". This is live score timing. <b><i>There is no going back to adjust!</i></b> If you resave a competitor\'s score, the timing for that competitor will be reset. If you change competitor view, timing will reset. Do not mess around. You have now been warned. If there is any <i>simple</i> logic you need,', 'text-domain'));
+    $judges_scoring_page_title = esc_html__('Judges Scoring Page', 'competitors');
+    $timer_label = esc_html__('Timer', 'competitors');
+    $start_button_title = esc_attr__('Start timer before scoring competitors!', 'competitors');
+    $save_scores_button_title = esc_attr__('Saves scores and time, resets Timer', 'competitors');
+    $reset_button_title = esc_attr__('This button and changing competitor resets Timer', 'competitors');
+    $clicking_info = wp_kses_post(__('Clicking any competitor name row while the Timer is running <b><i>always resets Timer</i></b>. Timing for a particular competitor can be Paused if you want, or saved when you click "Save scores". This is live score timing. <b><i>There is no going back to adjust!</i></b> If you resave a competitor\'s score, the timing for that competitor will be reset. Once again:<em> If you change competitor view (click another competitor\'s name), timing will reset</em>. Do not mess around. You have now been warned. ', 'competitors'));
 
     echo <<<HTML
     <h1 class="distance-large">{$judges_scoring_page_title}</h1>
@@ -144,6 +144,7 @@ function judges_scoring_page() {
         $tempHTML .= <<<HTML
         <input type="hidden" name="start_time[{$competitor_id}]" id="start-time-{$competitor_id}" value="">
         <input type="hidden" name="stop_time[{$competitor_id}]" id="stop-time-{$competitor_id}" value="">
+        <input type="hidden" name="elapsed_time[{$competitor_id}]" id="elapsed-time-{$competitor_id}" value="">
         HTML;
     
         foreach ($rolls as $index => $roll) {
@@ -191,25 +192,24 @@ function judges_scoring_page() {
     <td colspan="2"><b>Rolls to perform</b> (Avg: <b>{$average_rolls_formatted}</b>  per competitor)</td>
     <td colspan="3"><b>Grand Total Score</b> (Avg: <b>{$average_score_formatted}</b> points per competitor)</td>
     <td><b>{$grand_total}</b></td></tr></tbody></table>
-    <div id="spinner" class="hidden"></div>
+    <div id="spinner" class="fade-inout"></div>
+    <div id="message-overlay" class="fade-inout"></div>
     <p><input type="submit" value="Save scores" class="button button-primary save-scores" title="Saves scores and time, resets Timer. Just like the button on top."></p>
     </form>
     HTML;
 }
 
 
-
 function render_competitor_header_row($competitor_id, $competitor_total_score) {
     $title = get_the_title($competitor_id);
     // Now using $competitor_total_score in the heredoc output
     return <<<HTML
-        <tr class="competitors-header" data-competitor="$competitor_id" title="Clicking here always resets Timer. Careful!">
-            <th colspan="5"><span id="close-details" class="dashicons dashicons-arrow-down-alt2"></span><b class="larger-txt"> $title</b> <span class="showonhover">(click to see info and scoresheet)</span></th>
-            <th width="7%">$competitor_total_score points</th>
-        </tr>
+    <tr class="competitors-header" data-competitor="$competitor_id" title="Clicking here always resets Timer. Careful!">
+    <th colspan="5"><span id="close-details" class="dashicons dashicons-arrow-down-alt2"></span><b class="larger-txt"> $title</b> <span class="showonhover">(click to see info and scoresheet)</span></th>
+    <th width="7%">$competitor_total_score points</th>
+    </tr>
     HTML;
 }
-
 
 
 function render_competitor_info_row($competitor_id) {
@@ -218,55 +218,47 @@ function render_competitor_info_row($competitor_id) {
     $speaker_info = esc_html(get_post_meta($competitor_id, 'speaker_info', true));
     $sponsors = esc_html(get_post_meta($competitor_id, 'sponsors', true));
     
-    // Fetch start and stop times
+    // Fetch start, stop, and elapsed times
     $start_time_meta = get_post_meta($competitor_id, 'start_time', true);
     $stop_time_meta = get_post_meta($competitor_id, 'stop_time', true);
+    $elapsed_time_meta = get_post_meta($competitor_id, 'elapsed_time', true);
 
-    // Assuming the times are stored as Unix timestamps or are otherwise directly comparable
     $start_time = $start_time_meta ? date('H:i:s', strtotime($start_time_meta)) : 'N/A';
     $stop_time = $stop_time_meta ? date('H:i:s', strtotime($stop_time_meta)) : 'N/A';
 
-    // Calculate total time if both start and stop times are available
-    if ($start_time_meta && $stop_time_meta) {
-        $total_seconds = strtotime($stop_time_meta) - strtotime($start_time_meta);
-        $hours = floor($total_seconds / 3600);
-        $minutes = floor(($total_seconds % 3600) / 60);
-        $seconds = $total_seconds % 60;
-
-        // Format total time as H:i:s
-        $total_time = sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
-    } else {
-        $total_time = 'N/A';
-    }
+    // Display the saved elapsed time directly
+    $elapsed_time = $elapsed_time_meta ?: 'N/A';
 
     return <<<HTML
-        <tr class="competitors-info hidden" data-competitor="$competitor_id">
-            <td colspan="6">
-                <table>
-                    <tbody>
-                        <tr>
-                            <th>Speaker Info</th>
-                            <th width="7%">Sponsors</th>
-                            <th width="7%">Club</th>
-                            <th width="7%">Class</th>
-                            <th width="7%">Start time</th>
-                            <th width="7%">Total time</th>
-                        </tr>
-                        <tr>
-                            <td>$speaker_info</td>
-                            <td>$sponsors</td>
-                            <td>$club</td>
-                            <td>$participation_class</td>
-                            <td>$start_time</td>
-                            <td>$total_time</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </td>
-        </tr>
-        <tr class="th-columns hidden" data-competitor="$competitor_id"><th>Maneuver</th><th width="7%">L</th><th width="7%">L-</th><th width="7%">R</th><th width="7%">R-</th><th width="7%">Sum</th></tr>
+    <tr class="competitors-info hidden" data-competitor="$competitor_id">
+    <td colspan="6">
+    <table>
+    <tbody>
+    <tr>
+    <th>Info</th>
+    <th width="7%">Sponsors</th>
+    <th width="7%">Club</th>
+    <th width="7%">Class</th>
+    <th width="7%">Start - Stop</th>
+    <th width="7%">Elapsed Time</th>
+    </tr>
+    <tr>
+    <td class="overflow-ellipsis">$speaker_info</td>
+    <td class="overflow-ellipsis">$sponsors</td>
+    <td>$club</td>
+    <td>$participation_class</td>
+    <td>$start_time - $stop_time</td>
+    <td>$elapsed_time</td>
+    </tr>
+    </tbody>
+    </table>
+    </td>
+    </tr>
+    <tr class="th-columns hidden" data-competitor="$competitor_id"><th>Maneuver</th><th width="7%">L</th><th width="7%">L-</th><th width="7%">R</th><th width="7%">R-</th><th width="7%">Sum</th></tr>
     HTML;
 }
+
+
 
 function render_competitor_score_row($competitor_id, $index, $roll, $scores, $selected_rolls) {
     $roll_name = esc_html($roll['name']);
@@ -300,6 +292,7 @@ function handle_competitors_score_update_serialized() {
                 // Directly fetch individual start and stop times for each competitor
                 $start_time = isset($_POST['start_time'][$competitor_id]) ? sanitize_text_field($_POST['start_time'][$competitor_id]) : '';
                 $stop_time = isset($_POST['stop_time'][$competitor_id]) ? sanitize_text_field($_POST['stop_time'][$competitor_id]) : '';
+                $elapsed_time = isset($_POST['elapsed_time'][$competitor_id]) ? sanitize_text_field($_POST['elapsed_time'][$competitor_id]) : '';
 
                 // Update times without checking for existing values to allow updates
                 if (!empty($start_time)) {
@@ -307,6 +300,9 @@ function handle_competitors_score_update_serialized() {
                 }
                 if (!empty($stop_time)) {
                     update_post_meta($competitor_id, 'stop_time', $stop_time);
+                }
+                if (!empty($elapsed_time)) {
+                    update_post_meta($competitor_id, 'elapsed_time', $elapsed_time);
                 }
 
                 // Init to hold all scores for serialization
