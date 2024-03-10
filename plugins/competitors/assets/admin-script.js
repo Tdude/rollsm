@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const spinner = document.getElementById('spinner');
             spinner.classList.remove('hidden');
             spinner.classList.add('show');
-            spinner.style.display = 'flex'; // Ensure spinner is visible
+            //spinner.style.display = 'flex'; // Spinner visible with JS
             console.log("Show");
         }
 
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const spinner = document.getElementById('spinner');
             spinner.classList.add('hidden');
             spinner.classList.remove('show');
-            spinner.style.display = 'none'; // Hide spinner
+            //spinner.style.display = 'none'; // Hide spinner with JS
             console.log("Hide");
         }
 
@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const nonce = document.querySelector('#competitors_nonce').value;
 
                     // AJAX request to WordPress
-                    fetch(competitorsData.ajaxurl, {
+                    fetch(competitorsAdminAjax.ajaxurl, {
                         method: 'POST',
                         credentials: 'same-origin',
                         headers: {
@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         body: new URLSearchParams({
                             action: 'remove_competitor_row',
                             index: rowIndex,
-                            security: competitorsData.nonce,
+                            security: competitorsAdminAjax.nonce,
                         })
                     })
                     .then(response => response.json())
@@ -234,141 +234,134 @@ document.addEventListener('DOMContentLoaded', function() {
         form.addEventListener('keydown', function(event) {
             if (event.key === 'Enter') {
                 event.preventDefault();
-                alert("Do NOT hit the Enter key. Click the buttons \"Save Score\" if you want to save! This will now neither reset the Timer nor save. Oh-key-do-key?");
+                alert("Do NOT hit the Enter key. Click the buttons \"Save Score\" if you want to save! This will now neither reset the Timer nor save. Oh-key-doe-key?");
                 return false;
             }
         });
     }
 
-
-    // Timer/buttons/overlay mess in admin, judges scores page.
+    // Timer logic saves start, total and elapsed times in form
     if (document.getElementById('timer')) {
         const timer = document.getElementById('timer');
         const saveScoresBtn = document.querySelector('.save-scores');
         const form = document.querySelector('form');
-        const originalOffsetTop = timer.offsetTop;
 
-        if (timer) {
-            // Fix timer at top of window
-            window.addEventListener('scroll', function() {
-                if (window.scrollY > 50) {
-                    timer.classList.add('fixed-timer');
-                } else {
-                    timer.classList.remove('fixed-timer');
-                }
-            });
+        window.addEventListener('scroll', function() {
+            timer.classList.toggle('fixed-timer', window.scrollY > 50);
+        });
+
+        let timerStarted = false;
+        let paused = true;
+        let elapsedTime = 0;
+        let interval;
+        let currentCompetitorId = null;
+        const timerDisplay = document.getElementById('timer-display');
+        const startBtn = document.getElementById('start-timer');
+        const resetBtn = document.getElementById('reset-timer');
+
+        function showTimeout(msg){
+            let overlay = document.getElementById('message-overlay');
+            // Set the message and make it visible
+            overlay.innerText = msg;
+            overlay.classList.add('show');
+            // Automatically hide (e.g., 5 seconds)
+            setTimeout(() => {
+                overlay.classList.remove('show');
+
+            }, 5000);
+        }
+        function updateTimerDisplay() {
+            const hours = Math.floor(elapsedTime / 3600000).toString().padStart(2, '0');
+            const minutes = Math.floor((elapsedTime % 3600000) / 60000).toString().padStart(2, '0');
+            const seconds = Math.floor((elapsedTime % 60000) / 1000).toString().padStart(2, '0');
+            timerDisplay.textContent = `${hours}:${minutes}:${seconds}`;
             
-            let timerStarted = false;
-            let paused = true;
-            let elapsedTime = 0;
-            let interval;
-            let currentCompetitorId = null;
 
-            const timerDisplay = document.getElementById('timer-display');
-            const startBtn = document.getElementById('start-timer');
-            const resetBtn = document.getElementById('reset-timer');
-            if (saveScoresBtn) {
-                saveScoresBtn.addEventListener('click', function(e) {
-                    // Prevent default form submission here too to ensure stop time is updated before submitting
-                    e.preventDefault();
-                    // Stop the timer and update the stop time just before submission
-                    if (timerStarted && !paused) {
-                        stopTimerAndUpdateStopTime();
-                    }
-                    // Optionally, manually submit the form here if default submission was prevented
-                    form.submit();
-                });
+            // Check for the 15-minute mark
+            if (elapsedTime >= 900000 && elapsedTime < 901000) { // Adding a small buffer to ensure the message is triggered once
+                showTimeout("Half Time");
             }
-            function stopTimerAndUpdateStopTime() {
-                clearInterval(interval);
-                paused = true;
-                timerStarted = false;
-                let stopTime = new Date().toISOString();
-                if (currentCompetitorId) {
-                    document.getElementById(`stop-time-${currentCompetitorId}`).value = stopTime;
-                }
+            // Check for the 25-minute mark
+            if (elapsedTime >= 1500000 && elapsedTime < 1501000) { // Similarly, adding a small buffer
+                showTimeout("5 minutes to go");
+            }
+        }
+
+        function resetTimerDisplayAndData() {
+            clearInterval(interval);
+            timerStarted = false;
+            paused = true;
+            elapsedTime = 0;
+            updateTimerDisplay();
+            startBtn.textContent = 'Start';
+            if (currentCompetitorId) {
+                document.getElementById(`start-time-${currentCompetitorId}`).value = '';
+                document.getElementById(`stop-time-${currentCompetitorId}`).value = '';
+                document.getElementById(`elapsed-time-${currentCompetitorId}`).value = '';
+            }
+        }
+
+        resetBtn.addEventListener('click', function() {
+            var resetConfirmed = confirm("Are you sure you want to reset the timer?");
+            if (resetConfirmed) {
+                resetTimerDisplayAndData();
+            }
+        });
+
+        function pauseTimer() {
+            clearInterval(interval);
+            paused = true;
+            startBtn.textContent = 'Continue';
+        }
+
+        function startOrContinueTimer() {
+            timerStarted = true;
+            paused = false;
+            startBtn.textContent = 'Pause';
+            if (elapsedTime === 0) {
+                let startTime = new Date().toISOString();
+                document.getElementById(`start-time-${currentCompetitorId}`).value = startTime;
+            }
+            interval = setInterval(function() {
+                elapsedTime += 100;
                 updateTimerDisplay();
-                startBtn.textContent = 'Start';
+            }, 100);
+        }
+
+        startBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (!currentCompetitorId) {
+                alert('Please select a competitor first.');
+                return;
+            }
+
+            if (!timerStarted || paused) {
+                startOrContinueTimer();
+                hideSpinner();
+            } else {
+                pauseTimer();
                 showSpinner();
             }
-            // Listen for clicks on competitor headers to set the currentCompetitorId
-            document.querySelectorAll('.competitors-header').forEach(header => {
-                header.addEventListener('click', function() {
-                    currentCompetitorId = this.getAttribute('data-competitor');
-                    resetTimerDisplayAndData(); // Reset when a new competitor is selected
-                    // console.log(`Current Competitor ID: ${currentCompetitorId}`);
-                });
-            });
+        });
 
-            function resetTimerDisplayAndData() {
-                clearInterval(interval);
-                timerStarted = false;
-                paused = true;
-                elapsedTime = 0;
-                updateTimerDisplay();
-                startBtn.textContent = 'Start';
-                // Dont trigger spinner here. It loops.
-                if (currentCompetitorId) {
-                    document.getElementById(`start-time-${currentCompetitorId}`).value = '';
-                    document.getElementById(`stop-time-${currentCompetitorId}`).value = '';
-                }
-            }
-
-            function updateTimerDisplay() {
-                const hours = Math.floor(elapsedTime / 3600000).toString().padStart(2, '0');
-                const minutes = Math.floor((elapsedTime % 3600000) / 60000).toString().padStart(2, '0');
-                const seconds = Math.floor((elapsedTime % 60000) / 1000).toString().padStart(2, '0');
-                timerDisplay.textContent = `${hours}:${minutes}:${seconds}`;
-            }
-
-            resetBtn.addEventListener('click', function() {
-                var resetConfirmed = confirm("Are you sure you want to reset the timer?");
-                if (resetConfirmed) {
-                    resetTimerDisplayAndData();
-                } else {
-                    // Logic for when reset is canceled; potentially continue the timer.
-                    console.log("Timer reset canceled.");
-                }
-            });
-
-            startBtn.addEventListener('click', function(e) {
+        if (saveScoresBtn) {
+            saveScoresBtn.addEventListener('click', function(e) {
                 e.preventDefault();
-                if (!currentCompetitorId) {
-                    alert('Please select a competitor first.');
-                    return;
+                if (currentCompetitorId) {
+                    let stopTime = new Date().toISOString();
+                    document.getElementById(`stop-time-${currentCompetitorId}`).value = stopTime;
+                    document.getElementById(`elapsed-time-${currentCompetitorId}`).value = timerDisplay.textContent;
                 }
-
-                if (!timerStarted) {
-                    timerStarted = true;
-                    paused = false;
-                    startBtn.textContent = 'Pause';
-                    if (elapsedTime === 0) {
-                        let startTime = new Date().toISOString();
-                        document.getElementById(`start-time-${currentCompetitorId}`).value = startTime;
-                    }
-                    interval = setInterval(function() {
-                        elapsedTime += 100;
-                        updateTimerDisplay();
-                    }, 100);
-                    hideSpinner();
-                } else if (!paused) {
-                    clearInterval(interval);
-                    paused = true;
-                    startBtn.textContent = 'Continue';
-                    let pauseTime = new Date().toISOString();
-                    document.getElementById(`stop-time-${currentCompetitorId}`).value = pauseTime;
-                    showSpinner();
-                } else {
-                    paused = false;
-                    startBtn.textContent = 'Pause';
-                    interval = setInterval(function() {
-                        elapsedTime += 100;
-                        updateTimerDisplay();
-                    }, 100);
-                    hideSpinner();
-                } 
+                form.submit(); // Submit the form data
             });
         }
+
+        document.querySelectorAll('.competitors-header').forEach(header => {
+            header.addEventListener('click', function() {
+                currentCompetitorId = this.getAttribute('data-competitor');
+                resetTimerDisplayAndData();
+            });
+        });
     }
 
 });
