@@ -25,7 +25,7 @@ function competitors_admin_page() {
         // echo '<a href="' . esc_url(admin_url('admin.php?page=my_custom_page')) . '">Go to My Custom Page</a>';
 
         echo '<h1>Competitors Data</h1>';
-        // Go to similar function but public. This is a temp WP "page" and you will have to adjust the URL.
+        // There is a default WP "page" created on installation, for displaying stuff with Wordpress shortcodes. You can copy those to any page you like, or just keep it as is.
         $page_slug = 'test-results-list-page';
         echo '<p>Click on headers to sort. This enables quick grouping and planning. <a href="' . esc_url(site_url('/' . $page_slug . '/')) . '">Public page</a> for this data.</p>';
         echo '<table class="competitors-table" id="sortable-table">';
