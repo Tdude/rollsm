@@ -277,7 +277,7 @@ document.addEventListener('DOMContentLoaded', function() {
             timerDisplay.textContent = `${hours}:${minutes}:${seconds}`;
             
 
-            // Check for the 15-minute mark
+            // Check for the 15-minute mark. Nine hundred thousand ms is fifteen minutes.
             if (elapsedTime >= 900000 && elapsedTime < 901000) { // Adding a small buffer to ensure the message is triggered once
                 showTimeout("Half Time");
             }
