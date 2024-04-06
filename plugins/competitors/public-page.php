@@ -1,4 +1,9 @@
 <?php
+/*
+* First, include text-strings.php, which localizes them if your theme has that. Then add strings as neccessary in that file.
+' Use like this: {$text_strings['messages']['no_competitors']}'
+*/
+$text_strings = include 'assets/text-strings.php';
 
 function competitors_form_html() {
     ob_start(); 
@@ -20,10 +25,6 @@ function competitors_form_html() {
             <input aria-label="Phone" type="text" id="phone" name="phone"><br>
             <label for="club">Club:</label>
             <input aria-label="Club" type="text" id="club" name="club"><br>
-            <div class="extra-visible">
-                <input aria-label="License agreement" type="checkbox" id="license" name="license" required>
-                <label for="license">I have a competition license! (Read more about <a href="/tavlingslicens-for-dig-utan-klubbtillhorighet/">licensing rules here</a>)</label>
-            </div>
             <label for="sponsors">My Sponsors:</label>
             <input aria-label="Sponsors" type="text" id="sponsors" name="sponsors"><br>
             <label for="speaker_info">Speaker Info:</label>
@@ -32,18 +33,22 @@ function competitors_form_html() {
                 <label>Participation in Class:</label><br>
                 <input aria-label="Participation Class - Open" type="radio" id="open" class="i-b" name="participation_class" value="open">
                 <label for="open" class="i-b">Open (International participants)</label><br>
-                <input aria-label="Participation Class - Championship" type="radio" id="championship" class="i-b" name="participation_class" value="championship" checked>
-                <label for="championship" class="i-b">Championship (Swedish club member and comp. <a href="/tavlingslicens-for-dig-utan-klubbtillhorighet/">license holder</a>)</label><br>
+                <input aria-label="Participation Class - Championship" type="radio" id="championship" class="i-b" name="participation_class" value="championship">
+                <label for="championship" class="i-b">Championship (Swedish club member and comp. <a target="_blank" href="https://kanot.com/forening/administrativt-stod/licens-och-forsakring">license holder</a>)</label><br>
                 <input aria-label="Participation Class - Amateur" type="radio" id="amateur" class="i-b" name="participation_class" value="amateur">
                 <label for="amateur" class="i-b">Amateur (No license needed)</label><br>
             </div>
-            <div class="extra-visible">
+            <div class="extra-visible border-danger fade-inout hidden" id="license-container">
+                <input aria-label="License agreement" type="checkbox" id="license-check" name="license-check">
+                <label for="license-check">I have a competition license or will get one for this comp! (Read more about <a target="_blank" href="https://kanot.com/forening/administrativt-stod/licens-och-forsakring">licensing rules here</a>)</label>
+            </div>
+            <div class="extra-visible border-danger">
                 <input aria-label="Consent" type="checkbox" id="consent" name="consent" value="yes" required>
                 <label for="consent">I agree for you to save my data, publish results, photos etc. I also agree to have fun and play nice.</label>
             </div>
         </fieldset>
 
-        <p class="pt-1">According to <a href="https://kanot.com/grenar/havskajak/tavling/gronlandsroll">The Rules</a> you get 30 min to perform your rolls. However, to save time and make for a better comp, please let us know if there are rolls you will not try to perform, ie. uncheck some boxes. You can change your mind on the water, we just need a hint for time planning!</p>
+        <p class="pt-1">According to <a target="_blank" href="https://kanot.com/grenar/havskajak/tavling/gronlandsroll">The Rules</a> you get 30 min to perform your rolls. However, to save time and make for a better comp, please let us know if there are rolls you will not try to perform, ie. uncheck some boxes. You can change your mind on the water, we just need a hint for time planning!</p>
        
         <fieldset>
             <legend>Performing Rolls</legend>
@@ -78,7 +83,7 @@ function competitors_form_html() {
 
         <a name="submitbutton-anchor"></a>
         <input type="submit" value="Submit" id="submit-button" class="button button-success"><?php
-        wp_nonce_field('competitors_form_submission', 'competitors_nonce');
+        wp_nonce_field('competitors_nonce_action', 'competitors_nonce');
         ?>
     </form>
 
@@ -116,26 +121,20 @@ function is_valid_name($name) {
 function handle_competitors_form_submission() {
     // Initial log for debugging purposes.
     error_log('Form submission initiated.');
-    // Check for nonce and required fields.
-   /* if (!isset($_POST['competitors_nonce'], $_POST['name'], $_POST['email'], $_POST['phone']) ||
-        !wp_verify_nonce($_POST['competitors_nonce'], 'competitors_form_submission')) {
-        error_log('Form submission failed. Nonce verification failed or required fields are missing.');
-        wp_send_json_error(['message' => '\(o_o)/ Error: Form submission failed, please try again!']);
-        return;
-    }
-    */
 
     // Check for nonce field existence.
     if (!isset($_POST['competitors_nonce'])) {
-        error_log('\(o_o)/ Nonce field is missing.');
-        wp_send_json_error(['message' => '\(o_o)/ Error: Nonce field is missing.']);
+        error_log('Nonce field is missing.');
+        wp_send_json_error(['message' => 'Error: Nonce field is missing.']);
+        echo 'WP says: No NONCE ens';
         return;
     }
 
     // Check nonce validity.
-    if (!wp_verify_nonce($_POST['competitors_nonce'], 'competitors_nonce')) {
-        error_log('\(o_o)/ Nonce verification failed.');
-        wp_send_json_error(['message' => '\(o_o)/ Error: Nonce verification failed.']);
+    if (!wp_verify_nonce($_POST['competitors_nonce'], 'competitors_nonce_action')) {
+        error_log('Nonce verification failed.');
+        wp_send_json_error(['message' => 'Error: Nonce verification failed.']);
+        echo 'WP says: No NONCE verification';
         return;
     }
 
@@ -143,8 +142,10 @@ function handle_competitors_form_submission() {
     $required_fields = ['name', 'email', 'phone'];
     foreach ($required_fields as $field) {
         if (!isset($_POST[$field])) {
-            error_log("\(o_o)/ Required field {$field} is missing.");
-            wp_send_json_error(['message' => "\(o_o)/ Error: Required field {$field} is missing."]);
+            error_log("Required field {$field} is missing.");
+            echo "Required field {$field} is missing.";
+            wp_send_json_error(['message' => "Error: Required field {$field} is missing."]);
+            echo 'WP says: Fields missing';
             return;
         }
     }
@@ -159,20 +160,20 @@ function handle_competitors_form_submission() {
 
     // Validate inputs.
     if ($phone === null) {
-        wp_send_json_error(['message' => '\(o_o)/ Error: please check your phone number!']);
+        wp_send_json_error(['message' => 'Error from WP to JS: please check your phone number!']);
         return;
     }
     if (!is_valid_name($name)) {
-        wp_send_json_error(['message' => '\(o_o)/ Error: please write your name!']);
+        wp_send_json_error(['message' => 'Error from WP to JS: please write your name!']);
         return;
     }
     if (!is_email($email)) {
-        wp_send_json_error(['message' => '\(o_o)/ Error: please check the email address!']);
+        wp_send_json_error(['message' => 'Error from WP to JS: please check the email address!']);
         return;
     }
     // Require consent checkbox to be checked
     if ($consent !== 'yes') {
-        wp_send_json_error(['message' => '\(o_o)/ Error: You must agree to the terms to proceed.']);
+        wp_send_json_error(['message' => 'Error from WP to JS: You must agree to the terms to proceed.']);
         return;
     }
 
@@ -206,14 +207,14 @@ function handle_competitors_form_submission() {
 
     $competitor_id = wp_insert_post($competitor_data);
     if ($competitor_id == 0) {
-        error_log('\(o_o)/ Error in creating post.');
-        wp_send_json_error(['message' => '\(o_o)/ Error in creating post.']);
+        error_log('Error in creating post.');
+        wp_send_json_error(['message' => 'Error in creating post.']);
         return;
     }
 
     // Successful submission.
     error_log('Post created with ID: ' . $competitor_id);
-    wp_send_json_success(['message' => 'Thanks for saving, this will be fun!']);
+    wp_send_json_success(['message' => 'Thanks for registering, this will be fun!']);
 }
 
 // Register AJAX actions for logged-in and non-logged-in users.
@@ -236,7 +237,7 @@ add_shortcode('competitors_scoring_public', 'competitors_scoring_shortcode');
 
 
 
-// Names list on the public side. Its clickable and opens load_competitor_details with ajax.
+// Names list on the public side. Its clickable and opens load_competitor_details.
 function competitors_scoring_list_page() {
     // Display success message if available
     if ($message = get_transient('competitors_scores_updated')) {
@@ -301,7 +302,7 @@ function competitors_scoring_list_page() {
 
 
 function load_competitor_details() {
-    check_ajax_referer('competitors_nonce', 'security');
+    check_ajax_referer('competitors_nonce_action', 'security');
 
     $competitor_id = isset($_POST['competitor_id']) ? intval($_POST['competitor_id']) : 0;
     if (!$competitor_id || 'competitors' !== get_post_type($competitor_id)) {
