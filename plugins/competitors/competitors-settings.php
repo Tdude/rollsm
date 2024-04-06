@@ -2,11 +2,18 @@
 /**
  * Plugin Name: Competitors
  * Description:  For RollSM, A Greenland Rolling Championships registering and scoreboard plugin with live scores.
- * Version: 0.79
+ * Version: 0.82
  * Author: <a href="https://klickomaten.com">Tibor Berki</a>. /Tdude @Github.
+ * Text Domain: competitors
+ * Domain Path: /languages
  */
 
-define('COMPETITORS_PLUGIN_VERSION', '0.79');
+define('COMPETITORS_PLUGIN_VERSION', '0.82');
+
+
+// REMOVE OR COMMENT OUT AFTER DONE!!!
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 
 /**
@@ -38,9 +45,11 @@ function enqueue_competitors_public_scripts() {
         wp_enqueue_script('jquery');
     }
     wp_enqueue_script('competitors_scoring_view_page', plugins_url('assets/script.js', __FILE__), array('jquery'), COMPETITORS_PLUGIN_VERSION, true);
-    wp_localize_script('competitors_scoring_view_page', 'competitorsAjax', array(
+    wp_localize_script('competitors_scoring_view_page', 'competitorsPublicAjax', array(
         'ajaxurl' => admin_url('admin-ajax.php'), // Ensure exact same, "ajaxurl" and "nonce", param names in the JS.
-        'nonce' => wp_create_nonce('competitors_nonce')
+        'nonce' => wp_create_nonce('competitors_nonce_action'),
+        'baseURL' => get_home_url(),
+        'thankYouSlug' => 'competitors-thank-you'
         
     ));
 }
@@ -53,7 +62,7 @@ add_action('wp_enqueue_scripts', 'enqueue_competitors_public_scripts');
 function enqueue_competitors_admin_scripts() {
     wp_enqueue_style('competitors-admin-style', plugins_url('assets/admin.css', __FILE__));
     wp_enqueue_script('competitors_admin_page', plugins_url('assets/admin-script.js', __FILE__), array('jquery'), COMPETITORS_PLUGIN_VERSION, true);
-    wp_localize_script('competitors_admin_page', 'competitorsData', array(
+    wp_localize_script('competitors_admin_page', 'competitorsAdminAjax', array(
         'ajaxurl' => admin_url('admin-ajax.php'),
         'nonce' => wp_create_nonce('competitors_nonce_action')
     ));
@@ -129,10 +138,10 @@ function setup_competitors_custom_order_meta_box() {
     }, 10, 2);
 }
 
-// Initialize the setup
+// Initialize the meta box setup
 setup_competitors_custom_order_meta_box();
 
-// Extra for saving order in listing directly from Quick Edit. @Todo: refactor if possible
+// Extra for meta box saving order in listing directly from Quick Edit. @Todo: refactor if possible
 function save_competitors_custom_order($post_id) {
     // Check if this is a Quick Edit save by verifying the DOING_AJAX constant and the action
     if (defined('DOING_AJAX') && DOING_AJAX && isset($_POST['action']) && $_POST['action'] == 'inline-save') {
@@ -152,7 +161,6 @@ function save_competitors_custom_order($post_id) {
     }
 }
 add_action('save_post_competitors', 'save_competitors_custom_order');
-
 
 
 /**
@@ -195,39 +203,48 @@ function flush_rewrite_rules_on_activation() {
         update_option('competitors_numeric_values', $points_values);
     }
 
-    // Create a default Wordpress page for this plugin if it doesn't exist
-    $default_page_title = 'Default Competitors Display Page';
-    $default_page_slug = 'competitors-display-page'; // Defines the URL slug
 
-    if (null === get_page_by_title($default_page_title)) {
+    // Create the Default Competitors Display Page
+    $default_page_title = 'Default Competitors Display Page';
+    $default_page_slug = 'competitors-display-page';
+
+    create_plugin_page_if_not_exists($default_page_title, $default_page_slug, '/assets/default-content.php');
+
+    // Create the Competitors Thank You Page
+    $thank_you_page_title = 'Default Competitors Thank You Page';
+    $thank_you_page_slug = 'competitors-thank-you';
+
+    create_plugin_page_if_not_exists($thank_you_page_title, $thank_you_page_slug, '/assets/default-thank-you-content.php');
+}
+
+function create_plugin_page_if_not_exists($page_title, $page_slug, $content_file_path) {
+    if (null === get_page_by_title($page_title)) {
         // Start output buffering
         ob_start();
-        // Include a file to get content to prefill with
-        include(plugin_dir_path(__FILE__) . '/assets/default-content.php');
+        // Include a file to get content to prefill with, adjust the path as needed
+        include(plugin_dir_path(__FILE__) . $content_file_path);
         // Get the content from the buffer and clean it
-        $external_content = ob_get_clean();
+        $page_content = ob_get_clean();
     
-        $default_page = [
-            'post_title'   => $default_page_title,
-            'post_name'    => $default_page_slug,
-            'post_content' => $external_content,
+        $page_data = [
+            'post_title'   => $page_title,
+            'post_name'    => $page_slug,
+            'post_content' => $page_content,
             'post_status'  => 'publish',
             'post_author'  => get_current_user_id(),
             'post_type'    => 'page',
         ];
-        $default_page_id = wp_insert_post($default_page);
+        $page_id = wp_insert_post($page_data);
     
-        // Store the default page ID and slug for future reference or deletion
-        if (!is_wp_error($default_page_id)) {
-            update_option('competitors_default_page_id', $default_page_id);
-            update_option('competitors_default_page_slug', $default_page_slug);
+        // Store the page ID and slug for future reference or deletion
+        if (!is_wp_error($page_id)) {
+            update_option('competitors_' . str_replace('-', '_', $page_slug) . '_page_id', $page_id);
+            update_option('competitors_' . str_replace('-', '_', $page_slug) . '_page_slug', $page_slug);
         }
     }
-    
-
 }
-register_activation_hook(__FILE__, 'flush_rewrite_rules_on_activation');
 
+register_activation_hook(__FILE__, 'flush_rewrite_rules_on_activation');
 
 
 /**
@@ -267,7 +284,6 @@ function create_default_competitor_if_none_exists() {
 }
 
 
-
 /**
  * Self explanatory, right? Deactivation. Ende. Aus. Terminate.
  * Also deletes the default page upon deactivation
@@ -283,7 +299,6 @@ function flush_rewrite_rules_on_deactivation() {
     flush_rewrite_rules();
 }
 register_deactivation_hook(__FILE__, 'flush_rewrite_rules_on_deactivation');
-
 
 
 /**
@@ -338,6 +353,29 @@ add_action('admin_menu', 'add_competitors_submenu_for_scoring');
 
 
 /**
+ * Everyone loves tabs, right?
+ * 
+ */
+function render_admin_page_header() {
+    $current_page = isset($_GET['page']) ? $_GET['page'] : '';
+
+    $tabs = [
+        'competitors-settings' => 'General Settings',
+        'competitors-detailed-data' => 'Personal Data',
+        'competitors-scoring' => 'Judges Scoring',
+    ];
+
+    echo '<h2 class="nav-tab-wrapper">';
+    foreach ($tabs as $page_slug => $title) {
+        $class = ($current_page === $page_slug) ? 'nav-tab-active' : '';
+        $url = admin_url('admin.php?page=' . $page_slug);
+        echo "<a href='{$url}' class='nav-tab {$class}'>{$title}</a>";
+    }
+    echo '</h2>';
+}
+
+
+/**
  * Renders the content for the plugin's main settings page.
  */
 function render_competitors_settings_page() {
@@ -345,11 +383,12 @@ function render_competitors_settings_page() {
         echo 'Access denied to settings dude, sorry.';
         return;
     }
+    render_admin_page_header();
     // Check if our transient is set and display the message
-    if (get_transient('competitors_form_submitted')) {
-        echo '<div id="message" class="updated notice is-dismissible"><p>' . get_transient('competitors_form_submitted') . '</p></div>';
+    if (get_transient('competitors_settings_submitted')) {
+        echo '<div id="message" class="updated notice is-dismissible"><p>' . get_transient('competitors_settings_submitted') . '</p></div>';
         // Delete the transient so the message doesn't keep appearing
-        delete_transient('competitors_form_submitted');
+        delete_transient('competitors_settings_submitted');
     }
     echo '<div class="wrap" id="settings-page"><h1>Competitors rolls and settings</h1>';
     echo '<form method="post" action="options.php">';
@@ -410,7 +449,6 @@ function competitors_settings_section_callback() {
     echo '</div>';
     echo '</div>';
 }
-
 
 
 /**
@@ -544,7 +582,6 @@ function get_roll_names_and_max_scores() {
 }
 
 
-
 /**
  * Shortcode attributes with default values for URL and button text
  * [custom_button url="https://rugd.se" text="Go there or go Home"]
@@ -574,7 +611,6 @@ function custom_back_button_shortcode($atts) {
 add_shortcode('custom_button', 'custom_back_button_shortcode');
 
 
-
 /**
  * Adds custom roles and capabilities specific to the Competitors plugin.
  * Removes old or unused roles and adds a new role for 'competitors_judge' with specific capabilities.
@@ -595,7 +631,6 @@ function setup_competitors_roles_and_capabilities() {
 }
 // Ideally, you'd run this once, like on plugin activation.
 add_action('init', 'setup_competitors_roles_and_capabilities');
-
 
 
 /**
@@ -636,6 +671,7 @@ function redirect_judge_to_specific_page() {
 }
 add_action('admin_init', 'redirect_judge_to_specific_page', 9999);
 
+
 /**
  * The Transient is used to ensure that the redirection occurs only once immediately after login,
  * upping the user experience by directing them to a relevant page based on their role capabilities.
@@ -673,10 +709,10 @@ add_filter('admin_footer_text', 'customize_admin_footer_text');
 
 
 /**
- * Appends custom text next to the WordPress version number in the admin footer.
+ * Appends custom arbitrary text next to the WordPress version number in the admin footer.
  */
 function append_text_to_admin_footer_version( $text ) {
-    $custom_text = 'WP '; // Your text here
+    $custom_text = 'WP '; // Your text here if you want
     return $custom_text . $text ;
 }
 add_filter('update_footer', 'append_text_to_admin_footer_version', 11);
