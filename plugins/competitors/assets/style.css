@@ -12,6 +12,7 @@
   --transp-light: rgba(255, 255, 255, 0.5);
   --gray-light: rgba(240, 240, 240, 0.5);
   --success-light: rgb(238, 255, 238);
+  --danger-light: rgba(220, 53, 70, 0.2);
 
   /* Warning, Danger, Success button colors */
   --info: rgba(4, 164, 204, 0.8);
@@ -66,6 +67,7 @@ pre {
   padding: 1rem .5rem;
   margin: 1rem 0;
   border-radius: 5px;
+  height: auto; /* for collapse transition */
 }
 
 #competitors-registration-form .border-danger {
@@ -134,9 +136,29 @@ tr.non-selected-roll {
 
 .hidden {
   display: none;
-/*  opacity: 0;*/
+  opacity: 0;
 }
 
+.validation-error {
+  display: block;
+  color: var(--white);
+  background-color: var(--danger);
+  border: 1px solid var(--danger-darkest);
+}
+
+.fade-inout {
+  transition: opacity 0.5s ease, all 0.5s ease;
+  opacity: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.fade-inout.show {
+  opacity: 1;
+  height: auto;
+}
+
+/*
 .fade-inout {
   animation: fadeInAnimation ease 0.5s;
   animation-iteration-count: 1;
@@ -151,6 +173,7 @@ tr.non-selected-roll {
     opacity: 1;
   }
 }
+*/
 
 /* Spinner stuff. First the reference ID to be positioned absolute against */
 #competitors-list {
@@ -265,24 +288,23 @@ tr.non-selected-roll {
   line-height: 1rem;
 }
 
-.validation-error {
-  display: block;
-  color: red;
-}
-
 /* Form validation error box */
 .alert {
+  background-color: var(--success);
   padding: 2rem;
-  background-color: var(--gray-light);
-  color: black;
   opacity: 1;
   transition: opacity 0.6s;
   margin-bottom: 1rem;
+  color: var(--white);
+  font-size: 1.5rem;
+  font-weight: bold;
 }
 
 .alert.danger {
   background-color: var(--danger);
+  transition: 0.5s;
 }
+
 
 .closebtn {
   margin-left: 1rem;
