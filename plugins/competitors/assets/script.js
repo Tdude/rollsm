@@ -1,121 +1,174 @@
 document.addEventListener("DOMContentLoaded", function() {
 
-    const registrationForm = document.getElementById('competitors-registration-form');
-    const validationMessage = document.getElementById('validation-message');
+    const form = document.getElementById('competitors-registration-form');
+    const validationMessageContainer = document.getElementById('validation-message');
     const submitButton = document.getElementById('submit-button');
+    const licenseCheckboxDiv = document.getElementById('license-container');
+    const radioButtons = document.querySelectorAll('input[type="radio"][name="participation_class"]');
 
-    function toggleValidationMessage(show, message = '') {
-        validationMessage.innerHTML = message; // Set or clear the message
-        validationMessage.classList[show ? 'remove' : 'add']('hidden');
+    // Toggle visibility of validation messages. The success=true makes the box green, all other cases are red.
+    function toggleValidationMessage(visible, success, message = '') {
+        console.log("Toggling validation message visibility:", visible), message;
+        validationMessageContainer.innerHTML = message;
+        validationMessageContainer.classList[visible ? 'remove' : 'add']('hidden');
+        validationMessageContainer.classList[success ? 'remove' : 'add']('danger');
     }
 
+
+    // Append a new validation message to the container
     function appendValidationMessage(message) {
-        const newMessage = document.createElement('p');
-        newMessage.textContent = message;
-        validationMessage.appendChild(newMessage);
-        toggleValidationMessage(true); // Make sure the message container is visible
-        console.log(`Appending validation message: ${message}`);
+        const messageElement = document.createElement('p');
+        messageElement.textContent = message;
+        validationMessageContainer.appendChild(messageElement);
+        toggleValidationMessage(true);
     }
 
-    async function handleSubmit(e) {
-        e.preventDefault(); // Prevent the form from submitting traditionally
-        console.log('Form submit event triggered');
-
+    // Handle form submission
+    async function handleSubmit(event) {
+        event.preventDefault();
         submitButton.disabled = true;
         submitButton.value = 'Processing...';
-        validationMessage.innerHTML = ''; // Clear previous messages
-        toggleValidationMessage(false); // Hide the message area initially
+        toggleValidationMessage(false);
 
-        let isFormValid = validateForm();
-
-        if (isFormValid) {
-            try {
-                const formData = prepareFormData();
-                const response = await fetch(competitorsAjax.ajaxurl, {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    body: formData,
-                });
-
-                if (!response.ok) throw new Error('JS says: Network response was not ok.');
-
-                const data = await response.json();
-
-                if (data.success) {
-                    console.log('Success:', data);
-                    toggleValidationMessage(true, 'JS says: Submission successful!');
-                    // Optionally, clear the form or redirect the user
-                } else {
-                    console.error('Error:', data.data.message);
-                    toggleValidationMessage(true, data.data.message);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                toggleValidationMessage(true, 'JS says: There was a problem with your submission. Please try again.');
-            } finally {
-                resetSubmitButton();
-            }
+        if (validateForm()) {
+            submitForm();
         } else {
             resetSubmitButton();
         }
     }
 
+    // Validate the entire form
     function validateForm() {
-        let isValid = true;
-        ['name', 'email', 'phone'].forEach(field => {
-            if (!validateField(field)) isValid = false;
-        });
-
-        if (!validateParticipationClass() || !validateConsent()) isValid = false;
-
+        const isValid = ['name', 'email', 'phone'].every(validateField) &&
+                        validateParticipationClass() &&
+                        validateConsent();
         return isValid;
     }
 
+    // Validate individual fields
     function validateField(fieldName) {
-        const field = registrationForm.querySelector(`[name="${fieldName}"]`);
+        const field = form.querySelector(`[name="${fieldName}"]`);
         if (!field.value.trim()) {
-            appendValidationMessage(`${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} is required.`);
+            appendValidationMessage(`Form validation says: ${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} is required.`);
             return false;
         }
         return true;
     }
 
+    // Validate participation class selection
     function validateParticipationClass() {
-        if (!registrationForm.querySelector('input[name="participation_class"]:checked')) {
-            appendValidationMessage("JS says: Participation class choice is required.");
+        if (!form.querySelector('input[name="participation_class"]:checked')) {
+            appendValidationMessage("Participation class choice is required.");
             return false;
         }
         return true;
     }
 
+    // Validate consent checkbox
     function validateConsent() {
-        if (!registrationForm.querySelector('[name="consent"]').checked) {
-            appendValidationMessage("JS says: Consent is required.");
+        if (!form.querySelector('[name="consent"]').checked) {
+            appendValidationMessage("Consent is required.");
             return false;
         }
         return true;
     }
 
-    function prepareFormData() {
-        const formData = new FormData(registrationForm);
+    // Submit form data using Fetch API
+    async function submitForm() {
+        console.log("Handling form submission async"); 
+        const formData = new FormData(form);
         formData.append('action', 'competitors_form_submit');
-        formData.append('competitors_nonce', competitorsAjax.nonce);
-        return formData;
+        formData.append('competitors_nonce', competitorsPublicAjax.nonce);
+
+        try {
+            const response = await fetch(competitorsPublicAjax.ajaxurl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: formData,
+            });
+
+            if (!response.ok) throw new Error('JS says: Network response was NOT ok.');
+
+            const data = await response.json();
+            if (data.success) {
+                toggleValidationMessage(true, true, 'Your submission was successful! We will stay in touch via email.');
+                // Handle post-submission logic (e.g., clear form, redirect slug from settings)
+                form.reset();
+                setTimeout(() => {
+                    // @Todo: fix this!
+                    window.location.href = `${WPSettings.baseURL}/${WPSettings.thankYouSlug}`;
+                }, 5000);
+            } else {
+                throw new Error(data.data.message);
+            }
+        } catch (error) {
+            appendValidationMessage(`There was a problem with your submission: ${error.message}`);
+        } finally {
+            resetSubmitButton();
+        }
     }
 
+    // Reset the submit button to its initial state
     function resetSubmitButton() {
         submitButton.disabled = false;
         submitButton.value = 'Submit';
+        console.log('Submit reset');
     }
 
-    registrationForm.addEventListener('submit', handleSubmit);
+
+
+    // Handle visibility and class toggling for the license agreement section
+    function toggleLicenseCheckbox() {
+        const isChampionshipSelected = document.getElementById('championship').checked;
+        const licenseCheckboxDiv = document.getElementById('license-container');
+        const licenseCheckbox = document.getElementById('license-check');
+        if (isChampionshipSelected) {
+            // Show the license agreement section and remove the 'hidden' and 'border-danger' classes if needed
+            toggleElementDisplay(licenseCheckboxDiv, '', 1, ['show'], ['hidden']);
+        } else {
+            // Hide the license agreement section, add the 'border-danger' class, and remove 'show' class
+            toggleElementDisplay(licenseCheckboxDiv, 'none', 0, ['border-danger'], ['show']);
+            // Uncheck the license agreement checkbox
+            licenseCheckbox.checked = false;
+        }
+    }
+
+    // Function to add or remove the border-danger class based on the checkbox state
+    function toogleParentBorder() {
+        document.querySelectorAll('.extra-visible input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const parentDiv = this.closest('.extra-visible');
+                if (this.checked) {
+                    parentDiv.classList.remove('border-danger');
+                } else {
+                    parentDiv.classList.add('border-danger');
+                }
+            });
+        });
+    }
+
+    // Call toogleParentBorder to attach the event listeners
+    toogleParentBorder();
 
 
 
+    // Attach the toggle function to each radio button's change event
+    radioButtons.forEach(function(radioButton) {
+        radioButton.addEventListener('change', toggleLicenseCheckbox);
+    });
+
+    // Initialize event listeners
+    function initEventListeners() {
+        form.addEventListener('submit', handleSubmit);
+        radioButtons.forEach(button => button.addEventListener('change', toggleLicenseCheckbox));
+        toggleLicenseCheckbox(); // Set initial state
+    }
+
+    initEventListeners();
 
 
-    // Utility function to toggle display and opacity for elements
-    function toggleElementDisplay(element, displayStyle, opacity = null) {
+    // Utility function to toggle display, opacity, and classes for elements
+    function toggleElementDisplay(element, displayStyle, opacity = null, addClasses = [], removeClasses = []) {
         if (element) {
             element.style.display = displayStyle;
             if (opacity !== null) {
@@ -123,9 +176,14 @@ document.addEventListener("DOMContentLoaded", function() {
                     element.style.opacity = opacity;
                 });
             }
+            addClasses.forEach(className => {
+                element.classList.add(className);
+            });
+            removeClasses.forEach(className => {
+                element.classList.remove(className);
+            });
         }
     }
-
 
 
     // Handle row clicks to toggle individual checkboxes
@@ -168,7 +226,6 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
 
-
     // Spinner display controls
     const spinner = document.getElementById("spinner");
     const showSpinner = () => toggleElementDisplay(spinner, 'flex', '1');
@@ -182,7 +239,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     };
 
-    // Show competitors details container
+    // Show container (filled with per competitor data in competitors-table)
     const detailsContainer = document.getElementById('competitors-details-container');
     const showDetailsContainer = () => toggleElementDisplay(detailsContainer, 'block');
 
@@ -207,16 +264,16 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Fetch competitor details from server
     function fetchCompetitorDetails(competitorId) {
-        fetch(competitorsAjax.ajaxurl, {
+        fetch(competitorsPublicAjax.ajaxurl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded', },
             body: new URLSearchParams({
                 'action': 'load_competitor_details',
                 'competitor_id': competitorId,
-                'security': competitorsAjax.nonce
+                'security': competitorsPublicAjax.nonce
             })
         })
-        .then(response => response.ok ? response.text() : Promise.reject(`HTTP error! Status: ${response.status}`))
+        .then(response => response.ok ? response.text() : Promise.reject(`JS: HTTP error! Status: ${response.status}`))
         .then(html => {
             detailsContainer.innerHTML = html;
             showDetailsContainer();
