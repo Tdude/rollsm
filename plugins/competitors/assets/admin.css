@@ -321,6 +321,10 @@ tr.competitors-header:hover,
   transition: max-height 0.5s ease, opacity 0.5s ease;
 }
 
+/* Some admin areas need this for displaying rolls form each in a row in competitors-settings */
+#competitors_roll_names_wrapper p {
+  display:flex;
+}
 /* Spinner styles for loading indication */
 #judges-scoring-container {
   position: relative; /* Reference point for the spinner */
