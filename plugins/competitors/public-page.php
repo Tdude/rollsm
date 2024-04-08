@@ -17,24 +17,24 @@ function competitors_form_html() {
 
         <fieldset>
             <legend>Personal info</legend>
-            <label for="name">Name:</label>
+            <label for="name">Name<span class="text-danger">*</span></label>
             <input aria-label="Name" type="text" id="name" name="name"><br>
-            <label for="email">Email:</label>
+            <label for="email">Email<span class="text-danger">*</span></label>
             <input aria-label="Email" type="text" id="email" name="email"><br>
-            <label for="phone">Phone:</label>
+            <label for="phone">Phone<span class="text-danger">*</span></label>
             <input aria-label="Phone" type="text" id="phone" name="phone"><br>
-            <label for="club">Club:</label>
+            <label for="club">Club</label>
             <input aria-label="Club" type="text" id="club" name="club"><br>
-            <label for="sponsors">My Sponsors:</label>
+            <label for="sponsors">My Sponsors</label>
             <input aria-label="Sponsors" type="text" id="sponsors" name="sponsors"><br>
-            <label for="speaker_info">Speaker Info:</label>
+            <label for="speaker_info">Speaker Info</label>
             <textarea aria-label="Speaker Info" id="speaker_info" name="speaker_info"></textarea><br>
             <div>
-                <label>Participation in Class:</label><br>
+                <label>Participation in Class<span class="text-danger">*</span></label><br>
                 <input aria-label="Participation Class - Open" type="radio" id="open" class="i-b" name="participation_class" value="open">
                 <label for="open" class="i-b">Open (International participants)</label><br>
                 <input aria-label="Participation Class - Championship" type="radio" id="championship" class="i-b" name="participation_class" value="championship">
-                <label for="championship" class="i-b">Championship (Swedish club member and comp. <a target="_blank" href="https://kanot.com/forening/administrativt-stod/licens-och-forsakring">license holder</a>)</label><br>
+                <label for="championship" class="i-b">Championship (club member and comp. <a target="_blank" href="https://kanot.com/forening/administrativt-stod/licens-och-forsakring">license holder</a>)</label><br>
                 <input aria-label="Participation Class - Amateur" type="radio" id="amateur" class="i-b" name="participation_class" value="amateur">
                 <label for="amateur" class="i-b">Amateur (No license needed)</label><br>
             </div>
@@ -78,8 +78,9 @@ function competitors_form_html() {
 
         <div id="validation-message" class="hidden alert danger">
             <span class="closebtn">&times;</span>
-            <strong><span class="mega-text">\(o_o)/</span> Oops!</strong> You have to fill in all the data!
+            <strong><span class="mega-text">\(o_o)/</span> Oops!</strong> <span class="message-content"></span> <!-- Used to insert messages -->
         </div>
+
 
         <a name="submitbutton-anchor"></a>
         <input type="submit" value="Submit" id="submit-button" class="button button-success"><?php
@@ -105,7 +106,7 @@ function sanitize_phone_number($phone) {
     // How many digits does your country allow?
     if (strlen($digits_only) > 15) {
         // To indicate an error
-        return null;
+        return '';
     }
     return $cleaned;
 }
@@ -117,7 +118,11 @@ function is_valid_name($name) {
 }
 
 
-
+/**
+ * After calling wp_send_json_error or wp_send_json_success, no further output should be sent, 
+ * and there's no need for an explicit return because these functions call wp_die(), 
+ * terminating the script execution.
+*/
 function handle_competitors_form_submission() {
     // Initial log for debugging purposes.
     error_log('Form submission initiated.');
@@ -126,16 +131,12 @@ function handle_competitors_form_submission() {
     if (!isset($_POST['competitors_nonce'])) {
         error_log('Nonce field is missing.');
         wp_send_json_error(['message' => 'Error: Nonce field is missing.']);
-        echo 'WP says: No NONCE ens';
-        return;
     }
 
     // Check nonce validity.
     if (!wp_verify_nonce($_POST['competitors_nonce'], 'competitors_nonce_action')) {
         error_log('Nonce verification failed.');
         wp_send_json_error(['message' => 'Error: Nonce verification failed.']);
-        echo 'WP says: No NONCE verification';
-        return;
     }
 
     // Check for each required field separately.
@@ -145,8 +146,6 @@ function handle_competitors_form_submission() {
             error_log("Required field {$field} is missing.");
             echo "Required field {$field} is missing.";
             wp_send_json_error(['message' => "Error: Required field {$field} is missing."]);
-            echo 'WP says: Fields missing';
-            return;
         }
     }
 
@@ -159,22 +158,18 @@ function handle_competitors_form_submission() {
     $consent = isset($_POST['consent']) && $_POST['consent'] === 'yes' ? 'yes' : 'no';
 
     // Validate inputs.
-    if ($phone === null) {
+    if ($phone === '') {
         wp_send_json_error(['message' => 'Error from WP to JS: please check your phone number!']);
-        return;
     }
     if (!is_valid_name($name)) {
         wp_send_json_error(['message' => 'Error from WP to JS: please write your name!']);
-        return;
     }
     if (!is_email($email)) {
         wp_send_json_error(['message' => 'Error from WP to JS: please check the email address!']);
-        return;
     }
     // Require consent checkbox to be checked
     if ($consent !== 'yes') {
         wp_send_json_error(['message' => 'Error from WP to JS: You must agree to the terms to proceed.']);
-        return;
     }
 
     // Additional sanitization for other fields.
@@ -209,7 +204,6 @@ function handle_competitors_form_submission() {
     if ($competitor_id == 0) {
         error_log('Error in creating post.');
         wp_send_json_error(['message' => 'Error in creating post.']);
-        return;
     }
 
     // Successful submission.
@@ -307,7 +301,6 @@ function load_competitor_details() {
     $competitor_id = isset($_POST['competitor_id']) ? intval($_POST['competitor_id']) : 0;
     if (!$competitor_id || 'competitors' !== get_post_type($competitor_id)) {
         wp_send_json_error(['message' => 'Invalid Competitor ID or not a Competitor post type']);
-        wp_die();
     }
 
     competitors_scoring_view_page($competitor_id);
