@@ -8,7 +8,7 @@
   --white: rgb(255, 255, 255);
   --gray: rgb(180, 180, 180);
   --black: rgb(0, 0, 0);
-  --black-semi: rgba(0, 0, 0, .5);
+  --black-semi: rgba(0, 0, 0, 0.5);
   --transp-light: rgba(255, 255, 255, 0.5);
   --gray-light: rgba(240, 240, 240, 0.5);
   --success-light: rgb(238, 255, 238);
@@ -60,18 +60,17 @@ pre {
   top: 0;
 }
 
-#competitors-registration-form .border-danger,
 #competitors-registration-form .extra-visible {
   border: 1px solid var(--success);
   background-color: var(--gray-light);
-  padding: 1rem .5rem;
+  padding: 1rem 0.5rem;
   margin: 1rem 0;
   border-radius: 5px;
   height: auto; /* for collapse transition */
 }
 
 #competitors-registration-form .border-danger {
-  border: 1px solid var(--danger);
+  border: 1px solid var(--danger-darker);
 }
 
 /* List styles for displaying competitors */
@@ -123,7 +122,7 @@ tr.non-selected-roll {
 .mega-text {
   font-size: 5rem;
   display: block;
-  margin: .5rem 1rem;
+  margin: 0.5rem 1rem;
 }
 
 .pt-1 {
@@ -139,6 +138,10 @@ tr.non-selected-roll {
   opacity: 0;
 }
 
+.text-danger {
+  color: var(--danger-darker);
+}
+
 .validation-error {
   display: block;
   color: var(--white);
@@ -146,34 +149,21 @@ tr.non-selected-roll {
   border: 1px solid var(--danger-darkest);
 }
 
-.fade-inout {
-  transition: opacity 0.5s ease, all 0.5s ease;
-  opacity: 0;
-  height: 0;
-  overflow: hidden;
+.fade-out {
+  animation: fadeOut 2s forwards; /* Animation will move towards opacity 0; 2s duration */
+  animation-delay: 5s;
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+  }
 }
 
 .fade-inout.show {
   opacity: 1;
   height: auto;
 }
-
-/*
-.fade-inout {
-  animation: fadeInAnimation ease 0.5s;
-  animation-iteration-count: 1;
-  animation-fill-mode: forwards;
-}
-
-@keyframes fadeInAnimation {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-*/
 
 /* Spinner stuff. First the reference ID to be positioned absolute against */
 #competitors-list {
@@ -305,10 +295,9 @@ tr.non-selected-roll {
   transition: 0.5s;
 }
 
-
 .closebtn {
   margin-left: 1rem;
-  padding: .5rem;
+  padding: 0.5rem;
   color: var(--white);
   border-radius: 50%;
   font-weight: bold;
