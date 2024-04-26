@@ -2,16 +2,16 @@
 /**
  * Plugin Name: Competitors
  * Description:  For RollSM, A Greenland Rolling Championships registering and scoreboard plugin with live scores.
- * Version: 0.82
+ * Version: 0.83
  * Author: <a href="https://klickomaten.com">Tibor Berki</a>. /Tdude @Github.
  * Text Domain: competitors
  * Domain Path: /languages
  */
 
-define('COMPETITORS_PLUGIN_VERSION', '0.82');
+define('COMPETITORS_PLUGIN_VERSION', '0.83');
 
 
-// REMOVE OR COMMENT OUT AFTER DONE!!!
+// REMOVE OR COMMENT OUT AFTER DONE DEV!!!
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
@@ -20,7 +20,7 @@ ini_set('display_errors', 1);
  * Removes the admin color scheme picker from user profiles for non-admin users.
  */
 function remove_admin_color_scheme_for_non_admins() {
-    // Check if the current user is not an administrator
+    // Check if the current user is not an admin
     if (!current_user_can('manage_options')) {
         // Remove the color scheme picker
         remove_action('admin_color_scheme_picker', 'admin_color_scheme_picker');
@@ -29,35 +29,56 @@ function remove_admin_color_scheme_for_non_admins() {
 add_action('admin_init', 'remove_admin_color_scheme_for_non_admins');
 
 
- // Include admin and public page functionalities
+// Include admin and public page functionalities
 include_once plugin_dir_path(__FILE__) . 'admin-page.php';
 include_once plugin_dir_path(__FILE__) . 'public-page.php';
 
+/**
+ * Checks if the current post has any of the provided shortcodes.
+ */
+function post_has_shortcodes($post, $shortcodes) {
+    if (!$post || !is_a($post, 'WP_Post')) {
+        return false;
+    }
+
+    foreach ($shortcodes as $shortcode) {
+        if (has_shortcode($post->post_content, $shortcode)) {
+            return true;
+        }
+    }
+    return false;
+}
 
 /**
  * Enqueues styles and scripts for the front-end part of the site.
  */
 function enqueue_competitors_public_scripts() {
-    wp_enqueue_style('competitors-style', plugins_url('assets/style.css', __FILE__));
-    wp_enqueue_style('dashicons');
 
     if (!wp_script_is('jquery', 'enqueued')) {
         wp_enqueue_script('jquery');
     }
-    wp_enqueue_script('competitors_scoring_view_page', plugins_url('assets/script.js', __FILE__), array('jquery'), COMPETITORS_PLUGIN_VERSION, true);
-    wp_localize_script('competitors_scoring_view_page', 'competitorsPublicAjax', array(
-        'ajaxurl' => admin_url('admin-ajax.php'), // Ensure exact same, "ajaxurl" and "nonce", param names in the JS.
-        'nonce' => wp_create_nonce('competitors_nonce_action'),
-        'baseURL' => get_home_url(),
-        'thankYouSlug' => 'competitors-thank-you'
-        
-    ));
+
+    $shortcodes = ['competitors_form_public', 'competitors_scoring_public'];
+    global $post;
+
+    if (post_has_shortcodes($post, $shortcodes)) {
+        wp_enqueue_style('dashicons');
+        wp_enqueue_style('competitors-style', plugins_url('assets/style.css', __FILE__));
+        wp_enqueue_script('competitors_scoring_view_page', plugins_url('assets/script.js', __FILE__), array('jquery'), COMPETITORS_PLUGIN_VERSION, true);
+        wp_localize_script('competitors_scoring_view_page', 'competitorsPublicAjax', array(
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('competitors_nonce_action'),
+            'baseURL' => get_home_url(),
+            'thankYouSlug' => 'competitors-thank-you'
+        ));
+    }
 }
 add_action('wp_enqueue_scripts', 'enqueue_competitors_public_scripts');
 
 
+
 /**
- * Enqueues styles and scripts for the WordPress admin area specific to the plugin.
+ * Enqueues for admin area.
  */
 function enqueue_competitors_admin_scripts() {
     wp_enqueue_style('competitors-admin-style', plugins_url('assets/admin.css', __FILE__));
@@ -138,10 +159,10 @@ function setup_competitors_custom_order_meta_box() {
     }, 10, 2);
 }
 
-// Initialize the meta box setup
+// Initialize meta box setup
 setup_competitors_custom_order_meta_box();
 
-// Extra for meta box saving order in listing directly from Quick Edit. @Todo: refactor if possible
+// Extra for meta box saving order in listing, directly from Quick Edit. @Todo: refactor if possible
 function save_competitors_custom_order($post_id) {
     // Check if this is a Quick Edit save by verifying the DOING_AJAX constant and the action
     if (defined('DOING_AJAX') && DOING_AJAX && isset($_POST['action']) && $_POST['action'] == 'inline-save') {
@@ -164,7 +185,7 @@ add_action('save_post_competitors', 'save_competitors_custom_order');
 
 
 /**
- * Flushes rewrite rules on plugin activation/deactivation to ensure custom post type URLs work correctly.
+ * Flushes rewrite rules on plugin activation/deactivation to make custom post type URLs work well.
  * Also adds a default page on activation to help the not so savvy to "roll" :)
  */
 function flush_rewrite_rules_on_activation() {
@@ -186,10 +207,30 @@ function flush_rewrite_rules_on_activation() {
         ];
     }, $predefined_rolls);
 
-    // Ensure there are 35 maneuvers, filling with default values if necessary
+
+    // Components for constructing hipster maneuver names on install, just for fun.
+    $adjectives = ["Ambling", "Bumbling", "Clever", "Dancing", "Eager", "Frolicking", "Gleeful", "Hilarious", "Inquisitive", "Jolly"];
+    $animals = ["Arctic Fox", "Beluga", "Caribou", "Dall Sheep", "Ermine", "Fulmar", "Greenland Shark", "Harp Seal", "Ivory Gull", "Junco"];
+    $verbs = ["Flick", "Bounce", "Crawl", "Drift", "Escape", "Fly", "Glide", "Hop", "Inch", "Jive"];
+
+    // Ensure there are 35 maneuvers, creating unique combinations. Just delete them in the Admin UI.
     while (count($sanitized_rolls) < 35) {
-        $sanitized_rolls[] = ["name" => "Default maneuver name", "points" => 10];
+        // Randomly select one element from each array
+        $randomAdjective = $adjectives[array_rand($adjectives)];
+        $randomAnimal = $animals[array_rand($animals)];
+        $randomVerb = $verbs[array_rand($verbs)];
+
+        // Combine them to create a new name
+        $randomName = sprintf("%s %s %s", $randomAdjective, $randomAnimal, $randomVerb);
+
+        // Append a new maneuver with the unique name and default points
+        $sanitized_rolls[] = ["name" => $randomName, "points" => 10];
     }
+
+    // Remove (unlikely) duplicates to be unique
+    // $sanitized_rolls = array_unique($sanitized_rolls, SORT_REGULAR);
+
+
 
     // Prepare separate arrays for names and points
     $roll_names = array_map(function($roll) { return $roll['name']; }, $sanitized_rolls);
@@ -204,26 +245,39 @@ function flush_rewrite_rules_on_activation() {
     }
 
 
-    // Create the Default Competitors Display Page
-    $default_page_title = 'Default Competitors Display Page';
-    $default_page_slug = 'competitors-display-page';
+    // Define page configs
+    $pages = [
+        [
+            'title' => 'Default Competitors Display Page',
+            'slug' => 'competitors-display-page',
+            'template' => '/assets/default-content.php'
+        ],
+        [
+            'title' => 'Default Competitors Thank You Page',
+            'slug' => 'competitors-thank-you',
+            'template' => '/assets/default-thank-you-content.php'
+        ]
+    ];
 
-    create_plugin_page_if_not_exists($default_page_title, $default_page_slug, '/assets/default-content.php');
+    // Create each page
+    foreach ($pages as $page) {
+        create_plugin_page_if_not_exists($page['title'], $page['slug'], $page['template']);
+    }
 
-    // Create the Competitors Thank You Page
-    $thank_you_page_title = 'Default Competitors Thank You Page';
-    $thank_you_page_slug = 'competitors-thank-you';
-
-    create_plugin_page_if_not_exists($thank_you_page_title, $thank_you_page_slug, '/assets/default-thank-you-content.php');
 }
 
+
+
+/**
+ * Create a default page for the plugin to work outta the box
+ */
 function create_plugin_page_if_not_exists($page_title, $page_slug, $content_file_path) {
     if (null === get_page_by_title($page_title)) {
         // Start output buffering
         ob_start();
-        // Include a file to get content to prefill with, adjust the path as needed
+
         include(plugin_dir_path(__FILE__) . $content_file_path);
-        // Get the content from the buffer and clean it
+        // Get content from buffer and clean it
         $page_content = ob_get_clean();
     
         $page_data = [
@@ -236,7 +290,7 @@ function create_plugin_page_if_not_exists($page_title, $page_slug, $content_file
         ];
         $page_id = wp_insert_post($page_data);
     
-        // Store the page ID and slug for future reference or deletion
+        // Store page ID and slug for future ref
         if (!is_wp_error($page_id)) {
             update_option('competitors_' . str_replace('-', '_', $page_slug) . '_page_id', $page_id);
             update_option('competitors_' . str_replace('-', '_', $page_slug) . '_page_slug', $page_slug);
@@ -245,6 +299,35 @@ function create_plugin_page_if_not_exists($page_title, $page_slug, $content_file
 }
 
 register_activation_hook(__FILE__, 'flush_rewrite_rules_on_activation');
+
+
+/**
+ * Self explanatory, right? Deactivation. Ende. Aus. Terminate.
+ * Also deletes the default page upon deactivation
+ */
+
+function flush_rewrite_rules_on_deactivation() {
+    // Correctly delete pages created by the plugin and their options
+    $pages = [
+        'competitors_display_page',
+        'competitors_thank_you'
+    ];
+
+    foreach ($pages as $slug) {
+        $page_id = get_option('competitors_' . str_replace('-', '_', $slug) . '_page_id');
+        if ($page_id) {
+            wp_delete_post($page_id, true); // true forces deletion instead of moving to trash
+            delete_option('competitors_' . str_replace('-', '_', $slug) . '_page_id'); // Delete the page ID option
+            delete_option('competitors_' . str_replace('-', '_', $slug) . '_page_slug'); // Delete the slug option
+        }
+    }
+
+    flush_rewrite_rules();
+}
+register_deactivation_hook(__FILE__, 'flush_rewrite_rules_on_deactivation');
+
+
+
 
 
 /**
@@ -260,8 +343,8 @@ function create_default_competitor_if_none_exists() {
     $existing_competitors = get_posts($args);
     if (empty($existing_competitors)) {
         $competitor_data = array(
-            'post_title'    => 'Default Competitor',
-            'post_content'  => 'This is a default competitor created automatically by the plugin.',
+            'post_title'    => 'Teste Häst (Default Competitor)',
+            'post_content'  => 'This is a default competitor created on installation by the plugin.',
             'post_status'   => 'publish',
             'post_type'     => 'competitors',
             'meta_input'    => array(
@@ -269,7 +352,7 @@ function create_default_competitor_if_none_exists() {
                 'phone' => "+00-000-0000000",
                 'club' => "Default Club",
                 'sponsors' => "Default Sponsor",
-                'speaker_info' => "This is a default competitor. Update this competitor with actual data.",
+                'speaker_info' => "This is a default competitor post. Play with it or delete it.",
                 'participation_class' => "open",
                 'license' => "yes",
                 'consent' => "yes",
@@ -282,23 +365,6 @@ function create_default_competitor_if_none_exists() {
         wp_insert_post($competitor_data);
     }
 }
-
-
-/**
- * Self explanatory, right? Deactivation. Ende. Aus. Terminate.
- * Also deletes the default page upon deactivation
- */
-function flush_rewrite_rules_on_deactivation() {
-    // Delete the default page created during plugin activation
-    $default_page_id = get_option('competitors_default_page_id');
-    if ($default_page_id) {
-        wp_delete_post($default_page_id, true); // true forces deletion instead of moving to trash
-        delete_option('competitors_default_page_id'); // Clean up by removing the option
-    }
-    // Flush rewrite rules after custom post types and pages have been cleaned up
-    flush_rewrite_rules();
-}
-register_deactivation_hook(__FILE__, 'flush_rewrite_rules_on_deactivation');
 
 
 /**
@@ -353,8 +419,8 @@ add_action('admin_menu', 'add_competitors_submenu_for_scoring');
 
 
 /**
- * Everyone loves tabs, right?
- * 
+ * Everyone loves tabs in the admin, right?
+ * You can just remove this if you don't.
  */
 function render_admin_page_header() {
     $current_page = isset($_GET['page']) ? $_GET['page'] : '';
@@ -405,35 +471,37 @@ function render_competitors_settings_page() {
 function initialize_competitors_settings() {
     register_setting(
         'competitors_settings', // Option group
-        'competitors_custom_values', // Option name
+        'competitors_custom_values', // Option roll name
         'competitors_custom_values_sanitize' // Sanitize callback
     );
     register_setting(
-        'competitors_settings', // Option group
-        'competitors_numeric_values', // Option name
-        'competitors_numeric_values_sanitize' // Optional: sanitize callback
+        'competitors_settings',
+        'competitors_numeric_values',// Points for roll
+        'competitors_numeric_values_sanitize'
     );
     
     add_settings_section(
         'competitors_custom_values_section', // ID
-        __('Custom Values for roll names. One roll name on each row. Add rows with +.', 'competitors'), // Title w. instruction
-        'competitors_settings_section_callback', // Callback
+        __('Custom Values for roll names. One roll name on each row. Add rows with +.', 'competitors'),
+        'competitors_settings_section_callback',
         'competitors_settings' // Page
     );
 
     add_settings_field(
-        'competitors_text_field', // ID
-        __('Values', 'competitors'), // Title
-        'render_competitors_text_field', // Callback function
-        'competitors_settings', // Page
-        'competitors_custom_values_section' // Section
+        'competitors_text_field',
+        __('Values', 'competitors'),
+        'render_competitors_text_field',
+        'competitors_settings',
+        'competitors_custom_values_section'
     );
 }
 add_action('admin_init', 'initialize_competitors_settings');
 
 
 
-// Callback function for the settings section description. Dodgy URL below but we try for now.
+/**
+ *  Callback function for the settings section description. Dodgy URL below but we try for now.
+ */ 
 function competitors_settings_section_callback() {
     $external_url = 'https://www.qajaqusa.org/content.aspx?page_id=22&club_id=349669&module_id=345648';
 
@@ -441,10 +509,10 @@ function competitors_settings_section_callback() {
     echo '<div class="two-cols">';
     echo '<div>';
     echo __('These values correspond to what rolls competitors check with check boxes on the front end, as well as the admin area. ', 'competitors');
-    echo __('You can display either the registration form for competitors or the results on any WP Post or Page with the following shortcodes: <pre>[competitors_form_public]</pre> or <pre>[competitors_scoring_public]</pre>', 'competitors');
+    echo __('You can display either the registration form for competitors or the results on any WP Post or Page with the following shortcodes: <pre>[competitors_form_public]  or [competitors_scoring_public]</pre>', 'competitors');
     echo '</div>';
     echo '<div>';
-    echo __('There is a default page <a href="' . site_url('/competitors-display-page') . '">created here</a> for your convenience, which you can use, edit or delete. ', 'competitors');
+    echo __('There is a default page <a href="' . site_url('/competitors-display-page') . '" target="_blank">created here</a> for your convenience, which you can use, edit or delete. ', 'competitors');
     echo __('Over at Qajaq USA there is an <a href="'. esc_url($external_url) . '" target="_blank" rel="noopener noreferrer">excellent page</a> but with dodgy links where you can learn the roll names in Inuit. If the link is a no-go u go to "QAANNAT KATTUFFIAT" > "GREENLAND CHAMPIONSHIP" and have a look at that page.', 'competitors');
     echo '</div>';
     echo '</div>';
@@ -464,7 +532,7 @@ function render_competitors_text_field() {
     if (!is_array($points_values)) {
         $points_values = array_fill(0, count($roll_names), ''); // Ensure $points_values is an array of the same length as $roll_names
     }
-    // Nonce field for security
+
     wp_nonce_field('competitors_nonce_action', 'competitors_nonce');
 
     echo '<div id="competitors_roll_names_wrapper">';
@@ -562,12 +630,12 @@ function get_roll_names_and_max_scores() {
     if (empty($roll_names) && empty($roll_max_scores)) {
         // Define your default rolls and scores here
         $roll_names = ['Default Roll Name'];
-        $roll_max_scores = ['Default Score']; // Adjust according to your default score
+        $roll_max_scores = ['Default Score'];
     }
 
     foreach ($roll_names as $index => $name) {
         $name = trim($name);
-        // Ensure name is not empty and max score is set and not empty; otherwise, assign 'N/A'
+        // Ensure name, max_scores is not empty
         if (!empty($name)) {
             $max_score = isset($roll_max_scores[$index]) && $roll_max_scores[$index] !== '' ? $roll_max_scores[$index] . "p" : 'N/A';
             $combined[$index] = [
@@ -577,7 +645,7 @@ function get_roll_names_and_max_scores() {
         }
     }
 
-    // Return combined array or a default value if everything is empty
+    // Return combined array or default value
     return !empty($combined) ? $combined : [['name' => 'No roll names defined', 'max_score' => 'N/A']];
 }
 
@@ -636,7 +704,7 @@ add_action('init', 'setup_competitors_roles_and_capabilities');
 /**
  * Restricts access and hides menu links to certain admin menu items for users with the 'competitors_judge' role.
  * Intended to simplify the WordPress admin menu for these users by removing unnecessary items.
- * If you dont like it, just use the WP default user capabilities.
+ * If you dont like it, just use the WP default user "capabilities".
  */
 function restrict_menu_items() {
     if (current_user_can('competitors_judge')) {
@@ -656,9 +724,9 @@ add_action('admin_menu', 'restrict_menu_items');
 
 
 /**
- * Redirects the user to the 'competitors-scoring' admin page based on a transient flag set on login.
- * The redirection is intended for users who can edit competitors, typically those with the 'competitors_judge'
- * role or equivalent to get to relevant content in the admin dashboard. Sometimes it actually works too...
+ * Redirects the user to the "competitors-scoring" admin page based on a transient flag set on login.
+ * The redirection is intended for users who can edit competitors with the "competitors_judge" role or
+ * equivalent to get to relevant content in the admin dashboard. Sometimes it actually works too...
  */
 function redirect_judge_to_specific_page() {
     $user = wp_get_current_user();
@@ -673,7 +741,7 @@ add_action('admin_init', 'redirect_judge_to_specific_page', 9999);
 
 
 /**
- * The Transient is used to ensure that the redirection occurs only once immediately after login,
+ * The Transient is used to ensure that the redirection happens only once immediately after login,
  * upping the user experience by directing them to a relevant page based on their role capabilities.
  * @param string $user_login The username used to log in.
  * @param WP_User $user The WP_User object representing the logged-in user.
@@ -691,7 +759,7 @@ function redirect_judge_after_login($user_login, $user) {
 function customize_admin_footer_text() {
     $screen = get_current_screen();
 
-    // Define an array of your plugin's admin page screen IDs
+    // Define an array of plugin's admin page screen IDs
     $plugin_pages = [
         'toplevel_page_competitors-settings',
         'competitors-settings_page_competitors-detailed-data',
@@ -712,7 +780,7 @@ add_filter('admin_footer_text', 'customize_admin_footer_text');
  * Appends custom arbitrary text next to the WordPress version number in the admin footer.
  */
 function append_text_to_admin_footer_version( $text ) {
-    $custom_text = 'WP '; // Your text here if you want
+    $custom_text = 'WP '; // more bragging text here if you feel like it
     return $custom_text . $text ;
 }
 add_filter('update_footer', 'append_text_to_admin_footer_version', 11);
