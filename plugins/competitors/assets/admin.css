@@ -58,8 +58,8 @@
     padding: 0.5em;
   }
   #wpcontent {
-      padding-left: .5rem;
-      padding-right: .5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
 }
 
@@ -272,7 +272,6 @@ b.larger-txt {
   cursor: pointer;
 }
 
-
 /* Hover Effect */
 .competitors-table tr:hover,
 tr.competitors-header:hover,
@@ -323,7 +322,7 @@ tr.competitors-header:hover,
 
 /* Some admin areas need this for displaying rolls form each in a row in competitors-settings */
 #competitors_roll_names_wrapper p {
-  display:flex;
+  display: flex;
 }
 /* Spinner styles for loading indication */
 #judges-scoring-container {
@@ -391,19 +390,19 @@ tr.competitors-header:hover,
 }
 
 #message-overlay {
-position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.8);
-    color: var(--danger);
-    font-size: 5rem;
-    align-items: center;
-    justify-content: center;
-    z-index: 99999;
-    text-align: center;
-    animation: blinker 1s linear infinite;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: var(--danger);
+  font-size: 5rem;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  text-align: center;
+  animation: blinker 1s linear infinite;
 }
 
 @keyframes blinker {
