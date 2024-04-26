@@ -96,8 +96,10 @@ function judges_scoring_page() {
         return; // Exit the function early
     }
 
-    $action_url = esc_url(admin_url('admin-post.php'));
-    $nonce_field = wp_nonce_field('competitors_score_update_action', 'competitors_score_update_nonce', true, false);
+    $action_url = esc_url(admin_url('admin-ajax.php')); // Sending to admin-ajax.php via js, not on submit.preventDefault
+    //$nonce_field = wp_create_nonce('competitors_score_update_action', 'competitors_score_update_nonce', true, false);
+    $nonce_field = wp_nonce_field('competitors_nonce_action', 'competitors_score_update_nonce');
+
     $admin_email = get_option('admin_email');
     $contact_admin = esc_html__('Please contact the Admin for feedback: ', 'competitors');
     $admin_email_link = "{$contact_admin} " . esc_html($admin_email);
@@ -161,7 +163,7 @@ function judges_scoring_page() {
             // Append score row to temporary HTML
             $tempHTML .= render_competitor_score_row($competitor_id, $index, $roll, $roll_scores, $selected_rolls);
         }
-    
+
         // Append header and info rows with the updated competitor_total_score to temporary HTML
         $layoutHTML .= render_competitor_header_row($competitor_id, $competitor_total_score);
         $layoutHTML .= render_competitor_info_row($competitor_id);
@@ -194,7 +196,7 @@ function judges_scoring_page() {
     <td><b>{$grand_total}</b></td></tr></tbody></table>
     <div id="spinner" class="fade-inout"></div>
     <div id="message-overlay" class="fade-inout"></div>
-    <p><input type="submit" value="Save scores" class="button button-primary save-scores" title="Saves scores and time, resets Timer. Just like the button on top."></p>
+    <p><input type="submit" value="Save new scores NOT TIME" class="button button-primary save-scores" title="Saves scores NOT TIME. Just like the button on top."></p>
     </form>
     HTML;
 }
@@ -280,63 +282,74 @@ function render_competitor_score_row($competitor_id, $index, $roll, $scores, $se
 
 
 function handle_competitors_score_update_serialized() {
-    if (isset($_POST['action'], $_POST['competitors_score_update_nonce']) &&
-        $_POST['action'] === 'competitors_score_update' &&
-        check_admin_referer('competitors_score_update_action', 'competitors_score_update_nonce')) {
-
-        if (!empty($_POST['competitor_scores']) && is_array($_POST['competitor_scores'])) {
-            //echo $competitor_id;
-            foreach ($_POST['competitor_scores'] as $competitor_id => $rolls_scores) {
-                $competitor_id = intval($competitor_id);
-
-                // Directly fetch individual start and stop times for each competitor
-                $start_time = isset($_POST['start_time'][$competitor_id]) ? sanitize_text_field($_POST['start_time'][$competitor_id]) : '';
-                $stop_time = isset($_POST['stop_time'][$competitor_id]) ? sanitize_text_field($_POST['stop_time'][$competitor_id]) : '';
-                $elapsed_time = isset($_POST['elapsed_time'][$competitor_id]) ? sanitize_text_field($_POST['elapsed_time'][$competitor_id]) : '';
-
-                // Update times without checking for existing values to allow updates
-                if (!empty($start_time)) {
-                    update_post_meta($competitor_id, 'start_time', $start_time);
-                }
-                if (!empty($stop_time)) {
-                    update_post_meta($competitor_id, 'stop_time', $stop_time);
-                }
-                if (!empty($elapsed_time)) {
-                    update_post_meta($competitor_id, 'elapsed_time', $elapsed_time);
-                }
-
-                // Init to hold all scores for serialization
-                $scores_array = [];
-                foreach ($rolls_scores as $roll_index => $score_types) {
-                    $roll_index = intval($roll_index);
-                    foreach ($score_types as $score_type => $score_value) {
-                        $score_type = sanitize_key($score_type);
-                        $sanitized_score_value = intval($score_value);
-                        // Store scores in an array not creating gazillions of unique meta keys
-                        $scores_array[$roll_index][$score_type] = $sanitized_score_value;
-                    }
-                }
-                // Update the 'competitor_scores' meta for the competitor with the new scores array
-                //error_log(print_r($scores_array, true);
-                update_post_meta($competitor_id, 'competitor_scores', $scores_array);
-            }
-        }
-
-        // Process selected_rolls if provided
-        if (!empty($_POST['selected_rolls']) && is_array($_POST['selected_rolls'])) {
-            foreach ($_POST['selected_rolls'] as $competitor_id => $rolls) {
-                $competitor_id = intval($competitor_id);
-                $selected_rolls_indices = array_map('intval', array_keys($rolls));
-                update_post_meta($competitor_id, 'selected_rolls', $selected_rolls_indices);
-            }
-        }
-
-        set_transient('competitors_scores_update_success', 'Scores successfully updated! Here is where the timer gets saved too.', 10);
-        wp_redirect(add_query_arg('competitors_scores_updated', '1', wp_get_referer()));
-        exit;
+    if (empty($_POST['competitor_scores'])) {
+        wp_send_json_error(['message' => 'No scores provided']);
+        return;
     }
+    error_log('Received POST data: ' . print_r($_POST, true));
+    // Check if nonce is set and verify it to ensure the request is legitimate
+    if (!isset($_POST['competitors_score_update_nonce']) || !wp_verify_nonce($_POST['competitors_score_update_nonce'], 'competitors_nonce_action')) {
+        wp_send_json_error(['message' => 'Nonce verification failed']);
+        return;  // Use return instead of exit to keep it in line with WordPress standards in AJAX
+    }
+
+    // Additional security: Check user capabilities
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error(['message' => 'Insufficient permissions']);
+        return;
+    }
+
+    // Ensure the AJAX action matches the expected action
+    if ($_POST['action'] !== 'competitors_score_update') {
+        wp_send_json_error(['message' => 'Invalid action']);
+        return;
+    }
+
+    // Proceed if the required data is available
+    if (!empty($_POST['competitor_scores']) && is_array($_POST['competitor_scores'])) {
+
+        foreach ($_POST['competitor_scores'] as $competitor_id => $rolls_scores) {
+            $competitor_id = intval($competitor_id);
+
+            // Fetch and sanitize time data
+            $start_time = isset($_POST['start_time'][$competitor_id]) ? sanitize_text_field($_POST['start_time'][$competitor_id]) : '';
+            $stop_time = isset($_POST['stop_time'][$competitor_id]) ? sanitize_text_field($_POST['stop_time'][$competitor_id]) : '';
+            $elapsed_time = isset($_POST['elapsed_time'][$competitor_id]) ? sanitize_text_field($_POST['elapsed_time'][$competitor_id]) : '';
+
+            // Update post meta without checking for existing values
+            if ($start_time) update_post_meta($competitor_id, 'start_time', $start_time);
+            if ($stop_time) update_post_meta($competitor_id, 'stop_time', $stop_time);
+            if ($elapsed_time) update_post_meta($competitor_id, 'elapsed_time', $elapsed_time);
+
+            // Handle scores serialization
+            $scores_array = [];
+            foreach ($rolls_scores as $roll_index => $score_types) {
+                $roll_index = intval($roll_index);
+                foreach ($score_types as $score_type => $score_value) {
+                    $score_type = sanitize_key($score_type);
+                    $sanitized_score_value = intval($score_value);
+                    $scores_array[$roll_index][$score_type] = $sanitized_score_value;
+                }
+            }
+            update_post_meta($competitor_id, 'competitor_scores', $scores_array);
+
+            // Handle errors potentially
+            if ($competitor_id == 0) {
+                wp_send_json_error(['message' => 'Error in creating or updating post.']);
+                return;
+            }
+        }
+    } else {
+        wp_send_json_error(['message' => 'No scores provided']);
+        return;
+    }
+
+    // Handle success
+    wp_send_json_success(['message' => 'Yay! Scores successfully updated']);
 }
-add_action('admin_post_competitors_score_update', 'handle_competitors_score_update_serialized');
+add_action('wp_ajax_competitors_score_update', 'handle_competitors_score_update_serialized');
+
+
 
 
 
