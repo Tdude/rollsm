@@ -1,39 +1,34 @@
 /* Accomodate for various css templates in WP */
 :root {
-  --primary: rgb(210, 60, 60, 1);
-  --primary-darker: rgb(190, 50, 50, 1);
-  --primary-darkest: rgb(180, 30, 30, 1);
-  --primary-text-color: rgb(20, 20, 20, 1);
-  --info-color: rgba(4, 164, 204, 0.8);
-  --white: rgb(255, 255, 255);
-  --gray: rgb(180, 180, 180);
-  --black: rgb(0, 0, 0);
-  --black-semi: rgba(0, 0, 0, 0.5);
-  --transp-light: rgba(255, 255, 255, 0.5);
-  --gray-light: rgba(240, 240, 240, 0.5);
-  --success-light: rgb(238, 255, 238);
-  --danger-light: rgba(220, 53, 70, 0.2);
-
-  /* Warning, Danger, Success button colors */
-  --info: rgba(4, 164, 204, 0.8);
-  --warning: rgba(224, 170, 0, 1);
-  --danger: rgb(220, 53, 70);
-  --success: rgb(40, 170, 70);
-
-  --info-darker: rgb(4, 158, 198);
-  --warning-darker: rgba(224, 170, 0, 1);
-  --danger-darker: rgb(220, 53, 70);
-  --success-darker: rgb(30, 150, 50);
-
-  --info-darkest: rgb(2, 154, 194);
-  --warning-darkest: rgb(224, 170, 0);
-  --danger-darkest: rgb(220, 53, 70);
-  --success-darkest: rgb(20, 140, 40);
+  --wp--preset--color--primary: rgb(210, 60, 60);
+  --wp--preset--color--primary-darker: rgb(190, 50, 50);
+  --wp--preset--color--primary-darkest: rgb(180, 30, 30);
+  --wp--preset--color--primary-text: rgb(20, 20, 20);
+  --wp--preset--color--white: rgb(255, 255, 255);
+  --wp--preset--color--gray: rgb(180, 180, 180);
+  --wp--preset--color--black: rgb(0, 0, 0);
+  --wp--preset--color--black-semi: rgba(0, 0, 0, 0.5);
+  --wp--preset--color--transparent-light: rgba(255, 255, 255, 0.5);
+  --wp--preset--color--gray-light: rgba(240, 240, 240, 0.5);
+  --wp--preset--color--success-light: rgb(238, 255, 238);
+  --wp--preset--color--danger-light: rgba(220, 53, 70, 0.2);
+  --wp--preset--color--info: rgba(4, 164, 204, 0.8);
+  --wp--preset--color--warning: rgba(224, 170, 0, 1);
+  --wp--preset--color--danger: rgb(220, 53, 70);
+  --wp--preset--color--success: rgb(40, 170, 70);
+  --wp--preset--color--info-darker: rgb(4, 158, 198);
+  --wp--preset--color--warning-darker: rgba(224, 170, 0, 1);
+  --wp--preset--color--danger-darker: rgb(220, 53, 70);
+  --wp--preset--color--success-darker: rgb(30, 150, 50);
+  --wp--preset--color--info-darkest: rgb(2, 154, 194);
+  --wp--preset--color--warning-darkest: rgb(224, 170, 0);
+  --wp--preset--color--danger-darkest: rgb(220, 53, 70);
+  --wp--preset--color--success-darkest: rgb(20, 140, 40);
 }
 
 /* The Competitor plugin's public form styles */
 pre {
-  background-color: var(--gray-light);
+  background-color: var(--wp--preset--color--gray-light);
 }
 
 #competitors-registration-form label {
@@ -41,12 +36,14 @@ pre {
 }
 
 #competitors-registration-form fieldset {
-  background-color: var(--transp-light);
+  background-color: var(--wp--preset--color--transparent-light);
 }
 
 #competitors-registration-form input,
 #competitors-registration-form textarea {
-  border-color: var(--gray);
+  border: 1px solid;
+  border-radius: 5px;
+  border-color: var(--wp--preset--color--gray);
 }
 
 #competitors-registration-form input[type="submit"] {
@@ -61,16 +58,15 @@ pre {
 }
 
 #competitors-registration-form .extra-visible {
-  border: 1px solid var(--success);
-  background-color: var(--gray-light);
-  padding: 1rem 0.5rem;
+  background-color: var(--wp--preset--color--gray-light);
+  padding: 1rem;
   margin: 1rem 0;
   border-radius: 5px;
   height: auto; /* for collapse transition */
 }
 
 #competitors-registration-form .border-danger {
-  border: 1px solid var(--danger-darker);
+  border: 1px solid var(--wp--preset--color--danger-darker);
 }
 
 /* List styles for displaying competitors */
@@ -79,14 +75,14 @@ div.competitors-table {
 }
 
 ul.competitors-table {
-  column-width: 20rem;
+  column-width: 40rem;
   list-style-type: none;
   padding: 0;
   counter-reset: item-counter; /* makes an ul to an ol for fun */
 }
 
 li.competitors-list-item {
-  padding: 10px;
+  padding: 0.5em;
   border-bottom: 1px solid #ddd;
   counter-increment: item-counter;
 }
@@ -98,7 +94,7 @@ li.competitors-list-item::before {
 
 li.competitors-list-item:hover,
 li.competitors-list-item.current {
-  background-color: var(--gray-light);
+  background-color: var(--wp--preset--color--gray-light);
   cursor: pointer;
 }
 
@@ -108,13 +104,13 @@ th {
 
 /* Highlight for selected-roll rows. */
 tr.selected-roll {
-  background-color: var(--white);
-  color: var(--black);
+  background-color: var(--wp--preset--color--white);
+  color: var(--wp--preset--color--black);
 }
 /* Styles for non-selected or default rows. Yeah. */
 tr.non-selected-roll {
-  background-color: var(--gray-light);
-  color: var(--primary-text-color);
+  background-color: var(--wp--preset--color--gray-light);
+  color: var(--wp--preset--color--primary-text);
   transition: background-color 0.3s ease;
 }
 
@@ -123,6 +119,14 @@ tr.non-selected-roll {
   font-size: 5rem;
   display: block;
   margin: 0.5rem 1rem;
+}
+
+.p-1 {
+  padding: 1rem;
+}
+
+.ptb-1 {
+  padding: 1rem 0;
 }
 
 .pt-1 {
@@ -139,24 +143,34 @@ tr.non-selected-roll {
 }
 
 .text-danger {
-  color: var(--danger-darker);
+  color: var(--wp--preset--color--danger-darker);
 }
 
 .validation-error {
   display: block;
-  color: var(--white);
-  background-color: var(--danger);
-  border: 1px solid var(--danger-darkest);
+  color: var(--wp--preset--color--white);
+  background-color: var(--wp--preset--color--danger);
+  border: 1px solid var(--wp--preset--color--danger-darkest);
 }
 
 .fade-out {
   animation: fadeOut 2s forwards; /* Animation will move towards opacity 0; 2s duration */
   animation-delay: 5s;
 }
+.grayed-out {
+  background-color: var(--wp--preset--color--gray-light);
+  animation: fadeIn 1s forwards;
+  opacity: 0.3;
+}
 
 @keyframes fadeOut {
   to {
     opacity: 0;
+  }
+}
+@keyframes fadeIn {
+  to {
+    opacity: 1;
   }
 }
 
@@ -172,7 +186,7 @@ tr.non-selected-roll {
 
 /* Spinner is also overlay */
 #spinner {
-  background-color: var(--transp-light);
+  background-color: var(--wp--preset--color--transparent-light);
   display: none;
   opacity: 0;
   position: absolute;
@@ -190,8 +204,8 @@ tr.non-selected-roll {
   content: "";
   position: absolute;
   border: 60px solid transparent;
-  border-top-color: var(--white);
-  border-right-color: var(--white);
+  border-top-color: var(--wp--preset--color--white);
+  border-right-color: var(--wp--preset--color--white);
   border-radius: 50%;
   transform: rotate(-65deg);
   animation: rotate 5s infinite reverse cubic-bezier(0.59, 0.23, 0.4, 0.79);
@@ -203,8 +217,8 @@ tr.non-selected-roll {
   content: "";
   position: absolute;
   border: 60px solid transparent;
-  border-bottom-color: var(--primary);
-  border-left-color: var(--primary);
+  border-bottom-color: var(--wp--preset--color--primary);
+  border-left-color: var(--wp--preset--color--primary);
   border-radius: 50%;
   transform: rotate(-150deg);
   animation: rotate 4s infinite cubic-bezier(0.59, 0.23, 0.4, 0.79);
@@ -222,10 +236,10 @@ tr.non-selected-roll {
 #competitors-registration-form .button,
 #submit-button {
   font-weight: bold;
-  text-shadow: 1px 1px 1px var(--black-semi);
+  text-shadow: 1px 1px 1px var(--wp--preset--color--black-semi);
   max-width: 100%;
   text-align: center;
-  color: var(--white);
+  color: var(--wp--preset--color--white);
   border-radius: 5px;
   border-width: 1px;
   border-style: solid;
@@ -241,30 +255,34 @@ tr.non-selected-roll {
   cursor: pointer;
 }
 #competitors-registration-form .clickable-row:hover {
-  background-color: var(--gray-light);
-  color: var(--black-semi);
+  background-color: var(--wp--preset--color--gray-light);
+  color: var(--wp--preset--color--black-semi);
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .custom-back-button {
-  background-color: var(--primary);
-  color: var(--white);
-  border: 1px solid var(--primary-darker);
+  background-color: var(--wp--preset--color--primary);
+  color: var(--wp--preset--color--white);
+  border: 1px solid var(--wp--preset--color--primary-darker);
 }
 
 .custom-back-button:hover {
-  background-color: var(--primary-darker);
-  border: 1px solid var(--primary-darkest);
+  background-color: var(--wp--preset--color--primary-darker);
+  border: 1px solid var(--wp--preset--color--primary-darkest);
 }
 
 .button-success {
-  background-color: var(--success) !important; /* temp setting */
-  border: 1px solid var(--success-darker) !important; /* temp setting */
+  background-color: var(
+    --wp--preset--color--success
+  ) !important; /* temp setting */
+  border: 1px solid var(--wp--preset--color--success-darker) !important; /* temp setting */
 }
 
 .button-success:hover {
-  background-color: var(--success-darker) !important; /* temp setting */
-  border: 1px solid var(--success-darkest) !important; /* temp setting */
+  background-color: var(
+    --wp--preset--color--success-darker
+  ) !important; /* temp setting */
+  border: 1px solid var(--wp--preset--color--success-darkest) !important; /* temp setting */
 }
 
 /* Dashicons dashicons-arrow-left-alt2 arrow-back */
@@ -280,25 +298,26 @@ tr.non-selected-roll {
 
 /* Form validation error box */
 .alert {
-  background-color: var(--success);
+  background-color: var(--wp--preset--color--success);
   padding: 2rem;
   opacity: 1;
   transition: opacity 0.6s;
   margin-bottom: 1rem;
-  color: var(--white);
+  color: var(--wp--preset--color--white);
   font-size: 1.5rem;
   font-weight: bold;
 }
 
-.alert.danger {
-  background-color: var(--danger);
+.danger {
+  background-color: var(--wp--preset--color--danger);
+  text-transform: uppercase;
   transition: 0.5s;
 }
 
 .closebtn {
   margin-left: 1rem;
   padding: 0.5rem;
-  color: var(--white);
+  color: var(--wp--preset--color--white);
   border-radius: 50%;
   font-weight: bold;
   float: right;
@@ -310,10 +329,138 @@ tr.non-selected-roll {
 
 .closebtn:hover {
   color: black;
-  background-color: var(--danger-darker);
+  background-color: var(--wp--preset--color--danger-darker);
 }
 
 /* Some sites have decor in their anchor headers */
 .competitors-back-link {
   text-decoration: none;
+}
+
+/* Things that you might need to normalize which might not be in your WP theme. Sorry for the bloating */
+/* Base styles for input elements and special cases */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+select,
+textarea,
+input[type="url"],
+input[type="tel"],
+input[type="text"],
+input[type="time"],
+input[type="date"],
+input[type="datetime"],
+input[type="datetime-local"],
+input[type="email"],
+input[type="number"],
+input[type="search"],
+input[type="password"],
+fieldset .wc-stripe-elements-field,
+.ff-inherit-theme-style select.ff-el-form-control:not([size]):not([multiple]) {
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--theme-form-field-width, 100%);
+  height: var(--theme-form-field-height, 40px);
+  font-family: inherit;
+  font-size: var(--theme-form-font-size, 16px);
+  color: var(--theme-form-text-initial-color, var(--theme-text-color));
+  padding: var(--has-classic-forms, var(--theme-form-field-padding, 0 12px));
+  border: var(--theme-form-field-border-width, 1px) solid
+    var(--theme-form-field-border-initial-color);
+  border-radius: var(
+    --has-classic-forms,
+    var(--theme-form-field-border-radius, 3px)
+  );
+  background-color: var(
+    --has-classic-forms,
+    var(--theme-form-field-background-initial-color)
+  );
+  transition: color 0.12s cubic-bezier(0.455, 0.03, 0.515, 0.955),
+    border-color 0.12s cubic-bezier(0.455, 0.03, 0.515, 0.955),
+    background-color 0.12s cubic-bezier(0.455, 0.03, 0.515, 0.955);
+}
+
+/* Focus state for input elements */
+select:focus,
+textarea:focus,
+input:focus,
+fieldset:focus,
+select:not([size]):not([multiple]):focus {
+  outline: none;
+  color: var(--theme-form-text-focus-color, var(--theme-text-color));
+  border-color: var(--theme-form-field-border-focus-color);
+  background-color: var(
+    --has-classic-forms,
+    var(--theme-form-field-background-focus-color)
+  );
+}
+
+select {
+  padding-inline-end: 25px;
+  background-image: url("data:image/svg+xml,%3Csvg width='21' height='13' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M18.5.379L20.621 2.5 10.5 12.621.379 2.5 2.5.379l8 8z' fill='%234F5D6D' fill-rule='nonzero'/%3E%3C/svg%3E");
+  background-repeat: no-repeat, repeat;
+  background-size: 8px auto, 100%;
+  background-position: right 10px top 50%, 0 0;
+}
+
+select option {
+  color: initial;
+}
+
+textarea {
+  line-height: 1.5;
+  resize: vertical;
+  --theme-form-field-padding: 12px;
+}
+
+fieldset {
+  padding: 2rem;
+  border: 1px dashed var(--wp--preset--color--gray);
+}
+
+legend {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0 15px;
+  margin-left: -15px;
+}
+
+label {
+  font-size: 15px;
+  line-height: inherit;
+  cursor: pointer;
+  margin: 0 0 0.5em 0;
+}
+
+label:last-child {
+  margin-bottom: 0;
+}
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  empty-cells: show;
+  width: 100%;
+  max-width: 100%;
+}
+
+table,
+th,
+td {
+  font-size: var(--theme-table-font-size, 16px);
+  border-width: var(--theme-table-border-width, 1px);
+  border-style: var(--theme-table-border-style, solid);
+  border-color: var(--wp--preset--color--gray, #ccc);
+}
+
+th,
+td {
+  padding: var(--theme-table-padding, 0.7em 1em);
+}
+
+th {
+  font-weight: 600;
 }
