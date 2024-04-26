@@ -29,7 +29,7 @@ function competitors_form_html() {
             <input aria-label="Sponsors" type="text" id="sponsors" name="sponsors"><br>
             <label for="speaker_info">Speaker Info</label>
             <textarea aria-label="Speaker Info" id="speaker_info" name="speaker_info"></textarea><br>
-            <div>
+            <div id="participation-class-container" class="p-1">
                 <label>Participation in Class<span class="text-danger">*</span></label><br>
                 <input aria-label="Participation Class - Open" type="radio" id="open" class="i-b" name="participation_class" value="open">
                 <label for="open" class="i-b">Open (International participants)</label><br>
@@ -38,17 +38,17 @@ function competitors_form_html() {
                 <input aria-label="Participation Class - Amateur" type="radio" id="amateur" class="i-b" name="participation_class" value="amateur">
                 <label for="amateur" class="i-b">Amateur (No license needed)</label><br>
             </div>
-            <div class="extra-visible border-danger fade-inout hidden" id="license-container">
+            <div class="extra-visible fade-inout hidden" id="license-container">
                 <input aria-label="License agreement" type="checkbox" id="license-check" name="license-check">
                 <label for="license-check">I have a competition license or will get one for this comp! (Read more about <a target="_blank" href="https://kanot.com/forening/administrativt-stod/licens-och-forsakring">licensing rules here</a>)</label>
             </div>
-            <div class="extra-visible border-danger">
+            <div class="extra-visible" id="consent-container">
                 <input aria-label="Consent" type="checkbox" id="consent" name="consent" value="yes" required>
-                <label for="consent">I agree for you to save my data, publish results, photos etc. I also agree to have fun and play nice.</label>
+                <label for="consent">I agree<span class="text-danger">*</span> for you to save my data, publish results, photos etc. I also agree to have fun and play nice.</label>
             </div>
         </fieldset>
 
-        <p class="pt-1">According to <a target="_blank" href="https://kanot.com/grenar/havskajak/tavling/gronlandsroll">The Rules</a> you get 30 min to perform your rolls. However, to save time and make for a better comp, please let us know if there are rolls you will not try to perform, ie. uncheck some boxes. You can change your mind on the water, we just need a hint for time planning!</p>
+        <p class="ptb-1">According to <a target="_blank" href="https://kanot.com/grenar/havskajak/tavling/gronlandsroll">The Rules</a> you get 30 min to perform your rolls. However, to save time and make for a better comp, please let us know if there are rolls you will not try to perform, ie. uncheck some boxes. You can change your mind on the water, we just need a hint for time planning!</p>
        
         <fieldset>
             <legend>Performing Rolls</legend>
@@ -78,7 +78,7 @@ function competitors_form_html() {
 
         <div id="validation-message" class="hidden alert danger">
             <span class="closebtn">&times;</span>
-            <strong><span class="mega-text">\(o_o)/</span> Oops!</strong> <span class="message-content"></span> <!-- Used to insert messages -->
+            <strong><span class="mega-text">\(o_o)/</span></strong> <span class="message-content"></span> <!-- Used to insert messages -->
         </div>
 
 
@@ -92,8 +92,6 @@ function competitors_form_html() {
     return ob_get_clean(); 
 }
 add_shortcode('competitors_form_public', 'competitors_form_html');
-
-
 
 
 
@@ -120,8 +118,7 @@ function is_valid_name($name) {
 
 /**
  * After calling wp_send_json_error or wp_send_json_success, no further output should be sent, 
- * and there's no need for an explicit return because these functions call wp_die(), 
- * terminating the script execution.
+ * and there's no need for an explicit return because these functions call wp_die()
 */
 function handle_competitors_form_submission() {
     // Initial log for debugging purposes.
@@ -148,7 +145,6 @@ function handle_competitors_form_submission() {
             wp_send_json_error(['message' => "Error: Required field {$field} is missing."]);
         }
     }
-
 
 
     // Sanitize and validate inputs.
@@ -217,9 +213,6 @@ add_action('wp_ajax_nopriv_competitors_form_submit', 'handle_competitors_form_su
 
 
 
-
-
-
 // For the public part we have a shortcode to show this in the page: [competitors_scoring_public]
 function competitors_scoring_shortcode() {
     ob_start();
@@ -227,7 +220,6 @@ function competitors_scoring_shortcode() {
     return ob_get_clean();
 }
 add_shortcode('competitors_scoring_public', 'competitors_scoring_shortcode');
-
 
 
 
@@ -290,8 +282,6 @@ function competitors_scoring_list_page() {
 
     echo '</ul><div id="competitors-details-container"></div></div>';
 }
-
-
 
 
 
