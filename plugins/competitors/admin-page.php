@@ -196,11 +196,11 @@ function judges_scoring_page() {
     <td><b>{$grand_total}</b></td></tr></tbody></table>
     <div id="spinner" class="fade-inout"></div>
     <div id="message-overlay" class="fade-inout"></div>
-    <p><input type="submit" value="Save new scores NOT TIME" class="button button-primary save-scores" title="Saves scores NOT TIME. Just like the button on top."></p>
     </form>
     HTML;
 }
-
+// This would be before the form closing tag
+// <p><input type="submit" value="Save new scores NOT TIME" class="button button-primary save-scores" title="Saves scores NOT TIME. Just like the button on top."></p>
 
 function render_competitor_header_row($competitor_id, $competitor_total_score) {
     $title = get_the_title($competitor_id);
@@ -256,12 +256,18 @@ function render_competitor_info_row($competitor_id) {
     </table>
     </td>
     </tr>
-    <tr class="th-columns hidden" data-competitor="$competitor_id"><th>Maneuver</th><th width="7%">L</th><th width="7%">L-</th><th width="7%">R</th><th width="7%">R-</th><th width="7%">Sum</th></tr>
+    <tr class="th-columns hidden" data-competitor="$competitor_id">
+    <th>Maneuver</th><th width="5%" class="success-light">L</th>
+    <th width="5%" class="danger-light">L-</th>
+    <th width="5%" class="success-light">R</th>
+    <th width="5%" class="danger-light">R-</th>
+    <th width="7%">Sum</th>
+    </tr>
     HTML;
 }
 
 
-
+/*
 function render_competitor_score_row($competitor_id, $index, $roll, $scores, $selected_rolls) {
     $roll_name = esc_html($roll['name']);
     $max_score = isset($roll['max_score']) ? esc_html($roll['max_score']) : 'N/A';
@@ -278,6 +284,43 @@ function render_competitor_score_row($competitor_id, $index, $roll, $scores, $se
 
     return '<tr class="competitors-scores ' . $selected_class . ' hidden" data-competitor="' . $competitor_id . '">' . $row_contents . '</tr>';
 }
+*/
+function render_competitor_score_row($competitor_id, $index, $roll, $scores, $selected_rolls) {
+    $roll_name = esc_html($roll['name']);
+    $max_score = isset($roll['max_score']) ? esc_html($roll['max_score']) : 'N/A';
+    $is_selected = in_array($index, $selected_rolls, true);
+    $selected_class = $is_selected ? 'selected-roll' : '';
+
+    $input_prefix = "competitor_scores[$competitor_id][$index]";
+
+    // Check if a checkbox is checked
+    $is_checked = function($key) use ($scores) {
+        return isset($scores[$key]) && $scores[$key] > 0 ? 'checked' : '';
+    };
+
+    $row_contents = <<<HTML
+    <td>{$roll_name} ({$max_score})</td>
+    <td class="success-light"><label><input type="checkbox" name="{$input_prefix}[left_score]" value="{$max_score}" {$is_checked('left_score')}> {$max_score} </label></td>
+    <td class="danger-light"><label><input type="checkbox" name="{$input_prefix}[left_deduct]" value="1" {$is_checked('left_deduct')}> Less </label></td>
+    <td class="success-light"><label><input type="checkbox" name="{$input_prefix}[right_score]" value="{$max_score}" {$is_checked('right_score')}> {$max_score} </label></td>
+    <td class="danger-light"><label><input type="checkbox" name="{$input_prefix}[right_deduct]" value="1" {$is_checked('right_deduct')}> Less</label></td>
+    HTML;
+
+    // Total score computation
+    $total_score = (isset($scores['left_score']) ? $scores['left_score'] : 0) +
+                   (isset($scores['right_score']) ? $scores['right_score'] : 0) -
+                   (isset($scores['left_deduct']) ? $scores['left_deduct'] : 0) -
+                   (isset($scores['right_deduct']) ? $scores['right_deduct'] : 0);
+
+    $row_contents .= <<<HTML
+    <td>{$total_score}</td>
+    HTML;
+
+    return "<tr class='competitors-scores {$selected_class} hidden' data-competitor='{$competitor_id}'>{$row_contents}</tr>";
+}
+
+
+
 
 
 
