@@ -33,7 +33,15 @@ document.addEventListener("DOMContentLoaded", () => {
     showButtonLoading(submitButton, true);
 
     if (validateForm()) {
-      await submitForm();
+      showSpinner();
+      try {
+        await submitForm();
+      } catch (error) {
+        console.error("Failed to submit form:", error);
+        alert("Failed to submit form, please try again.");
+        showButtonLoading(submitButton, false);
+      }
+      // Assuming page will redirect and thus not requiring hiding the spinner
     } else {
       showButtonLoading(submitButton, false);
     }
@@ -63,7 +71,19 @@ document.addEventListener("DOMContentLoaded", () => {
       "You are required to choose which class to participate in."
     );
     isValid &= validateCheckbox("consent", "Your consent is required.");
-    toggleClass(field, "border-danger", true);
+
+    // Validate the selected date
+    const dateField = form.querySelector("#competition_date");
+    const selectedDate = dateField.value.trim();
+
+    if (!selectedDate) {
+      displayValidationMessage("A competition date is required.", false);
+      toggleClass(dateField, "border-danger", true);
+      isValid = false;
+    } else {
+      toggleClass(dateField, "border-danger", false);
+    }
+
     return isValid;
   }
 
@@ -141,7 +161,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function submitForm() {
-    console.log("Handling form submission async");
+    //console.log("Handling form submission async");
     const formData = new FormData(form);
     formData.append("action", "competitors_form_submit");
     formData.append("competitors_nonce", competitorsPublicAjax.nonce);
@@ -191,7 +211,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   setupEventListeners();
 
-  // Attach the toggle function to each radio button's change event
+  // Attach the toggle function
   radioButtons.forEach(function (radioButton) {
     radioButton.addEventListener("change", toggleLicenseCheckbox);
   });
@@ -269,74 +289,133 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  // Show container (filled with per competitor data in competitors-table)
+  // Utility for toggling display attributes
+  function toggleElementDisplay(element, displayStyle, opacity) {
+    element.style.display = displayStyle;
+    element.style.opacity = opacity;
+  }
+
+  // Function to dynamically add the close event listener
   const detailsContainer = document.getElementById(
     "competitors-details-container"
   );
-  const showDetailsContainer = () =>
-    toggleElementDisplay(detailsContainer, "block");
-
-  // Handle competitor list item click
-  const competitorsList = document.getElementById("competitors-list");
-  competitorsList?.addEventListener("click", function (e) {
-    const target = e.target.closest(".competitors-list-item");
-    if (target) {
-      handleCompetitorSelection(target);
-    }
-  });
-
-  // Fetch and display competitor details
-  function handleCompetitorSelection(target) {
-    showSpinner();
-    const competitorId = target.getAttribute("data-competitor-id");
-    document
-      .querySelectorAll(".competitors-list-item.current")
-      .forEach((item) => item.classList.remove("current"));
-    target.classList.add("current");
-
-    fetchCompetitorDetails(competitorId);
+  function addCloseButtonListener() {
+    const closeDetailsButton = document.getElementById("close-details");
+    closeDetailsButton.addEventListener(
+      "click",
+      (e) => {
+        e.preventDefault();
+        detailsContainer.style.display = "none";
+        detailsContainer.innerHTML = "";
+        document
+          .getElementById("competitors-list")
+          .scrollIntoView({ behavior: "smooth" });
+      },
+      { once: true }
+    );
   }
-
-  // Fetch competitor details from server
-  function fetchCompetitorDetails(competitorId) {
-    fetch(competitorsPublicAjax.ajaxurl, {
+  // Utility for fetching competitor data
+  function fetchCompetitorsData(url, params) {
+    return fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        action: "load_competitor_details",
-        competitor_id: competitorId,
-        security: competitorsPublicAjax.nonce,
-      }),
-    })
-      .then((response) =>
-        response.ok
-          ? response.text()
-          : Promise.reject(`JS: HTTP error! Status: ${response.status}`)
-      )
+      body: new URLSearchParams(params),
+    }).then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error, status = ${response.status}`);
+      }
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        return response.json();
+      } else {
+        return response.text(); // Parse as text (HTML)
+      }
+    });
+  }
+
+  // Function to fetch and display competitor details
+  function fetchCompetitorDetails(competitorId) {
+    const params = {
+      action: "load_competitor_details",
+      competitor_id: competitorId,
+      security: competitorsPublicAjax.nonce,
+    };
+
+    showSpinner();
+    fetchCompetitorsData(competitorsPublicAjax.ajaxurl, params)
       .then((html) => {
-        detailsContainer.innerHTML = html;
-        showDetailsContainer();
-        hideSpinner();
+        if (!html.trim()) {
+          detailsContainer.innerHTML =
+            "<p>No details available for this competitor.</p>";
+        } else {
+          detailsContainer.innerHTML = html;
+        }
+        detailsContainer.style.display = "block";
         document
           .getElementById("close-details")
           .scrollIntoView({ behavior: "smooth" });
+        addCloseButtonListener();
       })
       .catch((error) => {
         console.error("Fetch Error:", error);
+        alert("Error loading details: " + error.message);
+      })
+      .finally(() => {
         hideSpinner();
       });
   }
 
-  // Close and clear details container
-  const closeDetails = document.getElementById("close-details");
-  closeDetails?.addEventListener("click", function (e) {
-    e.preventDefault();
-    toggleElementDisplay(detailsContainer, "none");
-    detailsContainer.innerHTML = "";
-    hideSpinner();
-    document
-      .querySelector(".competitors-list-item.current")
-      ?.classList.remove("current");
-    competitorsList.scrollIntoView({ behavior: "smooth" });
-  });
+  // Event listener for clicks on competitor list items
+  document
+    .getElementById("competitors-list")
+    .addEventListener("click", (event) => {
+      const target = event.target.closest(".competitors-list-item");
+      if (target) {
+        fetchCompetitorDetails(target.getAttribute("data-competitor-id"));
+      }
+    });
+
+  // Handle date dropdown selection
+  document
+    .getElementById("date-select")
+    .addEventListener("change", function () {
+      const selectedDate = this.value;
+      const params = {
+        action: "load_competitors_list",
+        date_select: selectedDate,
+        security: competitorsPublicAjax.nonce,
+      };
+
+      showSpinner();
+      fetchCompetitorsData(competitorsPublicAjax.ajaxurl, params)
+        .then((data) => {
+          // Reference and clear content before inserting new data
+          const competitorsTable = document.querySelector(".competitors-table");
+          competitorsTable.innerHTML = ""; // Clear the existing content
+
+          if (typeof data === "string") {
+            if (
+              !data.trim() ||
+              data.trim() === '<ul class="competitors-table"></ul>'
+            ) {
+              competitorsTable.innerHTML =
+                "<p>No competitors registered for this date.</p>";
+            } else {
+              competitorsTable.innerHTML = data;
+            }
+          } else if (data.success && data.data.content) {
+            competitorsTable.innerHTML = data.data.content;
+          } else {
+            console.error("Error or missing content:", data.message);
+            throw new Error(data.message || "Missing content.");
+          }
+        })
+        .catch((error) => {
+          console.error("Fetch Error:", error);
+          alert("Error loading competitors: " + error.message);
+        })
+        .finally(() => {
+          hideSpinner();
+        });
+    });
 });

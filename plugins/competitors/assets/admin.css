@@ -8,7 +8,9 @@
   --gray: rgba(205, 204, 203, 1);
   --dark-gray: rgba(100, 100, 119, 1);
   --light-gray: rgba(245, 245, 244, 1);
-  --light-success: rgba(238, 255, 238, 1);
+  --success-light: rgba(240, 255, 240, 1);
+  --warning-light: rgba(255, 250, 220, 1);
+  --danger-light: rgb(255, 240, 240);
 
   /* Warning, Danger, Success button colors */
   --info: rgba(4, 164, 204, 0.8);
@@ -21,7 +23,7 @@
   --danger-darker: rgb(220, 53, 70);
   --success-darker: rgb(40, 170, 70);
 
-  --info-darkest: rgba(2, 154, 194, 1);
+  --info-darkest: rgba(30, 113, 177, 1);
   --warning-darkest: rgba(224, 170, 0, 1);
   --danger-darkest: rgb(220, 53, 70);
   --success-darkest: rgb(40, 170, 70);
@@ -69,7 +71,7 @@
   justify-content: space-evenly;
   flex-wrap: wrap;
   flex-direction: row;
-  background-color: var(--light-success);
+  background-color: var(--success-light);
   border: 1px solid var(--gray);
   padding: 1em;
   height: 70px;
@@ -239,6 +241,13 @@ b.larger-txt {
   text-align: left;
 }
 
+.competitors-table .danger-light {
+  background-color: var(--danger-light);
+}
+.competitors-table .success-light {
+  background-color: var(--success-light);
+}
+
 /* Specific styles for the inner table within .competitors-info row to remove borders */
 .competitors-info table {
   border-collapse: collapse;
@@ -276,11 +285,11 @@ b.larger-txt {
 .competitors-table tr:hover,
 tr.competitors-header:hover,
 .competitors-table tr.selected-roll:hover {
-  background-color: var(--light-success);
+  background-color: var(--success-light);
   cursor: pointer;
 }
 .competitors-totals {
-  background-color: var(--light-success);
+  background-color: var(--success-light);
   color: var(--charcoal);
 }
 
@@ -324,6 +333,12 @@ tr.competitors-header:hover,
 #competitors_roll_names_wrapper p {
   display: flex;
 }
+#competitors_roll_names_wrapper p label,
+#competitors_roll_names_wrapper p input[type="text"],
+#competitors_roll_names_wrapper p input[type="checkbox"] {
+  align-self: center;
+  padding: 0.1em 0.5em;
+}
 /* Spinner styles for loading indication */
 #judges-scoring-container {
   position: relative; /* Reference point for the spinner */
@@ -349,11 +364,6 @@ tr.competitors-header:hover,
 #spinner.show {
   opacity: 1;
   visibility: visible;
-}
-
-.hidden {
-  visibility: hidden;
-  opacity: 0;
 }
 
 #spinner:before {
@@ -412,6 +422,7 @@ tr.competitors-header:hover,
 }
 
 .hidden {
+  visibility: hidden;
   display: none;
   opacity: 0;
 }
@@ -446,4 +457,79 @@ tr.competitors-header:hover,
 
 .two-cols div:nth-child(2) {
   flex: 1;
+}
+
+/* Date picker styles */
+.ui-datepicker {
+  background: var(--white);
+  border: 1px solid var(--light-gray);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
+  margin-top: 0.1em;
+}
+.ui-datepicker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--light-gray);
+  border-bottom: 1px solid var(--gray);
+  color: var(--charcoal);
+}
+.ui-datepicker-title {
+  line-height: 1.8em;
+  margin: 0 2.3em;
+  text-align: center;
+  order: 2;
+  flex-grow: 1;
+}
+.ui-datepicker-prev {
+  order: 1;
+}
+.ui-datepicker-next {
+  order: 3;
+}
+
+.add-date,
+.remove-date,
+.ui-datepicker-prev,
+.ui-datepicker-next {
+  border: 1px solid;
+  border-radius: 0.2em;
+  border-color: var(--info-darkest);
+  background: var(--light-gray);
+  color: var(--info-darkest);
+  cursor: pointer;
+  line-height: 2em;
+  padding: 0 0.5em;
+}
+.button.add-date {
+  background: var(--info-darkest);
+  color: var(--white);
+}
+.ui-datepicker-prev-hover,
+.ui-datepicker-next-hover {
+  opacity: 0.8;
+}
+.ui-datepicker-calendar th {
+  color: var(--dark-gray);
+}
+.ui-datepicker-calendar td a {
+  color: var(--info-darkest);
+  text-decoration: none;
+  padding: 0.4em;
+}
+.ui-datepicker-calendar td a:hover {
+  background-color: var(--gray);
+}
+.ui-datepicker-calendar .ui-state-active,
+.ui-datepicker-calendar .ui-state-active:hover {
+  background: #0073aa;
+  color: var(--white);
+}
+.ui-datepicker-today .ui-state-highlight {
+  background: var(--info-darkest);
+  color: var(--white);
+}
+/* Mark the checked/numeric rows in admin */
+.is-numeric {
+  background-color: var(--success-light);
 }

@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Competitors
  * Description:  For RollSM, A Greenland Rolling Championships registering and scoreboard plugin with live scores.
- * Version: 0.83
+ * Version: 0.85
  * Author: <a href="https://klickomaten.com">Tibor Berki</a>. /Tdude @Github.
  * Text Domain: competitors
  * Domain Path: /languages
  */
 
-define('COMPETITORS_PLUGIN_VERSION', '0.83');
+define('COMPETITORS_PLUGIN_VERSION', '0.85');
 
 
 // REMOVE OR COMMENT OUT AFTER DONE DEV!!!
@@ -53,11 +53,9 @@ function post_has_shortcodes($post, $shortcodes) {
  * Enqueues styles and scripts for the front-end part of the site.
  */
 function enqueue_competitors_public_scripts() {
-
     if (!wp_script_is('jquery', 'enqueued')) {
         wp_enqueue_script('jquery');
     }
-
     $shortcodes = ['competitors_form_public', 'competitors_scoring_public'];
     global $post;
 
@@ -82,6 +80,7 @@ add_action('wp_enqueue_scripts', 'enqueue_competitors_public_scripts');
  */
 function enqueue_competitors_admin_scripts() {
     wp_enqueue_style('competitors-admin-style', plugins_url('assets/admin.css', __FILE__));
+    wp_enqueue_script('jquery-ui-datepicker');
     wp_enqueue_script('competitors_admin_page', plugins_url('assets/admin-script.js', __FILE__), array('jquery'), COMPETITORS_PLUGIN_VERSION, true);
     wp_localize_script('competitors_admin_page', 'competitorsAdminAjax', array(
         'ajaxurl' => admin_url('admin-ajax.php'),
@@ -89,6 +88,7 @@ function enqueue_competitors_admin_scripts() {
     ));
 }
 add_action('admin_enqueue_scripts', 'enqueue_competitors_admin_scripts');
+
 
 
 /**
@@ -189,24 +189,19 @@ add_action('save_post_competitors', 'save_competitors_custom_order');
  * Also adds a default page on activation to help the not so savvy to "roll" :)
  */
 function flush_rewrite_rules_on_activation() {
-    // Ensure CPT is registered
     register_competitors_post_type();
-    // Then flush rewrite rules
     flush_rewrite_rules();
-    // Defult registered competitor
     create_default_competitor_if_none_exists();
 
-    // Include the predefined rolls from a PHP file
     $predefined_rolls = include(plugin_dir_path(__FILE__) . '/assets/predefined-rolls.php');
 
-    // Sanitize and validate each roll
     $sanitized_rolls = array_map(function($roll) {
         return [
             'name' => sanitize_text_field($roll['name']),
             'points' => is_numeric($roll['points']) ? (int)$roll['points'] : 1, // Default point if not numeric
+            'is_numeric_field' => isset($roll['is_numeric_field']) ? (bool)$roll['is_numeric_field'] : false,
         ];
     }, $predefined_rolls);
-
 
     // Components for constructing hipster maneuver names on install, just for fun.
     $adjectives = ["Ambling", "Bumbling", "Clever", "Dancing", "Eager", "Frolicking", "Gleeful", "Hilarious", "Inquisitive", "Jolly"];
@@ -215,26 +210,17 @@ function flush_rewrite_rules_on_activation() {
 
     // Ensure there are 35 maneuvers, creating unique combinations. Just delete them in the Admin UI.
     while (count($sanitized_rolls) < 35) {
-        // Randomly select one element from each array
         $randomAdjective = $adjectives[array_rand($adjectives)];
         $randomAnimal = $animals[array_rand($animals)];
         $randomVerb = $verbs[array_rand($verbs)];
-
-        // Combine them to create a new name
         $randomName = sprintf("%s %s %s", $randomAdjective, $randomAnimal, $randomVerb);
-
-        // Append a new maneuver with the unique name and default points
-        $sanitized_rolls[] = ["name" => $randomName, "points" => 10];
+        $sanitized_rolls[] = ["name" => $randomName, "points" => 10, "is_numeric_field" => false];
     }
 
-    // Remove (unlikely) duplicates to be unique
-    // $sanitized_rolls = array_unique($sanitized_rolls, SORT_REGULAR);
-
-
-
-    // Prepare separate arrays for names and points
+    // Prepare separate arrays for names, points, and numeric flags
     $roll_names = array_map(function($roll) { return $roll['name']; }, $sanitized_rolls);
     $points_values = array_map(function($roll) { return $roll['points']; }, $sanitized_rolls);
+    $is_numeric_fields = array_map(function($roll) { return $roll['is_numeric_field']; }, $sanitized_rolls);
 
     // Update the options with predefined values if they are not set yet
     if (false === get_option('competitors_custom_values')) {
@@ -243,7 +229,9 @@ function flush_rewrite_rules_on_activation() {
     if (false === get_option('competitors_numeric_values')) {
         update_option('competitors_numeric_values', $points_values);
     }
-
+    if (false === get_option('competitors_is_numeric_field')) {
+        update_option('competitors_is_numeric_field', $is_numeric_fields);
+    }
 
     // Define page configs
     $pages = [
@@ -263,8 +251,8 @@ function flush_rewrite_rules_on_activation() {
     foreach ($pages as $page) {
         create_plugin_page_if_not_exists($page['title'], $page['slug'], $page['template']);
     }
-
 }
+
 
 
 
@@ -458,6 +446,8 @@ function render_competitors_settings_page() {
     }
     echo '<div class="wrap" id="settings-page"><h1>Competitors rolls and settings</h1>';
     echo '<form method="post" action="options.php">';
+
+
     settings_fields('competitors_settings');
     do_settings_sections('competitors_settings');
     submit_button();
@@ -469,22 +459,43 @@ function render_competitors_settings_page() {
  * Initializes plugin settings by registering them along with their sections and fields.
  */
 function initialize_competitors_settings() {
+    // Register settings for competitors' information
     register_setting(
-        'competitors_settings', // Option group
-        'competitors_custom_values', // Option roll name
-        'competitors_custom_values_sanitize' // Sanitize callback
+        'competitors_settings',
+        'competitors_custom_values',
+        'competitors_custom_values_sanitize'
     );
     register_setting(
         'competitors_settings',
-        'competitors_numeric_values',// Points for roll
+        'competitors_numeric_values',
         'competitors_numeric_values_sanitize'
     );
-    
+    register_setting(
+        'competitors_settings',
+        'available_competition_dates',
+        'available_competition_dates_sanitize'
+    );
+    register_setting(
+        'competitors_settings',
+        'competitors_is_numeric_field',
+        'competitors_is_numeric_field_sanitize'
+    );
+
+    // Register the custom values section
     add_settings_section(
-        'competitors_custom_values_section', // ID
+        'competitors_custom_values_section',
         __('Custom Values for roll names. One roll name on each row. Add rows with +.', 'competitors'),
         'competitors_settings_section_callback',
-        'competitors_settings' // Page
+        'competitors_settings'
+    );
+
+    // Add fields to the custom values section
+    add_settings_field(
+        'competitors_date_field',
+        __('Competition Dates', 'competitors'),
+        'render_competitors_date_field',
+        'competitors_settings',
+        'competitors_custom_values_section'
     );
 
     add_settings_field(
@@ -496,6 +507,7 @@ function initialize_competitors_settings() {
     );
 }
 add_action('admin_init', 'initialize_competitors_settings');
+
 
 
 
@@ -520,40 +532,74 @@ function competitors_settings_section_callback() {
 
 
 /**
+ * Everybody likes having a date, right?
+*/
+function render_competitors_date_field() {
+    $dates = get_option('available_competition_dates');
+    if (!is_array($dates)) {
+        $dates = [];
+    }
+    // Output buffering FTW
+    ob_start();
+    echo '<input type="text" id="new_competition_date" name="new_competition_date" class="date-picker" placeholder="YYYY-MM-DD" />';
+    echo '<button type="button" class="button add-date">Add Date</button>';
+    echo '<ul id="existing_dates">';
+    foreach ($dates as $date) {
+        echo '<li><input type="hidden" name="available_competition_dates[]" value="' . esc_attr($date) . '">' . $date . ' <button type="button" class="remove-date">Remove</button></li>';
+    }
+    echo '</ul>';
+    return ob_get_clean();
+}
+
+
+
+/**
  * Renders text input fields for the settings page, used for configuration options.
  */
 function render_competitors_text_field() {
-    $roll_names = get_option('competitors_custom_values');
-    $points_values = get_option('competitors_numeric_values'); // Fetch points values from the database
+    $roll_names = get_option('competitors_custom_values', []);
+    $points_values = get_option('competitors_numeric_values', []);
+    $is_numeric_fields = get_option('competitors_is_numeric_field', []);
 
-    if (!is_array($roll_names)) {
-        $roll_names = [$roll_names];
-    }
-    if (!is_array($points_values)) {
-        $points_values = array_fill(0, count($roll_names), ''); // Ensure $points_values is an array of the same length as $roll_names
-    }
+    // Ensure all arrays are present and consistent
+    $roll_names = is_array($roll_names) ? $roll_names : [$roll_names];
+    $points_values = is_array($points_values) ? $points_values : array_fill(0, count($roll_names), '');
+    $is_numeric_fields = is_array($is_numeric_fields) ? $is_numeric_fields : array_fill(0, count($roll_names), false);
 
     wp_nonce_field('competitors_nonce_action', 'competitors_nonce');
 
     echo '<div id="competitors_roll_names_wrapper">';
+
+    echo render_competitors_date_field();
+
     foreach ($roll_names as $index => $roll_name) {
-        $point_value = isset($points_values[$index]) ? $points_values[$index] : ''; // Fetch corresponding point value or default to empty
+        $roll_name = trim($roll_name);
+        $point_value = isset($points_values[$index]) ? esc_attr($points_values[$index]) : '0';
+        $numeric_checked = isset($is_numeric_fields[$index]) && $is_numeric_fields[$index] ? 'checked' : '';
+
         echo '<p data-index="' . $index . '">';
         echo '<label for="maneuver_' . $index . '">Maneuver: </label>';
         echo '<input type="text" id="maneuver_' . $index . '" name="competitors_custom_values[]" size="60" value="' . esc_attr($roll_name) . '" />';
+
         echo '<label for="points_' . $index . '"> Points: </label>';
-        $point_value = isset($points_values[$index]) ? $points_values[$index] : '0'; // Replace with appropriate default if empty
-        echo '<input type="text" class="numeric-input" id="points_' . $index . '" name="competitors_numeric_values[]" size="2" maxlength="2" pattern="\d*" title="Only 2 digits allowed" value="' . esc_attr($point_value) . '" />';
-        // Remove button for each row
-        echo '<button type="button" name="remove_row" value="' . $index . '" class="button custom-button button-secondary remove-row">Remove</button>';
+        echo '<input type="text" class="numeric-input" id="points_' . $index . '" name="competitors_numeric_values[]" size="2" maxlength="2" pattern="\\d*" value="' . $point_value . '" />';
+
+        echo '<label for="numeric_' . $index . '"> Numeric:</label>';
+        echo '<input type="checkbox" id="numeric_' . $index . '" name="competitors_is_numeric_field[' . $index . ']" value="1" ' . $numeric_checked . '>';
+
+        echo '<button type="button" class="button custom-button button-secondary remove-row">Remove</button>';
 
         if ($index === 0) {
             echo '<button type="button" id="add_more_roll_names" class="button custom-button button-primary plus-button"></button>';
         }
         echo '</p>';
     }
+
     echo '</div>';
 }
+
+
+
 
 
 /**
@@ -566,10 +612,12 @@ function handle_ajax_row_removal_for_competitors() {
         $index = intval($_POST['index']);
         $roll_names = get_option('competitors_custom_values', []);
         $points_values = get_option('competitors_numeric_values', []);
+        $is_numeric_fields = get_option('competitors_is_numeric_field', []);
 
-        // Ensure both options are arrays
+        // Ensure all options are arrays
         $roll_names = is_array($roll_names) ? $roll_names : [];
         $points_values = is_array($points_values) ? $points_values : [];
+        $is_numeric_fields = is_array($is_numeric_fields) ? $is_numeric_fields : [];
 
         $item_removed = false;
 
@@ -587,6 +635,13 @@ function handle_ajax_row_removal_for_competitors() {
             $item_removed = true;
         }
 
+        if (isset($is_numeric_fields[$index])) {
+            unset($is_numeric_fields[$index]);
+            $is_numeric_fields = array_values($is_numeric_fields);
+            update_option('competitors_is_numeric_field', $is_numeric_fields);
+            $item_removed = true;
+        }
+
         if ($item_removed) {
             wp_send_json_success(['message' => 'Row removed successfully']);
         } else {
@@ -601,8 +656,9 @@ function handle_ajax_row_removal_for_competitors() {
 add_action('wp_ajax_remove_competitor_row', 'handle_ajax_row_removal_for_competitors');
 
 
+
 /**
- * Sanitize callback function
+ * Sanitize callback functions
  */
 function competitors_custom_values_sanitize($input) {
     return array_map('sanitize_text_field', $input);
@@ -610,44 +666,66 @@ function competitors_custom_values_sanitize($input) {
 function competitors_numeric_values_sanitize($input) {
     return array_map('sanitize_text_field', $input);
 }
+function competitors_is_numeric_field_sanitize($input) {
+    return array_map(function($item) {
+        return filter_var($item, FILTER_VALIDATE_BOOLEAN);
+    }, (array)$input);
+}
+function available_competition_dates_sanitize($input) {
+    // Ensure $input is an array and sanitize its contents
+    if (is_array($input)) {
+        foreach ($input as $key => $value) {
+            $input[$key] = sanitize_text_field($value);
+        }
+    }
+    return $input;
+}
+
 
 
 /**
  * Retrieves the roll names and their max scores from WordPress options.
- * @return array An array of roll names with their max scores.
+ * @return array An array of roll names with their max scores and numeric status.
  */
 function get_roll_names_and_max_scores() {
-    // Fetch roll names and max scores, ensuring they are arrays
+    // Fetch options, ensuring they are arrays
     $roll_names = get_option('competitors_custom_values', []);
     $roll_max_scores = get_option('competitors_numeric_values', []);
-    $combined = [];
+    $is_numeric_fields = get_option('competitors_is_numeric_field', []);
 
-    // Ensure both options are arrays. If not, initialize as empty arrays.
+    // Ensure all are arrays
     $roll_names = is_array($roll_names) ? $roll_names : [];
     $roll_max_scores = is_array($roll_max_scores) ? $roll_max_scores : [];
+    $is_numeric_fields = is_array($is_numeric_fields) ? $is_numeric_fields : [];
 
-    // Check if both arrays are empty and initialize with default values if necessary
+    // Default values if both arrays are empty
     if (empty($roll_names) && empty($roll_max_scores)) {
-        // Define your default rolls and scores here
         $roll_names = ['Default Roll Name'];
-        $roll_max_scores = ['Default Score'];
+        $roll_max_scores = [1]; // Default to a numeric value
+        $is_numeric_fields = [false]; // Default boolean
     }
 
+    // Combining roll data
+    $combined = [];
     foreach ($roll_names as $index => $name) {
         $name = trim($name);
-        // Ensure name, max_scores is not empty
+
         if (!empty($name)) {
             $max_score = isset($roll_max_scores[$index]) && $roll_max_scores[$index] !== '' ? $roll_max_scores[$index] . "p" : 'N/A';
-            $combined[$index] = [
+            $is_numeric = isset($is_numeric_fields[$index]) && $is_numeric_fields[$index] ? 'Yes' : 'No';
+
+            $combined[] = [
                 'name' => $name,
-                'max_score' => $max_score
+                'max_score' => $max_score,
+                'is_numeric' => $is_numeric,
             ];
         }
     }
 
     // Return combined array or default value
-    return !empty($combined) ? $combined : [['name' => 'No roll names defined', 'max_score' => 'N/A']];
+    return !empty($combined) ? $combined : [['name' => 'No roll names defined', 'max_score' => 'N/A', 'is_numeric' => 'N/A']];
 }
+
 
 
 /**

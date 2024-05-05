@@ -4,10 +4,9 @@ function echo_table_cell($content) {
     echo '<td>' . esc_html($content) . '</td>';
 }
 
-
 function competitors_admin_page() {
     if (!current_user_can('manage_options') && !current_user_can('edit_competitors')) {
-        echo '<h2>\(o_o)/</h2><p>Access denied to scoring, dude. You dont seem to be The Judge.</p>';
+        echo '<h2>\(o_o)/</h2><p>Access denied to scoring, dude. You don’t seem to be The Judge.</p>';
         return;
     }
     render_admin_page_header(); // For nav tabs
@@ -21,21 +20,17 @@ function competitors_admin_page() {
     ]);
 
     if ($competitors_query->have_posts()) {
-        // Links within the plugin
-        // echo '<a href="' . esc_url(admin_url('admin.php?page=my_custom_page')) . '">Go to My Custom Page</a>';
-
-        echo '<h1>Competitors Data</h1>';
-        // There is a default WP "page" created on installation, for displaying stuff with Wordpress shortcodes. You can copy those to any page you like, or just keep it as is.
         $page_slug = 'test-results-list-page';
         echo '<p>Click on headers to sort. This enables quick grouping and planning. <a href="' . esc_url(site_url('/' . $page_slug . '/')) . '">Public page</a> for this data.</p>';
         echo '<table class="competitors-table" id="sortable-table">';
         echo '<thead><tr class="competitors-header">';
-        echo '<th>Name</th><th>Club</th><th>Class</th><th>Speaker Info</th><th>Sponsors</th><th>Email</th><th>Phone</th><th>Consent</th>';
+        echo '<th>Comp. Date</th><th>Name</th><th>Club</th><th>Class</th><th>Speaker Info</th><th>Sponsors</th><th>Email</th><th>Phone</th><th>Consent</th>';
         echo '</tr></thead><tbody>';
 
         while ($competitors_query->have_posts()) {
             $competitors_query->the_post();
-            // Get meta data
+
+            // Retrieve metadata
             $club = get_post_meta(get_the_ID(), 'club', true);
             $participation_class = get_post_meta(get_the_ID(), 'participation_class', true);
             $speaker_info = get_post_meta(get_the_ID(), 'speaker_info', true);
@@ -43,7 +38,11 @@ function competitors_admin_page() {
             $email = get_post_meta(get_the_ID(), 'email', true);
             $phone = get_post_meta(get_the_ID(), 'phone', true);
             $consent = get_post_meta(get_the_ID(), 'consent', true);
+            $competition_date = get_post_meta(get_the_ID(), 'competition_date', true);
+
+            // Render row content
             echo '<tr>';
+            echo_table_cell(esc_html($competition_date));
             echo_table_cell(get_the_title());
             echo_table_cell(esc_html($club));
             echo_table_cell(esc_html($participation_class));
@@ -54,17 +53,19 @@ function competitors_admin_page() {
             echo_table_cell(esc_html($consent));
             echo '</tr>';
         }
+
         echo '</tbody></table>';
     } else {
-        echo '<h2>\(o_o)/</h2><p>No competitors found! </p>';
+        echo '<h2>\(o_o)/</h2><p>No competitors found!</p>';
     }
     wp_reset_postdata();
 }
 
 
+
 function judges_scoring_page() {
     if (!current_user_can('manage_options') && !current_user_can('competitors_judge')) {
-        echo '<p>Access denied to scoring, dude. You dont seem to be The Judge.</p>';
+        echo '<p>Access denied to scoring, dude. You don’t seem to be The Judge.</p>';
         return;
     }
     render_admin_page_header(); // For nav tabs
@@ -89,22 +90,19 @@ function judges_scoring_page() {
     );
     $competitors_query = new WP_Query($args);
 
-    // Check if there are no competitors
     if (!$competitors_query->have_posts()) {
         $no_competitors_message = esc_html__('Looks like there are no competitors to score right now. Please add some competitors or check back later.', 'competitors');
         echo "<h2>\\(o_o)/</h2><p>{$no_competitors_message}</p>";
         return; // Exit the function early
     }
 
-    $action_url = esc_url(admin_url('admin-ajax.php')); // Sending to admin-ajax.php via js, not on submit.preventDefault
-    //$nonce_field = wp_create_nonce('competitors_score_update_action', 'competitors_score_update_nonce', true, false);
+    $action_url = esc_url(admin_url('admin-ajax.php'));
     $nonce_field = wp_nonce_field('competitors_nonce_action', 'competitors_score_update_nonce');
 
     $admin_email = get_option('admin_email');
     $contact_admin = esc_html__('Please contact the Admin for feedback: ', 'competitors');
     $admin_email_link = "{$contact_admin} " . esc_html($admin_email);
 
-    // Localizing static strings
     $judges_scoring_page_title = esc_html__('Judges Scoring Page', 'competitors');
     $timer_label = esc_html__('Timer', 'competitors');
     $start_button_title = esc_attr__('Start timer before scoring competitors!', 'competitors');
@@ -132,66 +130,59 @@ function judges_scoring_page() {
 
     $grand_total = 0;
     $total_rolls_performed = 0;
-    $valid_scores_count = 0; // Initialize a counter for valid (non-zero, non-empty) scores
-    
+    $valid_scores_count = 0; // Initialize a counter for valid scores
+
     while ($competitors_query->have_posts()) {
         $competitors_query->the_post();
         $competitor_id = get_the_ID();
-        $rolls = get_roll_names_and_max_scores(); // from settings
+        $rolls = get_roll_names_and_max_scores(); // from competitors-settings.php
         $competitor_scores = get_post_meta($competitor_id, 'competitor_scores', true) ?: [];
         $selected_rolls = get_post_meta($competitor_id, 'selected_rolls', true) ?: [];
         $competitor_total_score = 0;
         $tempHTML = $layoutHTML = '';
-        // Generate timing fields for each competitor updated by js
+
         $tempHTML .= <<<HTML
         <input type="hidden" name="start_time[{$competitor_id}]" id="start-time-{$competitor_id}" value="">
         <input type="hidden" name="stop_time[{$competitor_id}]" id="stop-time-{$competitor_id}" value="">
         <input type="hidden" name="elapsed_time[{$competitor_id}]" id="elapsed-time-{$competitor_id}" value="">
         HTML;
-    
+
         foreach ($rolls as $index => $roll) {
             $roll_scores = $competitor_scores[$index] ?? [];
-            // Directly calculate the total points for this roll
             $roll_total = ($roll_scores['left_score'] ?? 0) - ($roll_scores['left_deduct'] ?? 0) +
                           ($roll_scores['right_score'] ?? 0) - ($roll_scores['right_deduct'] ?? 0);
-    
+
             if (!empty($roll_total) && $roll_total != 0) {
                 $competitor_total_score += $roll_total;
                 $total_rolls_performed++;
             }
-    
-            // Append score row to temporary HTML
+
             $tempHTML .= render_competitor_score_row($competitor_id, $index, $roll, $roll_scores, $selected_rolls);
         }
 
-        // Append header and info rows with the updated competitor_total_score to temporary HTML
         $layoutHTML .= render_competitor_header_row($competitor_id, $competitor_total_score);
         $layoutHTML .= render_competitor_info_row($competitor_id);
         $layoutHTML .= $tempHTML;
-        // Now append the total row
+
         $layoutHTML .= '<tr class="competitors-totals hidden" data-competitor="' . $competitor_id . '">
         <td colspan="5"><b>Total</b></td><td><b>' . $competitor_total_score . ' points</b></td></tr>';
-        // Check if competitor_total_score is non-zero
+
         if ($competitor_total_score > 0) {
             $grand_total += $competitor_total_score;
             $valid_scores_count++;
         }
-        // Output the stored HTML
+
         echo $layoutHTML;
     }
 
-
-    // Calculate averages based on valid scores rather than total number of contestants
     $average_score = $valid_scores_count > 0 ? $grand_total / $valid_scores_count : 0;
     $average_rolls = $valid_scores_count > 0 ? $total_rolls_performed / $valid_scores_count : 0;
-    // Format to n decimals
     $average_score_formatted = number_format($average_score, 1, '.', '');
     $average_rolls_formatted = number_format($average_rolls, 1, '.', '');
 
-    // After all competitors are processed, display the Grand Total and the average score
     echo <<<HTML
     <tr class="competitors-totals grand-total" data-competitor="$competitor_id">
-    <td colspan="2"><b>Rolls to perform</b> (Avg: <b>{$average_rolls_formatted}</b>  per competitor)</td>
+    <td colspan="2"><b>Rolls to perform</b> (Avg: <b>{$average_rolls_formatted}</b> per competitor)</td>
     <td colspan="3"><b>Grand Total Score</b> (Avg: <b>{$average_score_formatted}</b> points per competitor)</td>
     <td><b>{$grand_total}</b></td></tr></tbody></table>
     <div id="spinner" class="fade-inout"></div>
@@ -199,8 +190,10 @@ function judges_scoring_page() {
     </form>
     HTML;
 }
+
 // This would be before the form closing tag
 // <p><input type="submit" value="Save new scores NOT TIME" class="button button-primary save-scores" title="Saves scores NOT TIME. Just like the button on top."></p>
+
 
 function render_competitor_header_row($competitor_id, $competitor_total_score) {
     $title = get_the_title($competitor_id);
@@ -285,6 +278,8 @@ function render_competitor_score_row($competitor_id, $index, $roll, $scores, $se
     return '<tr class="competitors-scores ' . $selected_class . ' hidden" data-competitor="' . $competitor_id . '">' . $row_contents . '</tr>';
 }
 */
+
+
 function render_competitor_score_row($competitor_id, $index, $roll, $scores, $selected_rolls) {
     $roll_name = esc_html($roll['name']);
     $max_score = isset($roll['max_score']) ? esc_html($roll['max_score']) : 'N/A';
@@ -293,18 +288,36 @@ function render_competitor_score_row($competitor_id, $index, $roll, $scores, $se
 
     $input_prefix = "competitor_scores[$competitor_id][$index]";
 
-    // Check if a checkbox is checked
+    // Prepare scores or default values for each type
+    $left_score_value = isset($scores['left_score']) ? esc_attr($scores['left_score']) : '';
+    $left_deduct_value = isset($scores['left_deduct']) ? esc_attr($scores['left_deduct']) : '';
+    $right_score_value = isset($scores['right_score']) ? esc_attr($scores['right_score']) : '';
+    $right_deduct_value = isset($scores['right_deduct']) ? esc_attr($scores['right_deduct']) : '';
+
     $is_checked = function($key) use ($scores) {
         return isset($scores[$key]) && $scores[$key] > 0 ? 'checked' : '';
     };
 
-    $row_contents = <<<HTML
-    <td>{$roll_name} ({$max_score})</td>
-    <td class="success-light"><label><input type="checkbox" name="{$input_prefix}[left_score]" value="{$max_score}" {$is_checked('left_score')}> {$max_score} </label></td>
-    <td class="danger-light"><label><input type="checkbox" name="{$input_prefix}[left_deduct]" value="1" {$is_checked('left_deduct')}> Less </label></td>
-    <td class="success-light"><label><input type="checkbox" name="{$input_prefix}[right_score]" value="{$max_score}" {$is_checked('right_score')}> {$max_score} </label></td>
-    <td class="danger-light"><label><input type="checkbox" name="{$input_prefix}[right_deduct]" value="1" {$is_checked('right_deduct')}> Less</label></td>
-    HTML;
+    //$is_numeric_field = isset($roll['is_numeric_field']) && $roll['is_numeric_field'];
+    $is_numeric_field = ($roll['is_numeric'] === 'Yes');
+
+    if ($is_numeric_field) {
+        $row_contents = <<<HTML
+        <td>{$roll_name} ({$max_score})</td>
+        <td><input type="text" name="{$input_prefix}[left_score]" class="numeric-input" maxlength="2" value="{$left_score_value}" /></td>
+        <td></td>
+        <td><input type="text" name="{$input_prefix}[right_score]" class="numeric-input" maxlength="2" value="{$right_score_value}" /></td>
+        <td></td>
+        HTML;
+    } else {
+        $row_contents = <<<HTML
+        <td>{$roll_name} ({$max_score})</td>
+        <td class="success-light"><label><input type="checkbox" name="{$input_prefix}[left_score]" value="{$max_score}" {$is_checked('left_score')}> {$max_score} </label></td>
+        <td class="danger-light"><label><input type="checkbox" name="{$input_prefix}[left_deduct]" value="1" {$is_checked('left_deduct')}> Less </label></td>
+        <td class="success-light"><label><input type="checkbox" name="{$input_prefix}[right_score]" value="{$max_score}" {$is_checked('right_score')}> {$max_score} </label></td>
+        <td class="danger-light"><label><input type="checkbox" name="{$input_prefix}[right_deduct}" value="1" {$is_checked('right_deduct')}> Less</label></td>
+        HTML;
+    }
 
     // Total score computation
     $total_score = (isset($scores['left_score']) ? $scores['left_score'] : 0) +
@@ -318,6 +331,9 @@ function render_competitor_score_row($competitor_id, $index, $roll, $scores, $se
 
     return "<tr class='competitors-scores {$selected_class} hidden' data-competitor='{$competitor_id}'>{$row_contents}</tr>";
 }
+
+
+
 
 
 

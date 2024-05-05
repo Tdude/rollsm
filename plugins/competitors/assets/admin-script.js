@@ -187,17 +187,22 @@ document.addEventListener("DOMContentLoaded", function () {
       const newIndex = wrapper.querySelectorAll("p").length;
       const newField = document.createElement("p");
       newField.setAttribute("data-index", newIndex);
-      newField.innerHTML =
-        `<label for="maneuver_${newIndex}">Maneuver: </label>` +
-        `<input type="text" id="maneuver_${newIndex}" name="competitors_custom_values[]" size="60" />` +
-        `<label for="points_${newIndex}"> Points: </label>` +
-        `<input type="text" class="numeric-input" id="points_${newIndex}" name="competitors_numeric_values[]" size="2" maxlength="2" pattern="\\d*" title="Only 2 digits allowed" />` +
-        `<button type="button" class="button custom-button button-secondary remove-row">Remove</button>`;
+
+      newField.innerHTML = `
+          <label for="maneuver_${newIndex}">Maneuver: </label>
+          <input type="text" id="maneuver_${newIndex}" name="competitors_custom_values[]" size="60" />
+          <label for="points_${newIndex}"> Points: </label>
+          <input type="text" class="numeric-input" id="points_${newIndex}" name="competitors_numeric_values[]" size="2" maxlength="2" pattern="\\d*" title="Only 2 digits allowed" />
+          <label for="numeric_field_${newIndex}"> Numeric:</label>
+          <input type="checkbox" id="numeric_field_${newIndex}" name="competitors_is_numeric_field[${newIndex}]" value="1">
+          <button type="button" class="button custom-button button-secondary remove-row">Remove</button>
+      `;
       wrapper.appendChild(newField);
     }
+
     addButton.addEventListener("click", addRow);
 
-    // Saving the new row
+    // Removing a row
     wrapper.addEventListener("click", function (e) {
       if (e.target.classList.contains("remove-row")) {
         e.preventDefault();
@@ -223,7 +228,6 @@ document.addEventListener("DOMContentLoaded", function () {
               if (data.success) {
                 console.log(data.message);
                 e.target.parentNode.remove(); // Remove the parent <p> element
-                //alert("Row removed successfully.");
               } else {
                 console.error(data.message);
                 alert("Failed to remove row.");
@@ -502,6 +506,35 @@ document.addEventListener("DOMContentLoaded", function () {
   }
   // Attempt to sync stored form data when back online
   window.addEventListener("online", syncDataAuto);
+
+  // Make numeric fields more visible in the admin
+  const wrapper = document.getElementById("competitors_roll_names_wrapper");
+  if (wrapper) {
+    // Function to update class based on checkbox state
+    function updateClass(element) {
+      const parentParagraph = element.closest("p");
+      if (parentParagraph) {
+        if (element.checked) {
+          parentParagraph.classList.add("is-numeric");
+        } else {
+          parentParagraph.classList.remove("is-numeric");
+        }
+      }
+    }
+    // Initial check for each checkbox
+    const checkboxes = wrapper.querySelectorAll("input[type='checkbox']");
+    checkboxes.forEach((checkbox) => {
+      updateClass(checkbox);
+    });
+    // Event listener for changes
+    wrapper.addEventListener("change", function (event) {
+      if (event.target.type === "checkbox") {
+        updateClass(event.target);
+      }
+    });
+  }
+
+  // DOMLoaded
 });
 
 // "Quick edit" custom order-by in Admin list view, the WP way
@@ -534,5 +567,30 @@ jQuery(document).ready(function ($) {
       // Append or prepend based on your layout needs
       $lastField.after(customOrderField);
     }, 150); // A slight delay to ensure the Quick Edit form is fully rendered
+  });
+
+  // Date picker for admin
+  $(".date-picker").datepicker({
+    dateFormat: "yy-mm-dd", // Matches the format expected by WordPress
+  });
+
+  // Add date button functionality
+  $(".add-date").click(function () {
+    var newDate = $("#new_competition_date").val();
+    if (newDate) {
+      $("#existing_dates").append(
+        '<li><input type="hidden" name="available_competition_dates[]" value="' +
+          newDate +
+          '">' +
+          newDate +
+          ' <button type="button" class="remove-date">Remove</button></li>'
+      );
+      $("#new_competition_date").val("").datepicker("setDate", null); // Clear input and reset datepicker
+    }
+  });
+
+  // Remove/delete date functionality
+  $("#existing_dates").on("click", ".remove-date", function () {
+    $(this).parent().remove();
   });
 });

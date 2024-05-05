@@ -1,5 +1,4 @@
 <?php
-
 return [
     'messages' => [
         'no_competitors' => esc_html__('Looks like there are no competitors to score right now. Please add some competitors or check back later.', 'competitors'),
