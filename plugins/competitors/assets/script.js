@@ -19,9 +19,6 @@ document.addEventListener("DOMContentLoaded", () => {
           )
         );
       });
-    const radioButtons = form.querySelectorAll(
-      'input[type="radio"][name="participation_class"]'
-    );
     radioButtons.forEach((radio) =>
       radio.addEventListener("change", toggleLicenseCheckbox)
     );
@@ -33,7 +30,6 @@ document.addEventListener("DOMContentLoaded", () => {
     showButtonLoading(submitButton, true);
 
     if (validateForm()) {
-      showSpinner();
       try {
         await submitForm();
       } catch (error) {
@@ -41,7 +37,6 @@ document.addEventListener("DOMContentLoaded", () => {
         alert("Failed to submit form, please try again.");
         showButtonLoading(submitButton, false);
       }
-      // Assuming page will redirect and thus not requiring hiding the spinner
     } else {
       showButtonLoading(submitButton, false);
     }
@@ -51,7 +46,6 @@ document.addEventListener("DOMContentLoaded", () => {
     closeValidationMessage();
     let isValid = true;
 
-    // Validate required fields
     ["phone", "email", "name"].forEach((fieldName) => {
       const field = form.querySelector(`[name="${fieldName}"]`);
       if (!field.value.trim()) {
@@ -72,7 +66,6 @@ document.addEventListener("DOMContentLoaded", () => {
     );
     isValid &= validateCheckbox("consent", "Your consent is required.");
 
-    // Validate the selected date
     const dateField = form.querySelector("#competition_date");
     const selectedDate = dateField.value.trim();
 
@@ -85,6 +78,60 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     return isValid;
+  }
+
+  function displayValidationMessage(message, isSuccess) {
+    validationMessageContainer.textContent = message;
+    validationMessageContainer.classList.remove("hidden");
+    validationMessageContainer.classList.toggle("danger", !isSuccess);
+    validationMessageContainer.classList.toggle("success", isSuccess);
+  }
+
+  function handleValidationMessage({
+    message = "Error",
+    success = true,
+    show = false,
+    fadeOut = true,
+  }) {
+    const messageContent =
+      validationMessageContainer.querySelector(".message-content");
+    if (messageContent) {
+      messageContent.textContent = message;
+    } else {
+      validationMessageContainer.textContent = message;
+    }
+    validationMessageContainer.classList.toggle("hidden", !show);
+    validationMessageContainer.classList.toggle("danger", !success && show);
+    validationMessageContainer.classList.toggle("success", success && show);
+
+    if (fadeOut) {
+      validationMessageContainer.classList.add("fade-out");
+      setTimeout(() => closeValidationMessage(), 8000);
+    }
+  }
+
+  function closeValidationMessage() {
+    validationMessageContainer.classList.add("hidden");
+    validationMessageContainer.textContent = ""; // Clear the message
+    validationMessageContainer.classList.remove(
+      "danger",
+      "success",
+      "fade-out"
+    );
+  }
+
+  function toggleClass(element, className, condition) {
+    if (element && condition) {
+      element.classList.add(className);
+    } else if (element) {
+      element.classList.remove(className);
+    }
+  }
+
+  function toggleLicenseCheckbox() {
+    const championshipSelected = form.querySelector("#championship").checked;
+    const licenseContainer = form.querySelector("#license-container");
+    toggleClass(licenseContainer, "hidden", !championshipSelected);
   }
 
   function validateRadioSection(name, message) {
@@ -112,56 +159,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function toggleLicenseCheckbox() {
-    const championshipSelected = form.querySelector("#championship").checked;
-    const licenseContainer = form.querySelector("#license-container");
-    toggleClass(licenseContainer, "hidden", !championshipSelected);
-  }
-
-  function toggleClass(element, className, condition) {
-    if (element && condition) {
-      element.classList.add(className);
-    } else if (element) {
-      element.classList.remove(className);
-    }
-  }
-
-  function displayValidationMessage(message, isSuccess) {
-    validationMessageContainer.textContent = message;
-    validationMessageContainer.classList.toggle("hidden", false);
-    validationMessageContainer.classList.toggle("danger", !isSuccess);
-    validationMessageContainer.classList.toggle("success", isSuccess);
-  }
-
-  function handleValidationMessage({
-    message = "Ärrår",
-    success = true,
-    show = false,
-    fadeOut = true,
-  }) {
-    validationMessageContainer.querySelector(".message-content").textContent =
-      message;
-    validationMessageContainer.classList.toggle("hidden", !show);
-    validationMessageContainer.classList.toggle("danger", !success && show);
-    validationMessageContainer.classList.toggle("success", success && show);
-
-    if (fadeOut) {
-      validationMessageContainer.classList.add("fade-out");
-      setTimeout(() => closeValidationMessage(), 8000);
-    }
-  }
-
-  function closeValidationMessage() {
-    validationMessageContainer.classList.add("hidden");
-  }
-
   function showButtonLoading(button, isLoading) {
     button.disabled = isLoading;
     button.value = isLoading ? "Processing..." : "Submit";
   }
 
   async function submitForm() {
-    //console.log("Handling form submission async");
     const formData = new FormData(form);
     formData.append("action", "competitors_form_submit");
     formData.append("competitors_nonce", competitorsPublicAjax.nonce);
@@ -173,19 +176,27 @@ document.addEventListener("DOMContentLoaded", () => {
         body: formData,
       });
 
-      if (!response.ok)
+      if (!response.ok) {
         throw new Error("Oops! Server not reachable. Please try again later.");
+      }
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        throw new Error("Invalid server response. Please try again later.");
+      }
+
       if (!data.success) {
         throw new Error(`Error from server: ${data.data.message}`);
       } else {
-        handleValidationMessage(
-          "Yay! Your submission was successful. We will stay in touch via email.",
-          true,
-          true,
-          true
-        );
+        handleValidationMessage({
+          message:
+            "Yay! Your submission was successful. We will stay in touch via email.",
+          success: true,
+          show: true,
+          fadeOut: true,
+        });
 
         form.reset();
         setTimeout(() => {
@@ -194,11 +205,16 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (error) {
       console.error("Error during form submission:", error);
-      let errorMessage = "Oops! There was a problem with your submission."; // Default message
+      let errorMessage = "Oops! There was a problem with your submission.";
       if (error.message) {
         errorMessage = `Oops! There was a problem with your submission: ${error.message}`;
       }
-      handleValidationMessage(errorMessage, false, true, true);
+      handleValidationMessage({
+        message: errorMessage,
+        success: false,
+        show: true,
+        fadeOut: true,
+      });
     } finally {
       resetSubmitButton();
     }
@@ -375,10 +391,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-  // Handle date dropdown selection
+  // Date dropdown
   document
     .getElementById("date-select")
-    .addEventListener("change", function () {
+    .addEventListener("change", async function () {
       const selectedDate = this.value;
       const params = {
         action: "load_competitors_list",
@@ -386,36 +402,81 @@ document.addEventListener("DOMContentLoaded", () => {
         security: competitorsPublicAjax.nonce,
       };
 
-      showSpinner();
-      fetchCompetitorsData(competitorsPublicAjax.ajaxurl, params)
-        .then((data) => {
-          // Reference and clear content before inserting new data
-          const competitorsTable = document.querySelector(".competitors-table");
-          competitorsTable.innerHTML = ""; // Clear the existing content
+      try {
+        showSpinner();
+        const data = await fetchCompetitorsData(
+          competitorsPublicAjax.ajaxurl,
+          params
+        );
+        updateCompetitorsTable(data);
+      } catch (error) {
+        console.error("Fetch Error:", error);
+        alert("Error loading competitors: " + error.message);
+      } finally {
+        hideSpinner();
+      }
+    });
 
-          if (typeof data === "string") {
-            if (
-              !data.trim() ||
-              data.trim() === '<ul class="competitors-table"></ul>'
-            ) {
-              competitorsTable.innerHTML =
-                "<p>No competitors registered for this date.</p>";
-            } else {
-              competitorsTable.innerHTML = data;
-            }
-          } else if (data.success && data.data.content) {
-            competitorsTable.innerHTML = data.data.content;
-          } else {
-            console.error("Error or missing content:", data.message);
-            throw new Error(data.message || "Missing content.");
-          }
-        })
-        .catch((error) => {
-          console.error("Fetch Error:", error);
-          alert("Error loading competitors: " + error.message);
-        })
-        .finally(() => {
-          hideSpinner();
-        });
+  function updateCompetitorsTable(data) {
+    const competitorsTable = document.querySelector(".competitors-table");
+    competitorsTable.innerHTML = "";
+
+    if (typeof data === "string") {
+      if (
+        !data.trim() ||
+        data.trim() === '<ul class="competitors-table"></ul>'
+      ) {
+        competitorsTable.innerHTML =
+          "<p>No competitors registered for this date.</p>";
+      } else {
+        competitorsTable.innerHTML = data;
+      }
+    } else if (data.success && data.data.content) {
+      competitorsTable.innerHTML = data.data.content;
+    } else {
+      console.error("Error or missing content:", data.message);
+      throw new Error(data.message || "Missing content.");
+    }
+  }
+
+  // Function to update performing rolls based on selected class
+  function updatePerformingRolls(classType) {
+    const params = new URLSearchParams({
+      action: "get_performing_rolls",
+      class_type: classType,
+      nonce: competitorsPublicAjax.nonce,
+    });
+
+    fetch(competitorsPublicAjax.ajaxurl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      },
+      body: params,
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        //console.log(data); // Log the full response
+        if (data.success) {
+          document.getElementById("performing-rolls-container").innerHTML =
+            data.data.html;
+        } else {
+          alert("Failed to update performing rolls.");
+        }
+      })
+      .catch((error) => {
+        alert("An error occurred while updating performing rolls.");
+        console.error("Error:", error);
+      });
+  }
+
+  // Event listener for participation class radio buttons
+  document
+    .querySelectorAll('input[name="participation_class"]')
+    .forEach(function (radio) {
+      radio.addEventListener("change", function () {
+        var selectedClass = this.value;
+        updatePerformingRolls(selectedClass);
+      });
     });
 });

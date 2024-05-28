@@ -7,7 +7,7 @@
 echo <<<HTML
 <div class="entry-content">
     <h2>Thank you for your registration!</h2>
-    <p>We will be in touch.</p>
+    <p>Let's stay in touch.</p>
     <p>//The organizing team</p>
     <p>[custom_button]</p>
 </div>

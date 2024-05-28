@@ -8,9 +8,9 @@
   --gray: rgba(205, 204, 203, 1);
   --dark-gray: rgba(100, 100, 119, 1);
   --light-gray: rgba(245, 245, 244, 1);
-  --success-light: rgba(240, 255, 240, 1);
-  --warning-light: rgba(255, 250, 220, 1);
-  --danger-light: rgb(255, 240, 240);
+  --success-light: rgba(240, 255, 240, 0.6);
+  --warning-light: rgba(255, 250, 220, 0.6);
+  --danger-light: rgba(255, 240, 240, 0.6);
 
   /* Warning, Danger, Success button colors */
   --info: rgba(4, 164, 204, 0.8);
@@ -222,22 +222,22 @@ b.larger-txt {
 .competitors-table {
   background-color: var(--light-gray);
   border-collapse: collapse;
-  color: var(--dark-gray);
+  color: var(--charcoal);
   width: 100%;
   font-size: 1.15em;
   line-height: 1.3em;
 }
-.competitors-table .competitors-info,
+.competitors-table .competitor-info,
 .competitors-table tr.selected-roll {
   background-color: var(--white);
-  color: var(--charcoal);
+  color: var(--primary-text-color);
 }
 
 /* Table Header and Data Cells */
 .competitors-table th,
 .competitors-table td {
   border: 1px solid var(--gray);
-  padding: 8px;
+  padding: 10px 8px;
   text-align: left;
 }
 
@@ -249,33 +249,33 @@ b.larger-txt {
 }
 
 /* Specific styles for the inner table within .competitors-info row to remove borders */
-.competitors-info table {
+.competitor-info table {
   border-collapse: collapse;
 }
-.competitors-info table th,
-.competitors-info table td {
+.competitor-info table th,
+.competitor-info table td {
   border: 1px solid var(--gray);
   border-top: none;
   border-bottom: none;
 }
-.competitors-info table th:first-child,
-.competitors-info table td:first-child {
+.competitor-info table th:first-child,
+.competitor-info table td:first-child {
   border-left: none; /* Removes the left border from the first cell */
 }
 
-.competitors-info table th:last-child,
-.competitors-info table td:last-child {
+.competitor-info table th:last-child,
+.competitor-info table td:last-child {
   border-right: none; /* Removes the right border from the last cell */
 }
 
-.competitors-info td.overflow-ellipsis {
+.competitor-info td.overflow-ellipsis {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100px;
 }
 
-.competitors-info td.overflow-ellipsis:hover {
+.competitor-info td.overflow-ellipsis:hover {
   overflow: visible;
   white-space: normal;
   cursor: pointer;
@@ -283,12 +283,12 @@ b.larger-txt {
 
 /* Hover Effect */
 .competitors-table tr:hover,
-tr.competitors-header:hover,
+tr.competitor-header:hover,
 .competitors-table tr.selected-roll:hover {
   background-color: var(--success-light);
   cursor: pointer;
 }
-.competitors-totals {
+.competitor-totals {
   background-color: var(--success-light);
   color: var(--charcoal);
 }
@@ -307,7 +307,7 @@ tr.competitors-header:hover,
   font-weight: bold;
 }
 
-.competitors-header:hover .showonhover {
+.competitor-header:hover .showonhover {
   opacity: 1;
   transition: opacity 0.5s ease;
 }
@@ -315,13 +315,13 @@ tr.competitors-header:hover,
 /* Input Field Styling */
 .competitors-table .score-input,
 .competitors-table input[type="text"] {
-  width: 30px;
-  padding: 4px;
+  max-width: 30px;
+  padding: 0 4px;
   box-sizing: border-box;
 }
 
 /* Hidden Rows Initial State */
-.competitors-totals .hidden,
+.competitor-totals .hidden,
 .competitors-table .hidden {
   max-height: 0;
   opacity: 0;
@@ -349,18 +349,18 @@ tr.competitors-header:hover,
   display: flex;
   justify-content: center;
   align-items: center;
+  position: absolute;
   left: 0;
   right: 0;
+  top: 0;
   bottom: 0;
-  z-index: 9;
+  z-index: 99;
   height: auto;
-  /*pointer-events: none !important;*/ /* Prevent interaction */
   visibility: hidden;
   opacity: 0;
   transition: all 0.5s ease;
 }
 
-/* If you get problems, just use display: none|flex without transition */
 #spinner.show {
   opacity: 1;
   visibility: visible;

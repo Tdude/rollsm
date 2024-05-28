@@ -52,7 +52,7 @@ pre {
 }
 
 #competitors-registration-form label {
-  display: inline-flex;
+  display: inline-block;
   padding: 0.5rem;
 }
 
@@ -493,4 +493,21 @@ td {
 
 th {
   font-weight: 600;
+}
+
+/* To normalize a few themes */
+.entry-content
+  > *:not(.alignwide):not(.alignfull):not(.alignleft):not(.alignright):not(
+    .is-style-wide
+  ) {
+  max-width: 100rem !important;
+  width: calc(100% - 4rem);
+}
+
+[class*="__inner-container"]
+  > *:not(.alignwide):not(.alignfull):not(.alignleft):not(.alignright):not(
+    .is-style-wide
+  ) {
+  max-width: 100rem;
+  width: 100%;
 }
