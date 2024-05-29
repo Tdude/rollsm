@@ -1,630 +1,637 @@
-// WIP tuesday 24-05-28
-// Attach scoring events to score and deduct inputs
-function attachScoringEvents() {
-  // Attach event listeners to score and deduct inputs
-  document.querySelectorAll(".score-input, .deduct-input").forEach((input) => {
-    input.addEventListener("change", function () {
-      const row = this.closest("tr");
-      const competitorId = row.getAttribute("data-competitor-id");
-      calculateAndUpdateTotalScore(row, competitorId);
-    });
-  });
-
-  // Calculate points for a given score and deduct value
-  function calculatePoints(scoreValue, deductValue) {
-    if (scoreValue && deductValue) {
-      return parseInt(deductValue) || 0;
-    } else if (scoreValue) {
-      return parseInt(scoreValue) || 0;
-    } else if (deductValue) {
-      return parseInt(deductValue) || 0;
-    }
-    return 0;
-  }
-
-  // Calculate points and update row total
-  function calculateAndUpdateTotalScore(row, competitorId) {
-    let left_score = null;
-    let left_deduct = null;
-    let right_score = null;
-    let right_deduct = null;
-
-    // Collect scores and deductions
-    row.querySelectorAll(".score-input").forEach((input) => {
-      if (input.name.includes("left_score") && input.checked) {
-        left_score = input.value;
-      } else if (input.name.includes("right_score") && input.checked) {
-        right_score = input.value;
-      }
-    });
-
-    row.querySelectorAll(".deduct-input").forEach((input) => {
-      if (input.name.includes("left_deduct") && input.checked) {
-        left_deduct = input.value;
-      } else if (input.name.includes("right_deduct") && input.checked) {
-        right_deduct = input.value;
-      }
-    });
-
-    // Calculate left and right points
-    const left_points = calculatePoints(left_score, left_deduct);
-    const right_points = calculatePoints(right_score, right_deduct);
-
-    // Ensure non-negative points
-    const total = Math.max(0, left_points + right_points);
-
-    // Update total in the row
-    const totalCell = row.querySelector(".total-score-row");
-    if (totalCell) {
-      totalCell.innerHTML = total;
-    }
-
-    // Update overall total for the competitor
-    updateCompetitorsTotal(competitorId);
-  }
-
-  // Update overall total for the competitor
-  function updateCompetitorsTotal(competitorId) {
-    let totalPoints = 0;
-
-    document
-      .querySelectorAll(
-        `[data-competitor-id="${competitorId}"] .total-score-row`
-      )
-      .forEach((cell) => {
-        totalPoints += parseInt(cell.innerText) || 0;
-      });
-
-    const competitorsTotalRow = document.getElementById(
-      `competitor-total-${competitorId}`
-    );
-    if (competitorsTotalRow) {
-      const totalPointsCell =
-        competitorsTotalRow.querySelector(".total-points");
-      if (totalPointsCell) {
-        totalPointsCell.innerText = totalPoints;
-      }
-    }
-  }
-} // Call the function somewhere to attach scoring events
-
+// WIP wednesday 24-05-29
 // DOMContentLoaded event listener
 document.addEventListener("DOMContentLoaded", function () {
   const scoringContainer = document.getElementById("judges-scoring-container");
-  let filterButton = document.getElementById("filter_button");
-  let resetButton = document.getElementById("reset_button");
-  let filterDateSelect = document.getElementById("filter_date");
-  let filterClassSelect = document.getElementById("filter_class");
-  const nonce = competitorsAdminAjax.nonce;
-  const spinner = document.getElementById("spinner");
+  if (scoringContainer) {
+    let filterButton = document.getElementById("filter_button");
+    let resetButton = document.getElementById("reset_button");
+    let filterDateSelect = document.getElementById("filter_date");
+    let filterClassSelect = document.getElementById("filter_class");
+    const nonce = competitorsAdminAjax.nonce;
+    const spinner = document.getElementById("spinner");
 
-  function showSpinner() {
-    console.log("Showing spinner - before change", spinner.classList);
-    spinner.classList.remove("hidden");
-    spinner.classList.add("show");
-    console.log("Showing spinner - after change", spinner.classList);
-  }
+    function showSpinner() {
+      spinner.classList.remove("hidden");
+      spinner.classList.add("show");
+      //console.log("Showing spinner - after change", spinner.classList);
+    }
 
-  function hideSpinner() {
-    console.log("Hiding spinner - before change", spinner.classList);
-    spinner.classList.add("hidden");
-    spinner.classList.remove("show");
-    console.log("Hiding spinner - after change", spinner.classList);
-  }
+    function hideSpinner() {
+      spinner.classList.add("hidden");
+      spinner.classList.remove("show");
+      //console.log("Hiding spinner - after change", spinner.classList);
+    }
 
-  function filterCompetitors() {
-    const filterDate = filterDateSelect.value;
-    const filterClass = filterClassSelect.value;
+    function filterCompetitors() {
+      const filterDate = filterDateSelect.value;
+      const filterClass = filterClassSelect.value;
 
-    if (filterDate) {
-      localStorage.setItem("filter_date", filterDate);
-    } else {
+      if (filterDate) {
+        localStorage.setItem("filter_date", filterDate);
+      } else {
+        localStorage.removeItem("filter_date");
+      }
+
+      if (filterClass) {
+        localStorage.setItem("filter_class", filterClass);
+      } else {
+        localStorage.removeItem("filter_class");
+      }
+
+      showSpinner();
+
+      fetch(competitorsAdminAjax.ajaxurl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        },
+        body: new URLSearchParams({
+          action: "filter_competitors_by_date",
+          filter_date: filterDate,
+          filter_class: filterClass,
+          nonce: nonce,
+        }),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success && data.data.html) {
+            scoringContainer.innerHTML = data.data.html;
+
+            filterButton = document.getElementById("filter_button");
+            resetButton = document.getElementById("reset_button");
+            filterDateSelect = document.getElementById("filter_date");
+            filterClassSelect = document.getElementById("filter_class");
+
+            reattachAllEvents();
+          } else {
+            scoringContainer.innerHTML = `
+            <p>Error loading competitors. Please try again (and reload the page).</p>
+            <button type="button" id="retry_button" class="button button-secondary">Retry</button>
+          `;
+          }
+          hideSpinner();
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          scoringContainer.innerHTML = `
+          <p>Error loading competitors. Please try again.</p>
+          <button type="button" id="retry_button" class="button button-secondary">Retry</button>
+        `;
+          hideSpinner();
+        });
+    }
+
+    function resetFilters() {
+      filterDateSelect.value = "";
+      filterClassSelect.value = "";
+
       localStorage.removeItem("filter_date");
-    }
-
-    if (filterClass) {
-      localStorage.setItem("filter_class", filterClass);
-    } else {
       localStorage.removeItem("filter_class");
-    }
 
-    showSpinner();
+      scoringContainer.innerHTML = "<p>Loading...</p>";
+      showSpinner();
 
-    fetch(competitorsAdminAjax.ajaxurl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-      },
-      body: new URLSearchParams({
-        action: "filter_competitors_by_date",
-        filter_date: filterDate,
-        filter_class: filterClass,
-        nonce: nonce,
-      }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.success && data.data.html) {
-          scoringContainer.innerHTML = data.data.html;
+      fetch(competitorsAdminAjax.ajaxurl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        },
+        body: new URLSearchParams({
+          action: "filter_competitors_by_date",
+          filter_date: "",
+          filter_class: "",
+          nonce: nonce,
+        }),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success && data.data.html) {
+            scoringContainer.innerHTML = data.data.html;
 
-          // Reinitialize the variables to target the new elements
-          filterButton = document.getElementById("filter_button");
-          resetButton = document.getElementById("reset_button");
-          filterDateSelect = document.getElementById("filter_date");
-          filterClassSelect = document.getElementById("filter_class");
+            // Reinitialize the variables to target the new elements
+            filterButton = document.getElementById("filter_button");
+            resetButton = document.getElementById("reset_button");
+            filterDateSelect = document.getElementById("filter_date");
+            filterClassSelect = document.getElementById("filter_class");
 
-          // Reattach events after updating the content
-          reattachAllEvents();
-        } else {
-          scoringContainer.innerHTML = `
+            // Reattach events after updating the content
+            reattachAllEvents();
+          } else {
+            scoringContainer.innerHTML = `
             <p>Error loading competitors. Please try again (and reload the page).</p>
             <button type="button" id="retry_button" class="button button-secondary">Retry</button>
           `;
-        }
-        hideSpinner();
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-        scoringContainer.innerHTML = `
-          <p>Error loading competitors. Please try again.</p>
-          <button type="button" id="retry_button" class="button button-secondary">Retry</button>
-        `;
-        hideSpinner();
-      });
-  }
-
-  function resetFilters() {
-    filterDateSelect.value = "";
-    filterClassSelect.value = "";
-
-    localStorage.removeItem("filter_date");
-    localStorage.removeItem("filter_class");
-
-    scoringContainer.innerHTML = "<p>Loading...</p>";
-    showSpinner();
-
-    fetch(competitorsAdminAjax.ajaxurl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-      },
-      body: new URLSearchParams({
-        action: "filter_competitors_by_date",
-        filter_date: "",
-        filter_class: "",
-        nonce: nonce,
-      }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.success && data.data.html) {
-          scoringContainer.innerHTML = data.data.html;
-
-          // Reinitialize the variables to target the new elements
-          filterButton = document.getElementById("filter_button");
-          resetButton = document.getElementById("reset_button");
-          filterDateSelect = document.getElementById("filter_date");
-          filterClassSelect = document.getElementById("filter_class");
-
-          // Reattach events after updating the content
-          reattachAllEvents();
-        } else {
+          }
+          hideSpinner();
+        })
+        .catch((error) => {
+          console.error("Error:", error);
           scoringContainer.innerHTML = `
-            <p>Error loading competitors. Please try again (and reload the page).</p>
-            <button type="button" id="retry_button" class="button button-secondary">Retry</button>
-          `;
-        }
-        hideSpinner();
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-        scoringContainer.innerHTML = `
           <p>Error loading competitors. Please try again.</p>
           <button type="button" id="retry_button" class="button button-secondary">Retry</button>
         `;
-        hideSpinner();
-      });
-  }
-
-  function reattachAllEvents() {
-    if (
-      !filterDateSelect ||
-      !filterClassSelect ||
-      !filterButton ||
-      !resetButton
-    ) {
-      console.error(
-        "One or more elements are missing. Cannot reattach events."
-      );
-      return;
+          hideSpinner();
+        });
     }
 
-    filterDateSelect.removeEventListener("change", filterCompetitors);
-    filterClassSelect.removeEventListener("change", filterCompetitors);
-    filterButton.removeEventListener("click", filterCompetitors);
-    resetButton.removeEventListener("click", resetFilters);
+    function reattachAllEvents() {
+      if (
+        !filterDateSelect ||
+        !filterClassSelect ||
+        !filterButton ||
+        !resetButton
+      ) {
+        console.error(
+          "One or more elements are missing. Cannot reattach events."
+        );
+        return;
+      }
 
-    filterDateSelect.addEventListener("change", filterCompetitors);
-    filterClassSelect.addEventListener("change", filterCompetitors);
-    filterButton.addEventListener("click", filterCompetitors);
-    resetButton.addEventListener("click", resetFilters);
+      filterDateSelect.removeEventListener("change", filterCompetitors);
+      filterClassSelect.removeEventListener("change", filterCompetitors);
+      filterButton.removeEventListener("click", filterCompetitors);
+      resetButton.removeEventListener("click", resetFilters);
 
-    attachCompetitorToggleEvents();
-    getFilterValues();
-    attachScoringEvents();
-    attachTimerEvents();
-  }
+      filterDateSelect.addEventListener("change", filterCompetitors);
+      filterClassSelect.addEventListener("change", filterCompetitors);
+      filterButton.addEventListener("click", filterCompetitors);
+      resetButton.addEventListener("click", resetFilters);
 
-  function getFilterValues() {
-    const savedFilterDate = localStorage.getItem("filter_date");
-    const savedFilterClass = localStorage.getItem("filter_class");
-
-    if (savedFilterDate) {
-      filterDateSelect.value = savedFilterDate;
+      attachCompetitorToggleEvents();
+      attachScoringEvents();
+      attachTimerEvents();
     }
-    if (savedFilterClass) {
-      filterClassSelect.value = savedFilterClass;
-    }
-    if (savedFilterDate || savedFilterClass) {
-      filterCompetitors();
-    }
-  }
 
-  function attachCompetitorToggleEvents() {
-    // Remove previous event listeners to prevent duplicates
-    scoringContainer.removeEventListener("click", handleCompetitorToggle);
+    function getFilterValues() {
+      if (scoringContainer) {
+        const savedFilterDate = localStorage.getItem("filter_date");
+        const savedFilterClass = localStorage.getItem("filter_class");
 
-    // Attach new event listener
-    scoringContainer.addEventListener("click", handleCompetitorToggle);
-  }
-
-  function handleCompetitorToggle(event) {
-    const header = event.target.closest(".competitor-header");
-    if (header) {
-      const competitorId = header.getAttribute("data-competitor-id");
-
-      // Hide all other competitor rows
-      const allCompetitorRows = scoringContainer.querySelectorAll(
-        ".competitor-columns, .competitor-scores, .competitor-info, .competitor-totals"
-      );
-      allCompetitorRows.forEach((row) => {
-        if (row.getAttribute("data-competitor-id") !== competitorId) {
-          row.classList.add("hidden");
+        if (savedFilterDate) {
+          filterDateSelect.value = savedFilterDate;
         }
-      });
+        if (savedFilterClass) {
+          filterClassSelect.value = savedFilterClass;
+        }
+        if (savedFilterDate || savedFilterClass) {
+          filterCompetitors();
+        }
+      }
+    }
 
-      const rowsToToggle = scoringContainer.querySelectorAll(
-        `.competitor-columns[data-competitor-id="${competitorId}"], 
+    if (scoringContainer) {
+      // Call the functions to reattach events and get filter values
+      reattachAllEvents();
+      getFilterValues();
+    }
+
+    function attachCompetitorToggleEvents() {
+      // Remove previous event listeners to prevent duplicates
+      scoringContainer.removeEventListener("click", handleCompetitorToggle);
+
+      // Attach new event listener
+      scoringContainer.addEventListener("click", handleCompetitorToggle);
+    }
+
+    function handleCompetitorToggle(event) {
+      const header = event.target.closest(".competitor-header");
+      if (header) {
+        const competitorId = header.getAttribute("data-competitor-id");
+
+        // Hide all other competitor rows
+        const allCompetitorRows = scoringContainer.querySelectorAll(
+          ".competitor-columns, .competitor-scores, .competitor-info, .competitor-totals"
+        );
+        allCompetitorRows.forEach((row) => {
+          if (row.getAttribute("data-competitor-id") !== competitorId) {
+            row.classList.add("hidden");
+          }
+        });
+
+        const rowsToToggle = scoringContainer.querySelectorAll(
+          `.competitor-columns[data-competitor-id="${competitorId}"], 
          .competitor-scores[data-competitor-id="${competitorId}"],
          .competitor-info[data-competitor-id="${competitorId}"],
          .competitor-totals[data-competitor-id="${competitorId}"]:not(.grand-total)`
+        );
+
+        let anyRowVisible = false;
+        Array.from(rowsToToggle).forEach((row) => {
+          row.classList.toggle("hidden");
+          if (!row.classList.contains("hidden")) {
+            anyRowVisible = true;
+          }
+        });
+
+        // Show spinner based on row visibility
+        if (anyRowVisible) {
+          console.log("Showing spinner");
+          updateOverlayPosition(rowsToToggle);
+          showSpinner();
+        } else {
+          console.log("Hiding spinner");
+          hideSpinner();
+        }
+
+        toggleIcons(header);
+      }
+    }
+
+    function updateOverlayPosition(rowsToToggle) {
+      const firstRow = rowsToToggle[0];
+      const lastRow = rowsToToggle[rowsToToggle.length - 1];
+      const containerRect = scoringContainer.getBoundingClientRect();
+      const firstRowRect = firstRow.getBoundingClientRect();
+      const lastRowRect = lastRow.getBoundingClientRect();
+
+      spinner.style.position = "absolute";
+      spinner.style.top = `${firstRowRect.top - containerRect.top}px`;
+      spinner.style.height = `${lastRowRect.bottom - firstRowRect.top}px`;
+      spinner.style.left = "0";
+      spinner.style.right = "0";
+
+      console.log(
+        `Spinner position updated: top=${spinner.style.top}, height=${spinner.style.height}`
       );
-
-      let anyRowVisible = false;
-      Array.from(rowsToToggle).forEach((row) => {
-        row.classList.toggle("hidden");
-        if (!row.classList.contains("hidden")) {
-          anyRowVisible = true;
-        }
-      });
-
-      // Show spinner based on row visibility
-      if (anyRowVisible) {
-        console.log("Showing spinner");
-        updateOverlayPosition(rowsToToggle);
-        showSpinner();
-      } else {
-        console.log("Hiding spinner");
-        hideSpinner();
-      }
-
-      toggleIcons(header);
     }
-  }
 
-  function updateOverlayPosition(rowsToToggle) {
-    const firstRow = rowsToToggle[0];
-    const lastRow = rowsToToggle[rowsToToggle.length - 1];
-    const containerRect = scoringContainer.getBoundingClientRect();
-    const firstRowRect = firstRow.getBoundingClientRect();
-    const lastRowRect = lastRow.getBoundingClientRect();
-
-    spinner.style.position = "absolute";
-    spinner.style.top = `${firstRowRect.top - containerRect.top}px`;
-    spinner.style.height = `${lastRowRect.bottom - firstRowRect.top}px`;
-    spinner.style.left = "0";
-    spinner.style.right = "0";
-
-    console.log(
-      `Spinner position updated: top=${spinner.style.top}, height=${spinner.style.height}`
-    );
-  }
-
-  function toggleIcons(clickedHeader) {
-    const icon = clickedHeader.querySelector(".dashicons");
-    if (icon) {
-      icon.classList.toggle("dashicons-arrow-down-alt2");
-      icon.classList.toggle("dashicons-arrow-up-alt2");
+    function toggleIcons(clickedHeader) {
+      const icon = clickedHeader.querySelector(".dashicons");
+      if (icon) {
+        icon.classList.toggle("dashicons-arrow-down-alt2");
+        icon.classList.toggle("dashicons-arrow-up-alt2");
+      }
     }
-  }
 
-  // Timer logic here...
-  function attachTimerEvents() {
-    console.log("attachTimerEvents called");
-    const timer = document.getElementById("timer");
-    const timerDisplay = document.getElementById("timer-display");
-    const startBtn = document.getElementById("start-timer");
-    const resetBtn = document.getElementById("reset-timer");
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    let timerStarted = false;
-    let paused = true;
-    let elapsedTime = 0;
-    let interval;
-    let currentCompetitorId = null;
+    // Timer logic here...
+    function attachTimerEvents() {
+      console.log("attachTimerEvents called");
+      const timer = document.getElementById("timer");
+      const timerDisplay = document.getElementById("timer-display");
+      const startBtn = document.getElementById("start-timer");
+      const resetBtn = document.getElementById("reset-timer");
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      let timerStarted = false;
+      let paused = true;
+      let elapsedTime = 0;
+      let interval;
+      let currentCompetitorId = null;
 
-    if (timer) {
-      window.addEventListener("scroll", function () {
-        timer.classList.toggle("fixed-timer", window.scrollY > 50);
-      });
+      if (timer) {
+        window.addEventListener("scroll", function () {
+          timer.classList.toggle("fixed-timer", window.scrollY > 50);
+        });
 
-      // Display timeout or warnings
-      function showTimeout(msg) {
-        const overlayWarning = document.getElementById("message-overlay");
-        overlayWarning.innerText = msg;
-        overlayWarning.classList.add("show");
-        setTimeout(() => overlayWarning.classList.remove("show"), 5000);
-      }
-
-      // Update timer display
-      function updateTimerDisplay() {
-        const hours = Math.floor(elapsedTime / 3600000)
-          .toString()
-          .padStart(2, "0");
-        const minutes = Math.floor((elapsedTime % 3600000) / 60000)
-          .toString()
-          .padStart(2, "0");
-        const seconds = Math.floor((elapsedTime % 60000) / 1000)
-          .toString()
-          .padStart(2, "0");
-        timerDisplay.textContent = `${hours}:${minutes}:${seconds}`;
-        checkTimeMilestones();
-      }
-
-      // Check time milestones
-      function checkTimeMilestones() {
-        if (elapsedTime >= 900000 && elapsedTime < 901000) {
-          showTimeout("Half Time");
+        // Display timeout or warnings
+        function showTimeout(msg) {
+          const overlayWarning = document.getElementById("message-overlay");
+          overlayWarning.innerText = msg;
+          overlayWarning.classList.add("show");
+          setTimeout(() => overlayWarning.classList.remove("show"), 5000);
         }
-        if (elapsedTime >= 1500000 && elapsedTime < 1501000) {
-          showTimeout("5 minutes to go");
-        }
-      }
 
-      // Reset timer and data
-      function resetTimerDisplayAndData() {
-        clearInterval(interval);
-        timerStarted = false;
-        paused = true;
-        elapsedTime = 0;
-        updateTimerDisplay();
-        startBtn.textContent = "Start";
-        clearCompetitorTimes();
-      }
-
-      // Clear competitor times
-      function clearCompetitorTimes() {
-        if (currentCompetitorId) {
-          document.getElementById(`start-time-${currentCompetitorId}`).value =
-            "";
-          document.getElementById(`stop-time-${currentCompetitorId}`).value =
-            "";
-          document.getElementById(`elapsed-time-${currentCompetitorId}`).value =
-            "";
+        // Update timer display
+        function updateTimerDisplay() {
+          const hours = Math.floor(elapsedTime / 3600000)
+            .toString()
+            .padStart(2, "0");
+          const minutes = Math.floor((elapsedTime % 3600000) / 60000)
+            .toString()
+            .padStart(2, "0");
+          const seconds = Math.floor((elapsedTime % 60000) / 1000)
+            .toString()
+            .padStart(2, "0");
+          timerDisplay.textContent = `${hours}:${minutes}:${seconds}`;
+          checkTimeMilestones();
         }
-      }
 
-      // Event to handle timer reset
-      resetBtn.addEventListener("click", () => {
-        if (confirm("Are you sure you want to reset the timer?")) {
-          resetTimerDisplayAndData();
+        // Check time milestones
+        function checkTimeMilestones() {
+          if (elapsedTime >= 900000 && elapsedTime < 901000) {
+            showTimeout("Half Time");
+          }
+          if (elapsedTime >= 1500000 && elapsedTime < 1501000) {
+            showTimeout("5 minutes to go");
+          }
         }
-      });
 
-      // Pause the timer
-      function pauseTimer() {
-        clearInterval(interval);
-        paused = true;
-        startBtn.textContent = "Continue";
-        showSpinner(); // Show spinner when paused
-      }
-
-      // Handle start/pause actions
-      startBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        if (!currentCompetitorId) {
-          alert("Please select a competitor first.");
-          return;
-        }
-        if (!timerStarted || paused) {
-          startOrContinueTimer();
-          hideSpinner(); // Hide spinner when starting/continuing
-        } else {
-          pauseTimer();
-        }
-      });
-
-      // Start or continue timer
-      function startOrContinueTimer() {
-        timerStarted = true;
-        paused = false;
-        startBtn.textContent = "Pause";
-        if (elapsedTime === 0) {
-          document.getElementById(`start-time-${currentCompetitorId}`).value =
-            getLocalizedTime(timezone);
-        }
-        interval = setInterval(() => {
-          elapsedTime += 100;
+        // Reset timer and data
+        function resetTimerDisplayAndData() {
+          clearInterval(interval);
+          timerStarted = false;
+          paused = true;
+          elapsedTime = 0;
           updateTimerDisplay();
-        }, 100);
-      }
-
-      function getLocalizedTime(timezone) {
-        const date = new Date().toISOString();
-        const options = {
-          timeZone: timezone,
-          year: "numeric",
-          month: "numeric",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          hour12: false,
-        };
-
-        return date.toLocaleString("en-US", options);
-      }
-
-      // Handle score saving
-      function prepareFormData(competitorId) {
-        if (competitorId) {
-          document.getElementById(`stop-time-${competitorId}`).value =
-            getLocalizedTime(timezone);
-          document.getElementById(`elapsed-time-${competitorId}`).value =
-            timerDisplay.textContent;
+          startBtn.textContent = "Start";
+          clearCompetitorTimes();
         }
-      }
 
-      // Add event listener to store form data locally if offline, otherwise submit
-      const scoringForm = document.getElementById("scoring-form");
-      if (scoringForm) {
-        scoringForm.addEventListener("submit", (event) => {
-          console.log("Form submit event triggered");
-          event.preventDefault();
-          console.log("Default event prevented");
+        // Clear competitor times
+        function clearCompetitorTimes() {
+          if (currentCompetitorId) {
+            document.getElementById(`start-time-${currentCompetitorId}`).value =
+              "";
+            document.getElementById(`stop-time-${currentCompetitorId}`).value =
+              "";
+            document.getElementById(
+              `elapsed-time-${currentCompetitorId}`
+            ).value = "";
+          }
+        }
 
-          prepareFormData(currentCompetitorId);
+        // Event to handle timer reset
+        resetBtn.addEventListener("click", () => {
+          if (confirm("Are you sure you want to reset the timer?")) {
+            resetTimerDisplayAndData();
+          }
+        });
 
-          if (navigator.onLine) {
-            console.log("Online: Sending data via AJAX");
-            syncDataAuto();
+        // Pause the timer
+        function pauseTimer() {
+          clearInterval(interval);
+          paused = true;
+          startBtn.textContent = "Continue";
+          showSpinner(); // Show spinner when paused
+        }
+
+        // Handle start/pause actions
+        startBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          if (!currentCompetitorId) {
+            alert("Please select a competitor first.");
+            return;
+          }
+          if (!timerStarted || paused) {
+            startOrContinueTimer();
+            hideSpinner(); // Hide spinner when starting/continuing
           } else {
-            console.log("Offline: Storing data locally");
-            storeFormDataLocally();
+            pauseTimer();
           }
         });
-      }
 
-      // For merging data
-      function deepMergeObjects(target, source) {
-        Object.keys(source).forEach((key) => {
-          if (
-            source[key] &&
-            typeof source[key] === "object" &&
-            !Array.isArray(source[key])
-          ) {
-            if (!target[key]) target[key] = {};
-            deepMergeObjects(target[key], source[key]);
+        // Start or continue timer
+        function startOrContinueTimer() {
+          timerStarted = true;
+          paused = false;
+          startBtn.textContent = "Pause";
+          if (elapsedTime === 0) {
+            document.getElementById(`start-time-${currentCompetitorId}`).value =
+              getLocalizedTime(timezone);
+          }
+          interval = setInterval(() => {
+            elapsedTime += 100;
+            updateTimerDisplay();
+          }, 100);
+        }
+
+        function getLocalizedTime(timezone) {
+          const date = new Date().toISOString();
+          const options = {
+            timeZone: timezone,
+            year: "numeric",
+            month: "numeric",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: false,
+          };
+
+          return date.toLocaleString("en-US", options);
+        }
+
+        // Handle score saving
+        function prepareFormData(competitorId) {
+          if (competitorId) {
+            document.getElementById(`stop-time-${competitorId}`).value =
+              getLocalizedTime(timezone);
+            document.getElementById(`elapsed-time-${competitorId}`).value =
+              timerDisplay.textContent;
+          }
+        }
+
+        // Add event listener to store form data locally if offline, otherwise submit
+        const scoringForm = document.getElementById("scoring-form");
+        if (scoringForm) {
+          scoringForm.addEventListener("submit", (event) => {
+            console.log("Form submit event triggered");
+            event.preventDefault();
+            console.log("Default event prevented");
+
+            prepareFormData(currentCompetitorId);
+
+            if (navigator.onLine) {
+              console.log("Online: Sending data via AJAX");
+              syncDataAuto();
+            } else {
+              console.log("Offline: Storing data locally");
+              storeFormDataLocally();
+            }
+          });
+        }
+
+        // For merging data
+        function deepMergeObjects(target, source) {
+          Object.keys(source).forEach((key) => {
+            if (
+              source[key] &&
+              typeof source[key] === "object" &&
+              !Array.isArray(source[key])
+            ) {
+              if (!target[key]) target[key] = {};
+              deepMergeObjects(target[key], source[key]);
+            } else {
+              target[key] = source[key];
+            }
+          });
+          return target;
+        }
+
+        // Store form data in local storage if offline
+        function storeFormDataLocally() {
+          try {
+            const existingData = localStorage.getItem(
+              "CompetitorsUnsyncedFormData"
+            );
+            const competitorsData = existingData
+              ? JSON.parse(existingData)
+              : {};
+            const newCompetitorData = Object.fromEntries(
+              new FormData(scoringForm)
+            );
+
+            // Use a more robust merging strategy if necessary
+            const newData = { [currentCompetitorId]: newCompetitorData };
+            deepMergeObjects(competitorsData, newData);
+
+            localStorage.setItem(
+              "CompetitorsUnsyncedFormData",
+              JSON.stringify(competitorsData)
+            );
+            alert(
+              "You're offline. Data is saved in local storage and will need to be synced later."
+            );
+          } catch (error) {
+            console.error("Failed to store data locally:", error);
+            alert("Failed to store data locally.");
+          }
+        }
+
+        // Data submission via AJAX
+        function syncDataAuto() {
+          const formData = new FormData(scoringForm);
+          const dataObject = Object.fromEntries(formData);
+          dataObject["action"] = "competitors_score_update";
+          dataObject["competitors_score_update_nonce"] =
+            competitorsAdminAjax.nonce;
+
+          console.log("Sending AJAX request", dataObject);
+
+          fetch(competitorsAdminAjax.ajaxurl, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+              "Content-Type":
+                "application/x-www-form-urlencoded; charset=UTF-8",
+            },
+            body: new URLSearchParams(dataObject),
+          })
+            .then((response) => {
+              console.log("Response received");
+              return response.json();
+            })
+            .then((data) => {
+              console.log("Processing response", data);
+              handleServerResponse(data);
+            })
+            .catch(handleSyncError);
+        }
+
+        function handleServerResponse(data) {
+          if (data.success) {
+            console.log("Data synced successfully:", data);
+            localStorage.removeItem("CompetitorsUnsyncedFormData");
+            if (
+              confirm(
+                "Data has been successfully synced! Do you want to reload the page to reflect the changes?"
+              )
+            ) {
+              window.location.reload();
+            }
           } else {
-            target[key] = source[key];
+            console.error("Failed to sync data:", data);
+            alert(`Sync failed: ${data.message || "Unknown error"}`);
           }
-        });
-        return target;
-      }
-
-      // Store form data in local storage if offline
-      function storeFormDataLocally() {
-        try {
-          const existingData = localStorage.getItem(
-            "CompetitorsUnsyncedFormData"
-          );
-          const competitorsData = existingData ? JSON.parse(existingData) : {};
-          const newCompetitorData = Object.fromEntries(
-            new FormData(scoringForm)
-          );
-
-          // Use a more robust merging strategy if necessary
-          const newData = { [currentCompetitorId]: newCompetitorData };
-          deepMergeObjects(competitorsData, newData);
-
-          localStorage.setItem(
-            "CompetitorsUnsyncedFormData",
-            JSON.stringify(competitorsData)
-          );
-          alert(
-            "You're offline. Data is saved in local storage and will need to be synced later."
-          );
-        } catch (error) {
-          console.error("Failed to store data locally:", error);
-          alert("Failed to store data locally.");
         }
-      }
 
-      // Data submission via AJAX
-      function syncDataAuto() {
-        const formData = new FormData(scoringForm);
-        const dataObject = Object.fromEntries(formData);
-        dataObject["action"] = "competitors_score_update";
-        dataObject["competitors_score_update_nonce"] =
-          competitorsAdminAjax.nonce;
-
-        console.log("Sending AJAX request", dataObject);
-
-        fetch(competitorsAdminAjax.ajaxurl, {
-          method: "POST",
-          credentials: "same-origin",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-          },
-          body: new URLSearchParams(dataObject),
-        })
-          .then((response) => {
-            console.log("Response received");
-            return response.json();
-          })
-          .then((data) => {
-            console.log("Processing response", data);
-            handleServerResponse(data);
-          })
-          .catch(handleSyncError);
-      }
-
-      function handleServerResponse(data) {
-        if (data.success) {
-          console.log("Data synced successfully:", data);
-          localStorage.removeItem("CompetitorsUnsyncedFormData");
-          if (
-            confirm(
-              "Data has been successfully synced! Do you want to reload the page to reflect the changes?"
-            )
-          ) {
-            window.location.reload();
-          }
-        } else {
-          console.error("Failed to sync data:", data);
-          alert(`Sync failed: ${data.message || "Unknown error"}`);
+        function handleSyncError(error) {
+          console.error("Sync Error:", error);
+          alert(error.message || "An unknown error occurred during sync.");
         }
-      }
 
-      function handleSyncError(error) {
-        console.error("Sync Error:", error);
-        alert(error.message || "An unknown error occurred during sync.");
-      }
-
-      // Store the current competitor's data before switching
-      document.querySelectorAll(".competitor-header").forEach((header) => {
-        header.addEventListener("click", function () {
-          if (!navigator.onLine) {
-            storeFormDataLocally();
-          }
-          currentCompetitorId = this.getAttribute("data-competitor-id");
-          resetTimerDisplayAndData();
+        // Store the current competitor's data before switching
+        document.querySelectorAll(".competitor-header").forEach((header) => {
+          header.addEventListener("click", function () {
+            if (!navigator.onLine) {
+              storeFormDataLocally();
+            }
+            currentCompetitorId = this.getAttribute("data-competitor-id");
+            resetTimerDisplayAndData();
+          });
         });
-      });
+      }
     }
-  }
+    // Attach scoring events to score and deduct inputs
+    function attachScoringEvents() {
+      // Attach event listeners to score and deduct inputs
+      document
+        .querySelectorAll(".score-input, .deduct-input")
+        .forEach((input) => {
+          input.addEventListener("change", function () {
+            const row = this.closest("tr");
+            const competitorId = row.getAttribute("data-competitor-id");
+            calculateAndUpdateTotalScore(row, competitorId);
+          });
+        });
 
-  if (scoringContainer) {
-    // Call the functions only on scoring page to reattach events and get filter values
+      // Calculate points for a given score and deduct value
+      function calculatePoints(scoreValue, deductValue) {
+        if (scoreValue && deductValue) {
+          return parseInt(deductValue) || 0;
+        } else if (scoreValue) {
+          return parseInt(scoreValue) || 0;
+        } else if (deductValue) {
+          return parseInt(deductValue) || 0;
+        }
+        return 0;
+      }
+
+      // Calculate points and update row total
+      function calculateAndUpdateTotalScore(row, competitorId) {
+        let left_score = null;
+        let left_deduct = null;
+        let right_score = null;
+        let right_deduct = null;
+
+        // Collect scores and deductions
+        row.querySelectorAll(".score-input").forEach((input) => {
+          if (input.name.includes("left_score") && input.checked) {
+            left_score = input.value;
+          } else if (input.name.includes("right_score") && input.checked) {
+            right_score = input.value;
+          }
+        });
+
+        row.querySelectorAll(".deduct-input").forEach((input) => {
+          if (input.name.includes("left_deduct") && input.checked) {
+            left_deduct = input.value;
+          } else if (input.name.includes("right_deduct") && input.checked) {
+            right_deduct = input.value;
+          }
+        });
+
+        // Calculate left and right points
+        const left_points = calculatePoints(left_score, left_deduct);
+        const right_points = calculatePoints(right_score, right_deduct);
+
+        // Ensure non-negative points
+        const total = Math.max(0, left_points + right_points);
+
+        // Update total in the row
+        const totalCell = row.querySelector(".total-score-row");
+        if (totalCell) {
+          totalCell.innerHTML = total;
+        }
+
+        // Update overall total for the competitor
+        updateCompetitorsTotal(competitorId);
+      }
+
+      // Update overall total for the competitor
+      function updateCompetitorsTotal(competitorId) {
+        let totalPoints = 0;
+
+        document
+          .querySelectorAll(
+            `[data-competitor-id="${competitorId}"] .total-score-row`
+          )
+          .forEach((cell) => {
+            totalPoints += parseInt(cell.innerText) || 0;
+          });
+
+        const competitorsTotalRow = document.getElementById(
+          `competitor-total-${competitorId}`
+        );
+        if (competitorsTotalRow) {
+          const totalPointsCell =
+            competitorsTotalRow.querySelector(".total-points");
+          if (totalPointsCell) {
+            totalPointsCell.innerText = totalPoints;
+          }
+        }
+      }
+    } // Call the function somewhere to attach scoring events
+
     reattachAllEvents();
   }
 });
