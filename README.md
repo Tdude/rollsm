@@ -1,6 +1,8 @@
 # RollSM
-The Wordpress ROllSM "Competitors" plugin for participant registration and judges' scoring of Greenland Rolling competitions. 
-This plugin arose due to a need for a robust system handed over each year to a new organizer. The hurdles to get it going should be as small as possible. 
+UPDATE 2024-05.05: Due to popular input, there now is a date setup in the admin which allows competitors to not only register for one event, but many. A user can filter the score lists by date.
+
+This is the Wordpress Greenland Rolling Competition plugin for participant registration and judges' scoring. 
+This plugin arose due to a need for a robust system handed over each year to a new organizer. The hurdles to get it going should be as small as possible.
 
 
 ## Installation
@@ -14,9 +16,9 @@ This plugin arose due to a need for a robust system handed over each year to a n
 
 ## Features
 
-- **Competitor Registration**: Allows competitors to register for events directly through the WordPress site.
-- **Scoring System**: Admins can score competitors based on their roll performances and publish the score live as it is saved, ensuring an interesting, fair and transparent competition.
-- **Customizable Maneuvers**: Admins can define their own rolling maneuvers names, making the plugin adaptive to many languages.
+- **Competitor Registration**: Allows competitors to register for events directly through the WordPress site. Now including dates created by admins.
+- **Scoring System**: Judges or Admins can score competitors based on their roll performances and publish the score live as it is saved, ensuring an interesting, fair and transparent competition.
+- **Customizable Maneuvers**: Admins can define their competition dates and rolling maneuvers names, making the plugin adaptive to many languages.
 - **Language Support**: The plugin's readiness for translations and internationalization is somewhat scarce. If you like it, cheer me on and I will try a little harder! Or, you can contribute to the code yourself!
 
 
