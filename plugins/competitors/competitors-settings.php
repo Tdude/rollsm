@@ -610,7 +610,7 @@ function render_competitors_text_field($class = 'open') {
         echo '<button type="button" class="button custom-button button-secondary remove-row">Remove</button>';
 
         if ($index === 0) {
-            echo '<button type="button" id="add_more_roll_names_' . $class . '" class="button custom-button button-primary plus-button">+</button>';
+            echo '<button type="button" id="add_more_roll_names_' . $class . '" class="button custom-button button-primary plus-button"></button>';
         }
         echo '</p>';
     }
