@@ -550,22 +550,23 @@ function render_competitors_date_field() {
     }
     ob_start();
     ?>
-    <div id="add-event-form">
+    <table id="add-event-form">
     <tbody>
-        <tr>
-            <td>
-                <label for="new_competition_date"><?php _e('New Competition Date:', 'competitors'); ?></label>
-                <input type="text" id="new_competition_date" class="date-picker" name="new_competition_date" value="" />
-            </td>
-            <td>
-                <label for="new_event_name"><?php _e('Event Name:', 'competitors'); ?></label>
-                <input type="text" id="new_event_name" name="new_event_name" value="" />
-                <button type="button" class="button add-event"><?php _e('Add Event', 'competitors'); ?></button>
-            </td>
+        <tr class="p-sm">
+            <th colspan="2"><label for="new_competition_date"><?php _e('Date:', 'competitors'); ?></label>
+            <input type="text" id="new_competition_date" class="date-picker" name="new_competition_date" value="" /></th>
+            <th></th>
+            <th><label for="new_event_name"><?php _e('Event Name:', 'competitors'); ?></label>
+            <input type="text" id="new_event_name" name="new_event_name" value="" /></th>
+            <th><label for="add-event-button">Add</label><br>
+            <button type="button" name="add-event-button" class="button add-event"><?php _e('Add Event', 'competitors'); ?></button></th>
         </tr>
         <?php foreach ($events as $event): ?>
-        <tr class="event-item" data-date="<?php echo esc_attr($event['date']); ?>" data-name="<?php echo esc_attr($event['name']); ?>">
-            <td><?php echo esc_html($event['date'] . ' - ' . $event['name']); ?></td>
+        <tr class="event-item p-sm" data-date="<?php echo esc_attr($event['date']); ?>" data-name="<?php echo esc_attr($event['name']); ?>">
+            <td></td>
+            <td><?php echo esc_html($event['date']); ?></td>
+            <td></td>
+            <td><?php echo esc_html($event['name']); ?></td>
             <input type="hidden" name="available_competition_dates[]" value="<?php echo esc_attr(json_encode($event)); ?>" />
             <td><button type="button" class="button custom-button button-secondary remove-event"><?php _e('Remove', 'competitors'); ?></button></td>
         </tr>

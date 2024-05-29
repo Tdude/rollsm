@@ -535,6 +535,6 @@ tr.competitor-header:hover,
   background-color: var(--success-light);
 }
 
-.event-item td {
+.p-sm td {
   padding: 1px;
 }
