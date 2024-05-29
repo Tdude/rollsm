@@ -300,7 +300,8 @@ tr.competitor-header:hover,
 }
 /* + Button */
 .wp-admin .plus-button {
-  padding-left: 1em;
+  line-height: unset;
+  font-size: 16px;
 }
 .wp-admin .plus-button:before {
   content: "+";
@@ -532,4 +533,8 @@ tr.competitor-header:hover,
 /* Mark the checked/numeric rows in admin */
 .is-numeric {
   background-color: var(--success-light);
+}
+
+.event-item td {
+  padding: 1px;
 }

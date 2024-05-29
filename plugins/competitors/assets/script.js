@@ -456,7 +456,6 @@ document.addEventListener("DOMContentLoaded", () => {
     })
       .then((response) => response.json())
       .then((data) => {
-        //console.log(data); // Log the full response
         if (data.success) {
           document.getElementById("performing-rolls-container").innerHTML =
             data.data.html;
