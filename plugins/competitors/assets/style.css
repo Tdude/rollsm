@@ -214,6 +214,17 @@ tr.non-selected-roll {
   position: relative;
 }
 
+#competitors-list fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+#competitors-list select {
+  width: 48%;
+  margin-bottom: 1rem;
+}
+
 /* Spinner is also overlay */
 #spinner {
   background-color: var(--wp--preset--color--transparent-light);
