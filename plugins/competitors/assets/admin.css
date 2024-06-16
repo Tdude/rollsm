@@ -302,10 +302,14 @@ tr.competitor-header:hover,
 .wp-admin .plus-button {
   line-height: unset;
   font-size: 16px;
+  margin: 0 1em;
 }
 .wp-admin .plus-button:before {
   content: "+";
-  font-weight: bold;
+  font-weight: 500;
+  transform: scale(1.2);
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .competitor-header:hover .showonhover {
@@ -331,12 +335,12 @@ tr.competitor-header:hover,
 }
 
 /* Some admin areas need this for displaying rolls form each in a row in competitors-settings */
-#competitors_roll_names_wrapper p {
+#settings-page p {
   display: flex;
 }
-#competitors_roll_names_wrapper p label,
-#competitors_roll_names_wrapper p input[type="text"],
-#competitors_roll_names_wrapper p input[type="checkbox"] {
+#settings-page p label,
+#settings-page p input[type="text"],
+#settings-page p input[type="checkbox"] {
   align-self: center;
   padding: 0.1em 0.5em;
 }
@@ -446,9 +450,21 @@ tr.competitor-header:hover,
 }
 
 /* Admin text layout */
+#toggle-instructions {
+  margin-bottom: 10px;
+}
+
+#instructions-content {
+  display: none;
+  border: 1px solid #ccd0d4;
+  padding: 15px;
+  background-color: #f9f9f9;
+}
+
 .two-cols {
   display: flex;
   flex-wrap: wrap;
+  gap: 1em;
 }
 
 .two-cols div:first-child {
@@ -500,7 +516,7 @@ tr.competitor-header:hover,
   color: var(--info-darkest);
   cursor: pointer;
   line-height: 2em;
-  padding: 0 0.5em;
+  padding: 0 0.8em;
 }
 .button.add-date {
   background: var(--info-darkest);
@@ -537,4 +553,19 @@ tr.competitor-header:hover,
 
 .p-sm td {
   padding: 1px;
+}
+
+.form-table {
+  max-width: 100rem;
+}
+
+.wrap li.class-item,
+.wrap li.event-item,
+.wrap p.roll-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.wrap .remove-row {
+  margin-left: auto;
 }
