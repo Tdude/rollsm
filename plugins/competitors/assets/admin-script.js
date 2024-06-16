@@ -1,6 +1,4 @@
-// WIP wednesday 24-05-29
-// DOMContentLoaded event listener
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
   const scoringContainer = document.getElementById("judges-scoring-container");
   if (scoringContainer) {
     let filterButton = document.getElementById("filter_button");
@@ -10,16 +8,90 @@ document.addEventListener("DOMContentLoaded", function () {
     const nonce = competitorsAdminAjax.nonce;
     const spinner = document.getElementById("spinner");
 
+    // Function to initialize all events on DOMContentLoaded
+    reattachAllEvents();
+    getFilterValues();
+    // initializeScores in reattachAllEvents
+
     function showSpinner() {
-      spinner.classList.remove("hidden");
-      spinner.classList.add("show");
-      //console.log("Showing spinner - after change", spinner.classList);
+      if (spinner) {
+        console.log("showSpinner called");
+        spinner.classList.remove("hidden");
+        void spinner.offsetWidth; // force reflow
+        spinner.classList.add("show");
+      } else {
+        console.error("Spinner element not found");
+      }
     }
 
     function hideSpinner() {
-      spinner.classList.add("hidden");
-      spinner.classList.remove("show");
-      //console.log("Hiding spinner - after change", spinner.classList);
+      if (spinner) {
+        spinner.classList.remove("show");
+        spinner.classList.add("hidden");
+      } else {
+        console.error("Spinner element not found");
+      }
+    }
+
+    function initializeScores() {
+      document.querySelectorAll(".competitor-scores").forEach((row) => {
+        const competitorId = row.getAttribute("data-competitor-id");
+        const index = row.getAttribute("data-index"); // Make sure to set this data attribute when rendering rows
+
+        let left_score = "";
+        let left_deduct = "";
+        let right_score = "";
+        let right_deduct = "";
+
+        // Collect values from radio buttons
+        row.querySelectorAll(".score-input").forEach((input) => {
+          if (input.name.includes("[left_group]") && input.checked) {
+            left_score = input.value;
+          } else if (input.name.includes("[right_group]") && input.checked) {
+            right_score = input.value;
+          }
+        });
+
+        row.querySelectorAll(".deduct-input").forEach((input) => {
+          if (input.name.includes("[left_group]") && input.checked) {
+            left_deduct = input.value;
+          } else if (input.name.includes("[right_group]") && input.checked) {
+            right_deduct = input.value;
+          }
+        });
+
+        // Collect values from numeric inputs
+        row.querySelectorAll(".numeric-input").forEach((input) => {
+          if (input.name.includes("[left_score]")) {
+            left_score = input.value;
+          } else if (input.name.includes("[right_score]")) {
+            right_score = input.value;
+          }
+        });
+
+        const left_points = calculatePoints(left_score, left_deduct);
+        const right_points = calculatePoints(right_score, right_deduct);
+        const total = Math.max(0, left_points + right_points);
+
+        const totalCell = row.querySelector(".total-score-row");
+        if (totalCell) {
+          totalCell.innerHTML = total;
+        }
+
+        // Update the existing hidden input field
+        const hiddenInput = row.querySelector(
+          `input[name='competitor_scores[${competitorId}][${index}][total_score]']`
+        );
+        if (hiddenInput) {
+          hiddenInput.value = total;
+        }
+      });
+
+      // Update the total scores for all competitors
+      document.querySelectorAll(".competitor-scores").forEach((row) => {
+        const competitorId = row.getAttribute("data-competitor-id");
+        updateCompetitorsTotal(competitorId);
+      });
     }
 
     function filterCompetitors() {
@@ -46,7 +118,7 @@ document.addEventListener("DOMContentLoaded", function () {
           "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         },
         body: new URLSearchParams({
-          action: "filter_competitors_by_date",
+          action: "filter_competitors",
           filter_date: filterDate,
           filter_class: filterClass,
           nonce: nonce,
@@ -65,18 +137,18 @@ document.addEventListener("DOMContentLoaded", function () {
             reattachAllEvents();
           } else {
             scoringContainer.innerHTML = `
-            <p>Error loading competitors. Please try again (and reload the page).</p>
-            <button type="button" id="retry_button" class="button button-secondary">Retry</button>
-          `;
+              <p>Error loading competitors. Please try again (and reload the page).</p>
+              <button type="button" id="retry_button" class="button button-secondary">Retry</button>
+            `;
           }
           hideSpinner();
         })
         .catch((error) => {
           console.error("Error:", error);
           scoringContainer.innerHTML = `
-          <p>Error loading competitors. Please try again.</p>
-          <button type="button" id="retry_button" class="button button-secondary">Retry</button>
-        `;
+            <p>Error loading competitors. Please try again.</p>
+            <button type="button" id="retry_button" class="button button-secondary">Retry</button>
+          `;
           hideSpinner();
         });
     }
@@ -97,7 +169,7 @@ document.addEventListener("DOMContentLoaded", function () {
           "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         },
         body: new URLSearchParams({
-          action: "filter_competitors_by_date",
+          action: "filter_competitors",
           filter_date: "",
           filter_class: "",
           nonce: nonce,
@@ -118,48 +190,20 @@ document.addEventListener("DOMContentLoaded", function () {
             reattachAllEvents();
           } else {
             scoringContainer.innerHTML = `
-            <p>Error loading competitors. Please try again (and reload the page).</p>
-            <button type="button" id="retry_button" class="button button-secondary">Retry</button>
-          `;
+              <p>Error loading competitors. Please try again (and reload the page).</p>
+              <button type="button" id="retry_button" class="button button-secondary">Retry</button>
+            `;
           }
           hideSpinner();
         })
         .catch((error) => {
           console.error("Error:", error);
           scoringContainer.innerHTML = `
-          <p>Error loading competitors. Please try again.</p>
-          <button type="button" id="retry_button" class="button button-secondary">Retry</button>
-        `;
+            <p>Error loading competitors. Please try again.</p>
+            <button type="button" id="retry_button" class="button button-secondary">Retry</button>
+          `;
           hideSpinner();
         });
-    }
-
-    function reattachAllEvents() {
-      if (
-        !filterDateSelect ||
-        !filterClassSelect ||
-        !filterButton ||
-        !resetButton
-      ) {
-        console.error(
-          "One or more elements are missing. Cannot reattach events."
-        );
-        return;
-      }
-
-      filterDateSelect.removeEventListener("change", filterCompetitors);
-      filterClassSelect.removeEventListener("change", filterCompetitors);
-      filterButton.removeEventListener("click", filterCompetitors);
-      resetButton.removeEventListener("click", resetFilters);
-
-      filterDateSelect.addEventListener("change", filterCompetitors);
-      filterClassSelect.addEventListener("change", filterCompetitors);
-      filterButton.addEventListener("click", filterCompetitors);
-      resetButton.addEventListener("click", resetFilters);
-
-      attachCompetitorToggleEvents();
-      attachScoringEvents();
-      attachTimerEvents();
     }
 
     function getFilterValues() {
@@ -179,18 +223,35 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
 
-    if (scoringContainer) {
-      // Call the functions to reattach events and get filter values
-      reattachAllEvents();
-      getFilterValues();
-    }
+    function reattachAllEvents() {
+      if (
+        !filterDateSelect ||
+        !filterClassSelect ||
+        !filterButton ||
+        !resetButton ||
+        !scoringContainer
+      ) {
+        console.error(
+          "One or more elements are missing. Cannot reattach events."
+        );
+        return;
+      }
 
-    function attachCompetitorToggleEvents() {
-      // Remove previous event listeners to prevent duplicates
+      filterDateSelect.removeEventListener("change", filterCompetitors);
+      filterClassSelect.removeEventListener("change", filterCompetitors);
+      filterButton.removeEventListener("click", filterCompetitors);
+      resetButton.removeEventListener("click", resetFilters);
       scoringContainer.removeEventListener("click", handleCompetitorToggle);
 
-      // Attach new event listener
+      filterDateSelect.addEventListener("change", filterCompetitors);
+      filterClassSelect.addEventListener("change", filterCompetitors);
+      filterButton.addEventListener("click", filterCompetitors);
+      resetButton.addEventListener("click", resetFilters);
       scoringContainer.addEventListener("click", handleCompetitorToggle);
+
+      attachScoringEvents();
+      attachTimerEvents();
+      initializeScores();
     }
 
     function handleCompetitorToggle(event) {
@@ -210,9 +271,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const rowsToToggle = scoringContainer.querySelectorAll(
           `.competitor-columns[data-competitor-id="${competitorId}"], 
-         .competitor-scores[data-competitor-id="${competitorId}"],
-         .competitor-info[data-competitor-id="${competitorId}"],
-         .competitor-totals[data-competitor-id="${competitorId}"]:not(.grand-total)`
+          .competitor-scores[data-competitor-id="${competitorId}"],
+          .competitor-info[data-competitor-id="${competitorId}"],
+          .competitor-totals[data-competitor-id="${competitorId}"]:not(.grand-total)`
         );
 
         let anyRowVisible = false;
@@ -225,8 +286,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Show spinner based on row visibility
         if (anyRowVisible) {
-          console.log("Showing spinner");
           updateOverlayPosition(rowsToToggle);
+          console.log("Showing spinner");
           showSpinner();
         } else {
           console.log("Hiding spinner");
@@ -263,7 +324,137 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
 
-    // Timer logic here...
+    // Calculate points for a given score and deduct value
+    function calculatePoints(scoreValue, deductValue) {
+      const score = parseInt(scoreValue) || 0;
+      const deduct = parseInt(deductValue) || 0;
+
+      if (score !== 0) {
+        return score;
+      } else if (deduct !== 0) {
+        return deduct;
+      }
+      return 0;
+    }
+
+    // Initialize event listeners for scoring
+    function attachScoringEvents() {
+      document
+        .querySelectorAll(".score-input, .deduct-input, .numeric-input")
+        .forEach((input) => {
+          input.addEventListener("change", function () {
+            const row = this.closest("tr");
+            const competitorId = row.getAttribute("data-competitor-id");
+            const index = row.getAttribute("data-index"); // Make sure to set this data attribute when rendering rows
+            calculateAndUpdateTotalScore(row, competitorId, index);
+          });
+        });
+    }
+
+    // Calculate points and update row total
+    function calculateAndUpdateTotalScore(row, competitorId, index) {
+      let left_score = "";
+      let left_deduct = "";
+      let right_score = "";
+      let right_deduct = "";
+
+      // Collect values from radio buttons
+      row.querySelectorAll(".score-input").forEach((input) => {
+        if (input.name.includes("[left_group]") && input.checked) {
+          left_score = input.value;
+        } else if (input.name.includes("[right_group]") && input.checked) {
+          right_score = input.value;
+        }
+      });
+
+      row.querySelectorAll(".deduct-input").forEach((input) => {
+        if (input.name.includes("[left_group]") && input.checked) {
+          left_deduct = input.value;
+        } else if (input.name.includes("[right_group]") && input.checked) {
+          right_deduct = input.value;
+        }
+      });
+
+      // Collect values from numeric inputs
+      row.querySelectorAll(".numeric-input").forEach((input) => {
+        if (input.name.includes("[left_score]")) {
+          left_score = input.value;
+        } else if (input.name.includes("[right_score]")) {
+          right_score = input.value;
+        }
+      });
+
+      console.log(
+        `left_score: ${left_score}, left_deduct: ${left_deduct}, right_score: ${right_score}, right_deduct: ${right_deduct}`
+      );
+
+      const left_points = calculatePoints(left_score, left_deduct);
+      const right_points = calculatePoints(right_score, right_deduct);
+
+      const total = Math.max(0, left_points + right_points);
+
+      const totalCell = row.querySelector(".total-score-row");
+      console.log("Total Cell Found: ", totalCell); // Log totalCell
+
+      if (totalCell) {
+        totalCell.innerHTML = total;
+        console.log(`Updated total cell: ${total}`);
+      } else {
+        console.error("Total cell not found");
+      }
+
+      // Update the existing hidden input field created by PHP
+      const hiddenInput = row.querySelector(
+        `input[name='competitor_scores[${competitorId}][${index}][total_score]']`
+      );
+      console.log("Hidden Input Found: ", hiddenInput); // Log hiddenInput
+
+      if (hiddenInput) {
+        hiddenInput.value = total;
+        console.log(`Updated hidden input: ${total}`);
+      } else {
+        console.error("Hidden input not found");
+      }
+
+      updateCompetitorsTotal(competitorId);
+    }
+
+    // Update total score for all competitors
+    function updateCompetitorsTotal(competitorId) {
+      let competitorTotal = 0;
+
+      document
+        .querySelectorAll(
+          `[data-competitor-id='${competitorId}'] .total-score-row`
+        )
+        .forEach((cell) => {
+          const score = parseInt(cell.textContent) || 0;
+          competitorTotal += score;
+        });
+
+      // Update the individual competitor total points
+      const competitorTotalCells = document.querySelectorAll(
+        `[data-competitor-id='${competitorId}'] .total-points`
+      );
+      competitorTotalCells.forEach((cell) => {
+        cell.innerHTML = competitorTotal;
+      });
+
+      // Calculate the grand total across all competitors
+      let grandTotal = 0;
+      document.querySelectorAll(".total-score-row").forEach((cell) => {
+        const score = parseInt(cell.textContent) || 0;
+        grandTotal += score;
+      });
+
+      // Update the grand total display
+      const grandTotalCell = document.querySelector(`#grand-total-value`);
+      if (grandTotalCell) {
+        grandTotalCell.innerHTML = grandTotal;
+      }
+    }
+
+    // Timer logic, off/online saving here...
     function attachTimerEvents() {
       console.log("attachTimerEvents called");
       const timer = document.getElementById("timer");
@@ -385,7 +576,9 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         function getLocalizedTime(timezone) {
-          const date = new Date().toISOString();
+          // Get the server date and time
+          const now = new Date();
+          // Add 2 hours to the current time
           const options = {
             timeZone: timezone,
             year: "numeric",
@@ -396,17 +589,27 @@ document.addEventListener("DOMContentLoaded", function () {
             second: "2-digit",
             hour12: false,
           };
-
-          return date.toLocaleString("en-US", options);
+          // Convert the date to a localized string
+          const localizedTime = new Intl.DateTimeFormat([], options).format(
+            now
+          );
+          return localizedTime;
         }
 
         // Handle score saving
         function prepareFormData(competitorId) {
           if (competitorId) {
+            const stopTime = getLocalizedTime(timezone);
+            const elapsedTimeValue = timerDisplay.textContent;
+
             document.getElementById(`stop-time-${competitorId}`).value =
-              getLocalizedTime(timezone);
+              stopTime;
             document.getElementById(`elapsed-time-${competitorId}`).value =
-              timerDisplay.textContent;
+              elapsedTimeValue;
+
+            console.log(`Prepared data for competitor ID ${competitorId}:`);
+            console.log(`Stop Time: ${stopTime}`);
+            console.log(`Elapsed Time: ${elapsedTimeValue}`);
           }
         }
 
@@ -428,6 +631,8 @@ document.addEventListener("DOMContentLoaded", function () {
               storeFormDataLocally();
             }
           });
+        } else {
+          console.error("Form element not found");
         }
 
         // For merging data
@@ -479,13 +684,50 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Data submission via AJAX
         function syncDataAuto() {
-          const formData = new FormData(scoringForm);
-          const dataObject = Object.fromEntries(formData);
-          dataObject["action"] = "competitors_score_update";
-          dataObject["competitors_score_update_nonce"] =
-            competitorsAdminAjax.nonce;
+          const scoringForm = document.getElementById("scoring-form");
+          if (!scoringForm) {
+            console.error("Scoring form not found");
+            return;
+          }
 
-          console.log("Sending AJAX request", dataObject);
+          const formData = new FormData(scoringForm);
+          formData.append("action", "competitors_score_update");
+          formData.append(
+            "competitors_score_update_nonce",
+            competitorsAdminAjax.nonce
+          );
+
+          // Log hidden field values
+          const stopTimeField = document.getElementById(
+            `stop-time-${currentCompetitorId}`
+          );
+          const elapsedTimeField = document.getElementById(
+            `elapsed-time-${currentCompetitorId}`
+          );
+          console.log(
+            `Stop Time Field: ${
+              stopTimeField ? stopTimeField.value : "not found"
+            }`
+          );
+          console.log(
+            `Elapsed Time Field: ${
+              elapsedTimeField ? elapsedTimeField.value : "not found"
+            }`
+          );
+
+          formData.forEach((value, key) => {
+            console.log(`${key}: ${value}`);
+          });
+
+          const dataObject = {};
+          formData.forEach((value, key) => {
+            dataObject[key] = value;
+          });
+
+          console.log(
+            "Sending AJAX request with the following data:",
+            dataObject
+          );
 
           fetch(competitorsAdminAjax.ajaxurl, {
             method: "POST",
@@ -497,11 +739,15 @@ document.addEventListener("DOMContentLoaded", function () {
             body: new URLSearchParams(dataObject),
           })
             .then((response) => {
-              console.log("Response received");
+              if (!response.ok) {
+                throw new Error(
+                  `Network response was not ok (${response.statusText})`
+                );
+              }
               return response.json();
             })
             .then((data) => {
-              console.log("Processing response", data);
+              console.log("Processing response:", data);
               handleServerResponse(data);
             })
             .catch(handleSyncError);
@@ -541,103 +787,10 @@ document.addEventListener("DOMContentLoaded", function () {
         });
       }
     }
-    // Attach scoring events to score and deduct inputs
-    function attachScoringEvents() {
-      // Attach event listeners to score and deduct inputs
-      document
-        .querySelectorAll(".score-input, .deduct-input")
-        .forEach((input) => {
-          input.addEventListener("change", function () {
-            const row = this.closest("tr");
-            const competitorId = row.getAttribute("data-competitor-id");
-            calculateAndUpdateTotalScore(row, competitorId);
-          });
-        });
-
-      // Calculate points for a given score and deduct value
-      function calculatePoints(scoreValue, deductValue) {
-        if (scoreValue && deductValue) {
-          return parseInt(deductValue) || 0;
-        } else if (scoreValue) {
-          return parseInt(scoreValue) || 0;
-        } else if (deductValue) {
-          return parseInt(deductValue) || 0;
-        }
-        return 0;
-      }
-
-      // Calculate points and update row total
-      function calculateAndUpdateTotalScore(row, competitorId) {
-        let left_score = null;
-        let left_deduct = null;
-        let right_score = null;
-        let right_deduct = null;
-
-        // Collect scores and deductions
-        row.querySelectorAll(".score-input").forEach((input) => {
-          if (input.name.includes("left_score") && input.checked) {
-            left_score = input.value;
-          } else if (input.name.includes("right_score") && input.checked) {
-            right_score = input.value;
-          }
-        });
-
-        row.querySelectorAll(".deduct-input").forEach((input) => {
-          if (input.name.includes("left_deduct") && input.checked) {
-            left_deduct = input.value;
-          } else if (input.name.includes("right_deduct") && input.checked) {
-            right_deduct = input.value;
-          }
-        });
-
-        // Calculate left and right points
-        const left_points = calculatePoints(left_score, left_deduct);
-        const right_points = calculatePoints(right_score, right_deduct);
-
-        // Ensure non-negative points
-        const total = Math.max(0, left_points + right_points);
-
-        // Update total in the row
-        const totalCell = row.querySelector(".total-score-row");
-        if (totalCell) {
-          totalCell.innerHTML = total;
-        }
-
-        // Update overall total for the competitor
-        updateCompetitorsTotal(competitorId);
-      }
-
-      // Update overall total for the competitor
-      function updateCompetitorsTotal(competitorId) {
-        let totalPoints = 0;
-
-        document
-          .querySelectorAll(
-            `[data-competitor-id="${competitorId}"] .total-score-row`
-          )
-          .forEach((cell) => {
-            totalPoints += parseInt(cell.innerText) || 0;
-          });
-
-        const competitorsTotalRow = document.getElementById(
-          `competitor-total-${competitorId}`
-        );
-        if (competitorsTotalRow) {
-          const totalPointsCell =
-            competitorsTotalRow.querySelector(".total-points");
-          if (totalPointsCell) {
-            totalPointsCell.innerText = totalPoints;
-          }
-        }
-      }
-    } // Call the function somewhere to attach scoring events
-
-    reattachAllEvents();
   }
 });
 
 // From hereon there be jQuery because its included in WP
-// "Quick edit" custom order-by in Admin list view, the WP way
 jQuery(document).ready(function ($) {
   // Sort columns in Personal Data view page when clicking html table headers
   if ($("#sortable-table").length) {
@@ -690,45 +843,79 @@ jQuery(document).ready(function ($) {
 
       // Check Quick Edit form layout and adjust the above selector if needed
       var customOrderField = `<div class="inline-edit-group competitors-custom-order-field">
-           <label><span class="title">Order</span>
-           <span class="input-text-wrap"><input type="number" name="competitors_custom_order" value="${customOrderValue.trim()}">
-           </span></label></div>`;
+             <label><span class="title">Order</span>
+             <span class="input-text-wrap"><input type="number" name="competitors_custom_order" value="${customOrderValue.trim()}">
+             </span></label></div>`;
 
       // Append or prepend based on your layout needs
       $lastField.after(customOrderField);
     }, 150); // A slight delay to ensure the Quick Edit form is fully rendered
   });
 
-  // The following is for adding/removing dates/events in settings, not on the scoring page
-  // Initialize the date picker
+  // Initialize date picker
   $(".date-picker").datepicker({
     dateFormat: "yy-mm-dd",
   });
 
-  // Add event button functionality for Settings page
-  $(".add-event").click(function () {
+  // Add Event button functionality for Settings page
+  $("#add-event-button").click(function () {
     var newDate = $("#new_competition_date").val();
     var eventName = $("#new_event_name").val();
     if (newDate && eventName) {
-      var eventObj = {
-        date: newDate,
-        name: eventName,
-      };
-      var eventString = JSON.stringify(eventObj); // Convert the object to a string for storage
+      var eventObj = { date: newDate, name: eventName };
+      var eventString = JSON.stringify(eventObj);
       $("#existing_events").append(
-        `<li data-date="${escapeHtml(newDate)}" data-name="${escapeHtml(
-          eventName
-        )}">
-           <input type="hidden" name="available_competition_dates[]" value="${encodeURIComponent(
-             eventString
-           )}">
-           ${escapeHtml(newDate)} - ${escapeHtml(eventName)}
-           <button type="button" class="remove-event">Remove</button>
-         </li>`
+        `<li class="event-item" data-date="${escapeHtml(
+          newDate
+        )}" data-name="${escapeHtml(eventName)}">
+                <input type="hidden" name="competitors_options[available_competition_dates][]" value="${encodeURIComponent(
+                  eventString
+                )}">
+                ${escapeHtml(newDate)} - ${escapeHtml(eventName)}
+                <button type="button" class="button-secondary remove-event-button">Remove</button>
+            </li>`
       );
       $("#new_competition_date").val("").datepicker("setDate", null);
       $("#new_event_name").val("");
     }
+  });
+
+  // Add Class button functionality for Settings page
+  $("#add-class-button").click(function () {
+    var newClassName = $("#new_class_name").val();
+    var newClassComment = $("#new_class_comment").val();
+    if (newClassName && newClassComment) {
+      var classObj = { name: newClassName, comment: newClassComment };
+      var classString = JSON.stringify(classObj);
+      $("#existing_classes").append(
+        `<li class="class-item" data-name="${escapeHtml(
+          newClassName
+        )}" data-comment="${escapeHtml(newClassComment)}">
+                <input type="hidden" name="competitors_options[available_competition_classes][]" value="${encodeURIComponent(
+                  classString
+                )}">
+                ${escapeHtml(newClassName)} - ${escapeHtml(newClassComment)}
+                <button type="button" class="button-secondary remove-class-button">Remove</button>
+            </li>`
+      );
+      $("#new_class_name").val("");
+      $("#new_class_comment").val("");
+    }
+  });
+
+  // Remove Class button functionality
+  $("#existing_classes").on("click", ".remove-class-button", function () {
+    $(this).closest("li").remove();
+  });
+
+  // Delegate click event for the event and class row remove buttons
+  $(document).on("click", ".remove-class-button", function () {
+    $(this).closest("li").remove();
+  });
+
+  // Delegate click event for the event and class row remove buttons
+  $(document).on("click", ".remove-event-button", function () {
+    $(this).closest("li").remove();
   });
 
   // Function to escape HTML
@@ -745,95 +932,106 @@ jQuery(document).ready(function ($) {
     });
   }
 
-  // Adding more roll names in Settings
+  // Function to create a new roll field
+  function createNewRollField(classType, index) {
+    return `
+    <p class="roll-item" data-index="${index}">
+      <label for="maneuver_${classType}_${index}">Maneuver: </label>
+      <input type="text" id="maneuver_${classType}_${index}" name="competitors_options[custom_values_${classType}][]" size="60" value="" />
+      <label for="points_${classType}_${index}"> Points: </label>
+      <input type="text" class="numeric-input" id="points_${classType}_${index}" name="competitors_options[numeric_values_${classType}][]" size="2" maxlength="2" pattern="\\d*" value="0" />
+      <label for="numeric_${classType}_${index}"> Numeric:</label>
+      <input type="checkbox" id="numeric_${classType}_${index}" name="competitors_options[is_numeric_field_${classType}][${index}]" value="1">
+      <button type="button" class="button custom-button button-secondary remove-row">Remove</button>
+    </p>
+  `;
+  }
+
+  // Event listener for adding roll names
   $(document).on("click", ".plus-button", function () {
     var classType = $(this).attr("id").replace("add_more_roll_names_", "");
     var $wrapper = $("#competitors_roll_names_wrapper_" + classType);
     var index = $wrapper.find("p").length;
-
-    var newField = `
-      <p data-index="${index}">
-        <label for="maneuver_${classType}_${index}">Maneuver: </label>
-        <input type="text" id="maneuver_${classType}_${index}" name="competitors_custom_values_${classType}[]" size="60" value="" />
-        <label for="points_${classType}_${index}"> Points: </label>
-        <input type="text" class="numeric-input" id="points_${classType}_${index}" name="competitors_numeric_values_${classType}[]" size="2" maxlength="2" pattern="\\d*" value="0" />
-        <label for="numeric_${classType}_${index}"> Numeric:</label>
-        <input type="checkbox" id="numeric_${classType}_${index}" name="competitors_is_numeric_field_${classType}[${index}]" value="1">
-        <button type="button" class="button custom-button button-secondary remove-row">Remove</button>
-      </p>
-    `;
+    var newField = createNewRollField(classType, index);
 
     $wrapper.append(newField);
+    console.log("Added new roll field: ", newField);
   });
 
-  // Removing a row in Settings
+  // Event listener for removing a roll field
   $(document).on("click", ".remove-row", function () {
-    $(this).parent().remove();
+    var $wrapper = $(this).closest(".roll-item").parent();
+    if ($wrapper.find(".roll-item").length > 1) {
+      $(this).parent().remove();
+      console.log("Removed roll field.");
+    } else {
+      alert("At least one roll must remain.");
+    }
   });
 
-  // Settings page AJAX add/remove rows
+  // Settings page AJAX add row
   if ($("#settings-page").length) {
     const $wrapper = $("#competitors_roll_names_wrapper");
     const $addButton = $("#add_more_roll_names");
 
-    if (!$wrapper.length || !$addButton.length) {
-      return;
-    }
-
-    function addRow() {
-      const newIndex = $wrapper.find("p").length;
-      const newField = $(`
-        <p data-index="${newIndex}">
-          <label for="maneuver_${newIndex}">Maneuver: </label>
-          <input type="text" id="maneuver_${newIndex}" name="competitors_custom_values[]" size="60" />
-          <label for="points_${newIndex}"> Points: </label>
-          <input type="text" class="numeric-input" id="points_${newIndex}" name="competitors_numeric_values[]" size="2" maxlength="2" pattern="\\d*" title="Only 2 digits allowed" />
-          <label for="numeric_field_${newIndex}"> Numeric:</label>
-          <input type="checkbox" id="numeric_field_${newIndex}" name="competitors_is_numeric_field[${newIndex}]" value="1">
-          <button type="button" class="button custom-button button-secondary remove-row">Remove</button>
-        </p>
-      `);
-      $wrapper.append(newField);
-    }
-
-    $addButton.on("click", addRow);
-
-    // Removing a row in settings
-    $wrapper.on("click", ".remove-row", function (e) {
-      e.preventDefault();
-      if (confirm("Remove, destroy, kill this row irrevocably?")) {
-        const rowIndex = $(this).parent().data("index");
-        const nonce = $("#competitors_nonce").val();
-
-        // AJAX request to WordPress
-        $.ajax({
-          url: competitorsAdminAjax.ajaxurl,
-          type: "POST",
-          data: {
-            action: "remove_competitor_row",
-            index: rowIndex,
-            security: nonce,
-          },
-          success: function (response) {
-            if (response.success) {
-              console.log(response.message);
-              $(`[data-index="${rowIndex}"]`).remove(); // Remove the parent <p> element
-            } else {
-              console.error(response.message);
-              alert("Failed to remove row.");
-            }
-          },
-          error: function (error) {
-            console.error("Error:", error);
-            alert("Error removing row.");
-          },
-        });
+    if ($wrapper.length && $addButton.length) {
+      // Function to add a new row
+      function addRow() {
+        const newIndex = $wrapper.find("p").length;
+        const newField = createNewRollField("", newIndex);
+        $wrapper.append(newField);
       }
-    });
 
-    $wrapper.on("input", ".numeric-input", function (e) {
-      const value = $(this).val();
-      $(this).val(value.slice(0, 2)); // Only 2 digits
-    });
+      $addButton.on("click", addRow);
+
+      // Removing a row in settings
+      $wrapper.on("click", ".remove-row", function (e) {
+        e.preventDefault();
+        const $parentWrapper = $(this).closest(".roll-item").parent();
+        if ($parentWrapper.find(".roll-item").length > 1) {
+          if (confirm("Remove, destroy, kill this row irrevocably?")) {
+            const rowIndex = $(this).parent().data("index");
+            const nonce = $("#competitors_nonce").val();
+
+            // AJAX request to WordPress
+            $.ajax({
+              url: competitorsAdminAjax.ajaxurl,
+              type: "POST",
+              data: {
+                action: "remove_competitor_row",
+                index: rowIndex,
+                security: nonce,
+              },
+              success: function (response) {
+                if (response.success) {
+                  console.log(response.message);
+                  $(`[data-index="${rowIndex}"]`).remove();
+                } else {
+                  console.error(response.message);
+                  alert("Failed to remove row.");
+                }
+              },
+              error: function (error) {
+                console.error("Error:", error);
+                alert("Error removing row.");
+              },
+            });
+          }
+        } else {
+          alert("At least one roll must remain.");
+        }
+      });
+
+      // Ensure numeric inputs only accept two digits
+      $wrapper.on("input", ".numeric-input", function (e) {
+        const value = $(this).val();
+        $(this).val(value.slice(0, 2));
+      });
+    }
   }
+
+  // Toggle admin notice text
+  $("#toggle-instructions").click(function () {
+    $("#instructions-content").slideToggle();
+  });
 });
