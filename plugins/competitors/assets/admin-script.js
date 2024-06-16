@@ -15,7 +15,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function showSpinner() {
       if (spinner) {
-        console.log("showSpinner called");
         spinner.classList.remove("hidden");
         void spinner.offsetWidth; // force reflow
         spinner.classList.add("show");
@@ -287,10 +286,8 @@ document.addEventListener("DOMContentLoaded", () => {
         // Show spinner based on row visibility
         if (anyRowVisible) {
           updateOverlayPosition(rowsToToggle);
-          console.log("Showing spinner");
           showSpinner();
         } else {
-          console.log("Hiding spinner");
           hideSpinner();
         }
 
@@ -310,10 +307,6 @@ document.addEventListener("DOMContentLoaded", () => {
       spinner.style.height = `${lastRowRect.bottom - firstRowRect.top}px`;
       spinner.style.left = "0";
       spinner.style.right = "0";
-
-      console.log(
-        `Spinner position updated: top=${spinner.style.top}, height=${spinner.style.height}`
-      );
     }
 
     function toggleIcons(clickedHeader) {
@@ -384,21 +377,17 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       });
 
-      console.log(
-        `left_score: ${left_score}, left_deduct: ${left_deduct}, right_score: ${right_score}, right_deduct: ${right_deduct}`
-      );
+      // console.log(
+      // `left_score: ${left_score}, left_deduct: ${left_deduct}, right_score: ${right_score}, right_deduct: ${right_deduct}`
+      // );
 
       const left_points = calculatePoints(left_score, left_deduct);
       const right_points = calculatePoints(right_score, right_deduct);
-
       const total = Math.max(0, left_points + right_points);
-
       const totalCell = row.querySelector(".total-score-row");
-      console.log("Total Cell Found: ", totalCell); // Log totalCell
 
       if (totalCell) {
         totalCell.innerHTML = total;
-        console.log(`Updated total cell: ${total}`);
       } else {
         console.error("Total cell not found");
       }
@@ -407,11 +396,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const hiddenInput = row.querySelector(
         `input[name='competitor_scores[${competitorId}][${index}][total_score]']`
       );
-      console.log("Hidden Input Found: ", hiddenInput); // Log hiddenInput
 
       if (hiddenInput) {
         hiddenInput.value = total;
-        console.log(`Updated hidden input: ${total}`);
       } else {
         console.error("Hidden input not found");
       }
@@ -456,7 +443,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Timer logic, off/online saving here...
     function attachTimerEvents() {
-      console.log("attachTimerEvents called");
       const timer = document.getElementById("timer");
       const timerDisplay = document.getElementById("timer-display");
       const startBtn = document.getElementById("start-timer");
@@ -606,10 +592,6 @@ document.addEventListener("DOMContentLoaded", () => {
               stopTime;
             document.getElementById(`elapsed-time-${competitorId}`).value =
               elapsedTimeValue;
-
-            console.log(`Prepared data for competitor ID ${competitorId}:`);
-            console.log(`Stop Time: ${stopTime}`);
-            console.log(`Elapsed Time: ${elapsedTimeValue}`);
           }
         }
 
@@ -617,14 +599,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const scoringForm = document.getElementById("scoring-form");
         if (scoringForm) {
           scoringForm.addEventListener("submit", (event) => {
-            console.log("Form submit event triggered");
             event.preventDefault();
-            console.log("Default event prevented");
-
             prepareFormData(currentCompetitorId);
 
             if (navigator.onLine) {
-              console.log("Online: Sending data via AJAX");
               syncDataAuto();
             } else {
               console.log("Offline: Storing data locally");
@@ -704,30 +682,11 @@ document.addEventListener("DOMContentLoaded", () => {
           const elapsedTimeField = document.getElementById(
             `elapsed-time-${currentCompetitorId}`
           );
-          console.log(
-            `Stop Time Field: ${
-              stopTimeField ? stopTimeField.value : "not found"
-            }`
-          );
-          console.log(
-            `Elapsed Time Field: ${
-              elapsedTimeField ? elapsedTimeField.value : "not found"
-            }`
-          );
-
-          formData.forEach((value, key) => {
-            console.log(`${key}: ${value}`);
-          });
 
           const dataObject = {};
           formData.forEach((value, key) => {
             dataObject[key] = value;
           });
-
-          console.log(
-            "Sending AJAX request with the following data:",
-            dataObject
-          );
 
           fetch(competitorsAdminAjax.ajaxurl, {
             method: "POST",
@@ -747,7 +706,6 @@ document.addEventListener("DOMContentLoaded", () => {
               return response.json();
             })
             .then((data) => {
-              console.log("Processing response:", data);
               handleServerResponse(data);
             })
             .catch(handleSyncError);
@@ -755,7 +713,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         function handleServerResponse(data) {
           if (data.success) {
-            console.log("Data synced successfully:", data);
             localStorage.removeItem("CompetitorsUnsyncedFormData");
             if (
               confirm(
@@ -955,7 +912,6 @@ jQuery(document).ready(function ($) {
     var newField = createNewRollField(classType, index);
 
     $wrapper.append(newField);
-    console.log("Added new roll field: ", newField);
   });
 
   // Event listener for removing a roll field
@@ -963,7 +919,6 @@ jQuery(document).ready(function ($) {
     var $wrapper = $(this).closest(".roll-item").parent();
     if ($wrapper.find(".roll-item").length > 1) {
       $(this).parent().remove();
-      console.log("Removed roll field.");
     } else {
       alert("At least one roll must remain.");
     }
@@ -1004,7 +959,6 @@ jQuery(document).ready(function ($) {
               },
               success: function (response) {
                 if (response.success) {
-                  console.log(response.message);
                   $(`[data-index="${rowIndex}"]`).remove();
                 } else {
                   console.error(response.message);
