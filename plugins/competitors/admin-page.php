@@ -93,13 +93,22 @@ add_action('manage_competitors_posts_custom_column', 'show_meta_keys_in_competit
 
 
 
-// Competition Date filter
 function display_filter_form($filter_date = '', $filter_class = '') {
-    $events = get_option('available_competition_dates', []);
+    // Retrieve options
+    $options = get_option('competitors_options');
+    
+    // Extract competition dates from options
+    $events = isset($options['available_competition_dates']) ? $options['available_competition_dates'] : [];
     if (!is_array($events)) {
         $events = [];
     }
-    $classes = ['open', 'championship', 'amateur']; // Define participation classes
+
+    // Extract competition classes from options
+    $classes = isset($options['available_competition_classes']) ? $options['available_competition_classes'] : [];
+    if (!is_array($classes)) {
+        $classes = [];
+    }
+
     ?>
     <div id="filter_form" class="distance-large">
         <p>These filters are persistent until you change or reset.</p>
@@ -117,9 +126,11 @@ function display_filter_form($filter_date = '', $filter_class = '') {
         <select id="filter_class" name="filter_class">
             <option value=""><?php _e('All Classes', 'competitors'); ?></option>
             <?php foreach ($classes as $class): ?>
-                <option value="<?php echo esc_attr($class); ?>" <?php selected($filter_class, $class); ?>>
-                    <?php echo esc_html(ucfirst($class)); ?>
-                </option>
+                <?php if (isset($class['name']) && isset($class['comment'])): ?>
+                    <option value="<?php echo esc_attr($class['name']); ?>" <?php selected($filter_class, $class['name']); ?>>
+                        <?php echo esc_html($class['comment']); ?>
+                    </option>
+                <?php endif; ?>
             <?php endforeach; ?>
         </select>
 
@@ -128,6 +139,8 @@ function display_filter_form($filter_date = '', $filter_class = '') {
     </div>
     <?php
 }
+
+
 
 
 
