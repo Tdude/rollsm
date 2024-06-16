@@ -10,35 +10,60 @@ $text_strings = include_once 'assets/text-strings.php';
 
 function render_competitors_date_field_public() {
     // Retrieve the events; assume they are stored as an array of associative arrays
-    $events = get_option('available_competition_dates', []);
+    $options = get_option('competitors_options', []);
+    $events = isset($options['available_competition_dates']) ? $options['available_competition_dates'] : [];
     if (!is_array($events)) {
         $events = [];
     }
+    ob_start();
+    ?>
+    <div class="mb-3">
+        <label for="competition_date"><?php _e('Select your competition date', 'competitors'); ?> <span class="text-danger"> * </span></label>
+        <select id="competition_date" name="competition_date">
+            <option value=""><?php _e('Please select a date', 'competitors'); ?></option>
+            <?php foreach ($events as $event) : ?>
+                <?php
+                if (isset($event['date']) && isset($event['name'])) {
+                    $date = esc_html($event['date']);
+                    $name = esc_html($event['name']);
+                    $formatted_event = $date . ' - ' . $name;
+                ?>
+                    <option value="<?php echo esc_attr($date); ?>"><?php echo $formatted_event; ?></option>
+                <?php } ?>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <?php
+    return ob_get_clean();
+}
 
-    ob_start(); // Start output buffering to capture HTML
 
-    echo '<div class="mb-3">';
-    echo '<label for="competition_date">Select your competition date <span class="text-danger"> * </span></label>';
-    echo '<select id="competition_date" name="competition_date">';
 
-    // Provide an option to not select any specific date
-    echo '<option value="">Please select a date</option>';
 
-    // Append options dynamically
-    foreach ($events as $event) {
-        if (isset($event['date']) && isset($event['name'])) {
-            $date = esc_html($event['date']);
-            $name = esc_html($event['name']);
-            $formatted_event = $date . ' - ' . $name;
-            // Use date as the value, assuming it is unique and sufficient for identifying the event
-            echo '<option value="' . esc_attr($date) . '">' . $formatted_event . '</option>';
-        }
-    }
 
-    echo '</select>';
-    echo '</div>';
-
-    return ob_get_clean(); // Return the buffered content
+/**
+ * The dynamic classes
+ * Refactored according to the settings page
+ */
+function render_competitors_classes_field_public() {
+    $options = get_option('competitors_options', []);
+    $competitor_classes = isset($options['available_competition_classes']) ? $options['available_competition_classes'] : [
+        ['name' => 'open', 'comment' => 'Open (International participants, 30 minutes max. SEK 500)'],
+        ['name' => 'championship', 'comment' => 'Championship (club member and competition license holder, 30 minutes max. SEK 500)'],
+        ['name' => 'amateur', 'comment' => 'Amateur (No license needed, 10 minutes max. SEK 300)']
+    ];
+    
+    ob_start();
+    ?>
+    <div id="participation-class-container">
+        <label>Participation in Class <span class="text-danger">*</span></label><br>
+        <?php foreach ($competitor_classes as $class): ?>
+            <input aria-label="Participation Class - <?php echo esc_attr($class['name']); ?>" type="radio" id="<?php echo esc_attr($class['name']); ?>" name="participation_class" value="<?php echo esc_attr($class['name']); ?>">
+            <label for="<?php echo esc_attr($class['name']); ?>"><?php echo esc_html($class['comment']); ?></label><br>
+        <?php endforeach; ?>
+    </div>
+    <?php
+    return ob_get_clean();
 }
 
 
@@ -65,20 +90,11 @@ function competitors_form_html() {
             <input aria-label="Club" type="text" id="club" name="club"><br>
             <label for="sponsors">Your Sponsors</label>
             <input aria-label="Sponsors" type="text" id="sponsors"><br>
-            <label for="speaker_info">Speaker support text (Info about you)</label>
+            <label for="speaker_info">Support text (ICE phone number<span class="text-danger"> * </span>, info about you, allergies etc.)</label>
             <textarea aria-label="Speaker Info" id="speaker_info" name="speaker_info"></textarea><br>
 
             <?php echo render_competitors_date_field_public(); ?>
-
-            <div id="participation-class-container">
-                <label>Participation in Class <span class="text-danger">*</span></label><br>
-                <input aria-label="Participation Class - Open" type="radio" id="open" name="participation_class" value="open">
-                <label for="open">Open (International participants)</label><br>
-                <input aria-label="Participation Class - Championship" type="radio" id="championship" name="participation_class" value="championship">
-                <label for="championship">Championship (club member and comp. <a target="_blank" href="https://kanot.com/forening/administrativt-stod/licens-och-forsakring"> license holder</a>)</label><br>
-                <input aria-label="Participation Class - Amateur" type="radio" id="amateur" name="participation_class" value="amateur">
-                <label for="amateur">Amateur (No license needed)</label><br>
-            </div>
+            <?php echo render_competitors_classes_field_public(); ?>
 
             <div class="extra-visible" id="license-container">
                 <input aria-label="License agreement" type="checkbox" id="license" name="license">
@@ -86,7 +102,7 @@ function competitors_form_html() {
             </div>
             <div class="extra-visible" id="dinner-container">
                 <input aria-label="Join competition dinner" type="checkbox" id="dinner-check" name="dinner-check">
-                <label for="dinner-check">I want to join the competition dinner (200 SEK)</label>
+                <label for="dinner-check">Join competition dinner (200 SEK). Allergies? Write in the Support text above please!</label>
             </div>
             <div class="extra-visible" id="consent-container">
                 <input aria-label="Consent" type="checkbox" id="consent" name="consent" value="yes" required>
@@ -94,7 +110,7 @@ function competitors_form_html() {
             </div>
         </fieldset>
 
-        <p class="ptb-1">According to <a target="_blank" href="https://kanot.com/grenar/havskajak/tavling/gronlandsroll">The Rules</a>, you get 30 min to perform your rolls. However, to save time and make for a better comp, please let us know if there are rolls you will not try to perform. You can change your mind on the water, but we need a hint for time planning!</p>
+        <p class="ptb-1">According to <a target="_blank" href="https://kanot.com/grenar/havskajak/tavling/gronlandsroll">The Rules</a>, you get 30 min to perform your rolls in the Championship and Open classes. However, to save time and make for a better comp, please let us know if there are rolls you will not try to perform. You can change your mind on the water, but we need a hint for time planning!</p>
 
         <div id="performing-rolls-container">
             <?php echo render_performing_rolls_fieldset('open'); // Default to 'open' class initially ?>
@@ -114,6 +130,8 @@ function competitors_form_html() {
     return ob_get_clean(); 
 }
 add_shortcode('competitors_form_public', 'competitors_form_html');
+
+
 
 
 
@@ -167,7 +185,6 @@ function get_performing_rolls() {
         wp_send_json_error('Class type not specified.');
     }
 }
-
 
 add_action('wp_ajax_get_performing_rolls', 'get_performing_rolls');
 add_action('wp_ajax_nopriv_get_performing_rolls', 'get_performing_rolls');
@@ -309,7 +326,6 @@ add_shortcode('competitors_scoring_public', 'competitors_scoring_shortcode');
 
 
 
-// Available competition dates are created in admin under 'available_competition_dates'
 function competitors_scoring_list_page() {
     // Handle the transient message display and deletion
     if ($message = get_transient('competitors_scores_updated')) {
@@ -317,18 +333,17 @@ function competitors_scoring_list_page() {
         delete_transient('competitors_scores_updated');
     }
 
-    // Retrieve the option value for competition dates
-    $dates = get_option('available_competition_dates', []);
-    // Check if the dates are in JSON format and decode them if necessary
-    if (is_string($dates)) {
-        $dates = json_decode($dates, true);
-    }
-    // Ensure that dates is an array
+    // Retrieve the options value for competition dates and classes
+    $options = get_option('competitors_options', []);
+
+    // Extract competition dates from options
+    $dates = isset($options['available_competition_dates']) ? $options['available_competition_dates'] : [];
     if (!is_array($dates)) {
         $dates = [];
     }
 
-    $list_of_dates = '<option value="">All Dates</option>';
+    // Generate the options for the dates dropdown
+    $list_of_dates = '<option value="">' . __('All Dates', 'competitors') . '</option>';
     foreach ($dates as $date) {
         if (isset($date['date']) && isset($date['name'])) {
             $date_value = esc_attr($date['date']);
@@ -337,14 +352,33 @@ function competitors_scoring_list_page() {
         }
     }
 
+    // Extract competition classes from options
+    $classes = isset($options['available_competition_classes']) ? $options['available_competition_classes'] : [];
+    if (!is_array($classes)) {
+        $classes = [];
+    }
+
+    // Generate the options for the competitor classes dropdown
+    $list_of_classes = '<option value="">' . __('Select Class', 'competitors') . '</option>';
+    foreach ($classes as $class) {
+        if (isset($class['name']) && isset($class['comment'])) {
+            $class_value = esc_attr($class['name']);
+            $class_text = esc_html($class['comment']);
+            $list_of_classes .= '<option value="' . $class_value . '">' . $class_text . '</option>';
+        }
+    }
+
     // Output the HTML
     echo <<<HTML
     <div id="competitors-list">
         <h2>List of Competitors</h2>
         <fieldset>
-            <legend>Select a Competition Date</legend>
+            <legend>Select filters</legend>
             <select id="date-select" name="date_select">
                 {$list_of_dates}
+            </select>
+            <select id="class-select" name="class_select">
+                {$list_of_classes}
             </select>
         </fieldset>
         <div id="spinner"></div>
@@ -357,6 +391,11 @@ function competitors_scoring_list_page() {
 
 
 
+
+
+
+
+
 function load_competitors_list() {
     // Check if the nonce and the date_select are passed correctly
     if (!check_ajax_referer('competitors_nonce_action', 'security', false)) {
@@ -365,12 +404,30 @@ function load_competitors_list() {
     }
 
     $selected_date = isset($_POST['date_select']) ? sanitize_text_field($_POST['date_select']) : '';
+    $selected_class = isset($_POST['class_select']) ? sanitize_text_field($_POST['class_select']) : '';
 
     $args = ['post_type' => 'competitors', 'posts_per_page' => -1];
+
+    $meta_query = [];
+
     if (!empty($selected_date)) {
-        $args['meta_query'] = [
-            ['key' => 'competition_date', 'value' => $selected_date, 'compare' => '=']
+        $meta_query[] = [
+            'key' => 'competition_date',
+            'value' => $selected_date,
+            'compare' => '='
         ];
+    }
+
+    if (!empty($selected_class)) {
+        $meta_query[] = [
+            'key' => 'participation_class',
+            'value' => $selected_class,
+            'compare' => '='
+        ];
+    }
+
+    if (!empty($meta_query)) {
+        $args['meta_query'] = $meta_query;
     }
 
     $competitors_query = new WP_Query($args);
@@ -382,13 +439,14 @@ function load_competitors_list() {
             'ID' => get_the_ID(),
             'title' => get_the_title(),
             'total' => get_post_meta(get_the_ID(), 'total_score', true),
-            'club' => get_post_meta(get_the_ID(), 'club', true)
+            'club' => get_post_meta(get_the_ID(), 'club', true),
+            'participation_class' => get_post_meta(get_the_ID(), 'participation_class', true),
         ];
     }
     wp_reset_postdata();
+    
     // Send the JSON response with HTML content built
     wp_send_json_success(['content' => build_competitors_list_html($competitors_data)]);
-    
 }
 add_action('wp_ajax_load_competitors_list', 'load_competitors_list');
 add_action('wp_ajax_nopriv_load_competitors_list', 'load_competitors_list');
@@ -399,12 +457,9 @@ add_action('wp_ajax_nopriv_load_competitors_list', 'load_competitors_list');
 function build_competitors_list_html($competitors_data) {
     usort($competitors_data, function($a, $b) { return $b['total'] <=> $a['total']; });
     error_log(print_r($competitors_data, true)); 
+
     $html = '';
     foreach ($competitors_data as $competitor) {
-        // if (!isset($competitor['total']) || !is_numeric($competitor['total'])) {
-        //     error_log('Total points missing or non-numeric for competitor ID: ' . $competitor['ID']);
-        //     continue;  // Skip this iteration if total is not set properly
-        // }
         error_log('Competitor Total Raw: ' . $competitor['total']);  // Check raw value
         $total_points = intval($competitor['total']);
         error_log('Competitor Total Converted: ' . $total_points);  // Check converted value
@@ -420,6 +475,7 @@ function build_competitors_list_html($competitors_data) {
     
     return $html;
 }
+
 
 
 
@@ -444,12 +500,24 @@ add_action('wp_ajax_nopriv_load_competitor_details', 'load_competitor_details');
 
 
 
+
 function competitors_scoring_view_page($competitor_id = 0, $selected_date = null) {
     $rolls = get_roll_names_and_max_scores();
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log("Rolls Data: " . print_r($rolls, true));
+    }
 
     // Retrieve competitor scores and selected rolls
     $competitor_scores = get_post_meta($competitor_id, 'competitor_scores', true);
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log("Competitor Scores Data: " . print_r($competitor_scores, true));
+    }
+
     $selected_rolls_indexes = (array) get_post_meta($competitor_id, 'selected_rolls', true);
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log("Selected Rolls Indexes: " . print_r($selected_rolls_indexes, true));
+    }
+
     $no_scores_yet = empty($competitor_scores);
     $scores_text = $no_scores_yet ? __(" - Newly registered", 'competitors') : "";
 
@@ -480,20 +548,25 @@ function competitors_scoring_view_page($competitor_id = 0, $selected_date = null
         $selected_class = $is_selected ? 'selected-roll' : 'non-selected-roll';
 
         $scores = $competitor_scores[$index] ?? [];
-        $left_score = $scores['left_score'] ?? 0;
-        $left_deduct = $scores['left_deduct'] ?? 0;
-        $right_score = $scores['right_score'] ?? 0;
-        $right_deduct = $scores['right_deduct'] ?? 0;
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("Scores for roll index $index: " . print_r($scores, true));
+        }
 
-        // Determine the values to display for left and right scores and deductions
-        $left_display_score = $left_deduct ? '' : ($left_score ? esc_html($left_score) : '');
-        $left_display_deduct = $left_deduct ? esc_html($left_deduct) : '';
-        $right_display_score = $right_deduct ? '' : ($right_score ? esc_html($right_score) : '');
-        $right_display_deduct = $right_deduct ? esc_html($right_deduct) : '';
+        // Retrieve the scores and handle inconsistencies
+        $left_score = $scores['left_score'] ?? 0;
+        $left_group = $scores['left_group'] ?? 0;
+        $right_score = $scores['right_score'] ?? 0;
+        $right_group = $scores['right_group'] ?? 0;
+
+        // Determine the values to display for left and right scores and groups
+        $left_display_score = $left_score ? esc_html($left_score) : '';
+        $left_display_group = $left_group ? esc_html($left_group) : '';
+        $right_display_score = $right_score ? esc_html($right_score) : '';
+        $right_display_group = $right_group ? esc_html($right_group) : '';
 
         // Calculate total points
-        $total_left = $left_deduct ? $left_deduct : $left_score;
-        $total_right = $right_deduct ? $right_deduct : $right_score;
+        $total_left = $left_score + $left_group;
+        $total_right = $right_score + $right_group;
         $total = $total_left + $total_right;
 
         $grand_total += $total;
@@ -505,9 +578,9 @@ function competitors_scoring_view_page($competitor_id = 0, $selected_date = null
             esc_html($roll['name']),
             esc_html($roll['max_score']),
             $left_display_score,
-            $left_display_deduct,
+            $left_display_group,
             $right_display_score,
-            $right_display_deduct,
+            $right_display_group,
             $total
         );
     }
@@ -516,3 +589,5 @@ function competitors_scoring_view_page($competitor_id = 0, $selected_date = null
     echo '<tr><td colspan="5"><b>' . __('Grand Total Competitor Score', 'competitors') . '</b></td><td><b>' . esc_html($grand_total) . '</b></td></tr>';
     echo '</table>';
 }
+
+
