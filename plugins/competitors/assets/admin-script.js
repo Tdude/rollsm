@@ -984,8 +984,23 @@ jQuery(document).ready(function ($) {
     }
   }
 
+  // Check the local storage for the admin notice state
+  if (localStorage.getItem("instructionsVisible") === "true") {
+    $("#instructions-content").show();
+  } else {
+    $("#instructions-content").hide();
+  }
+
   // Toggle admin notice text
-  $("#toggle-instructions").click(function () {
-    $("#instructions-content").slideToggle();
+  $("#toggle-instructions").on("click", function () {
+    console.log("You have clicked the toggle Button");
+    $("#instructions-content").slideToggle(function () {
+      console.log("Instructions content toggled");
+      // Save the current state in local storage
+      localStorage.setItem(
+        "instructionsVisible",
+        $("#instructions-content").is(":visible")
+      );
+    });
   });
 });
