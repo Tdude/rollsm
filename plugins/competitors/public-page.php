@@ -151,9 +151,11 @@ function render_performing_rolls_fieldset($class = 'open') {
             <?php
             $rolls = get_roll_names_and_max_scores($class); // Ensure this function handles the class
             foreach ($rolls as $index => $roll) {
+                $max_score = isset($roll['max_score']) ? $roll['max_score'] : '';
+                $points_display = ($max_score == 0 || $max_score === '') ? 'N/A' : esc_html($max_score) . ' points';
                 echo '<tr class="clickable-row">';
                 echo '<td><input type="checkbox" class="roll-checkbox" checked id="roll_' . ($index + 1) . '" name="selected_rolls[' . $index . ']"></td>';
-                echo '<td>' . esc_html($roll['name']) . ' ' . (isset($roll['max_score']) ? esc_html($roll['max_score']) : '') . '</td>';
+                echo '<td>' . esc_html($roll['name']) . ' (' . $points_display . ')</td>';
                 echo '</tr>';
             } ?>
         </table>
@@ -161,6 +163,7 @@ function render_performing_rolls_fieldset($class = 'open') {
     <?php
     return ob_get_clean();
 }
+
 
 
 
