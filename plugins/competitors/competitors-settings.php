@@ -499,17 +499,17 @@ function render_competitors_main_settings_page() {
     render_admin_page_header();
 
     if (get_transient('competitors_settings_submitted')) {
-        echo '<div id="message" class="updated notice is-dismissible"><p>' . get_transient('competitors_settings_submitted') . '</p>';
+        echo '<div id="message" class="updated notice is-dismissible"><p>' . esc_html(get_transient('competitors_settings_submitted')) . '</p>';
         echo '<button type="button" class="notice-dismiss"><span class="screen-reader-text">Dismiss this notice.</span></button></div>';
         delete_transient('competitors_settings_submitted');
     }
 
     echo '<div class="wrap" id="settings-page">';
     echo '<h1>' . __('Rolls Settings', 'competitors') . '</h1>';
-    
+
     // Display the instructions section
     competitors_settings_section_callback();
-    
+
     echo '<form method="post" action="options.php">';
     settings_fields('competitors_rollnames_settings_group');
     do_settings_sections('competitors_rollnames_settings');
@@ -517,16 +517,6 @@ function render_competitors_main_settings_page() {
     echo '</form>';
     echo '</div>';
 }
-
-add_action('admin_menu', function() {
-    add_options_page(
-        __('Competitors Settings', 'competitors'),
-        __('Competitors', 'competitors'),
-        'manage_options',
-        'competitors',
-        'render_competitors_main_settings_page'
-    );
-});
 
 
 
@@ -609,7 +599,8 @@ function initialize_competitors_rollnames_settings() {
         'competitors_rollnames_settings'
     );
 
-    $participation_classes = get_option('available_competition_classes', []);
+    $options = get_option('competitors_options', []);
+    $participation_classes = isset($options['available_competition_classes']) ? $options['available_competition_classes'] : [];
     foreach ($participation_classes as $class) {
         if (!is_array($class) || !isset($class['name'])) {
             continue;
@@ -618,7 +609,7 @@ function initialize_competitors_rollnames_settings() {
 
         add_settings_field(
             "competitors_text_field_{$class_name}",
-            __('Roll Names for ', 'competitors') . " ({$class_name})",
+            __('Roll Names for - ', 'competitors') . " {$class_name}",
             function() use ($class_name) {
                 render_competitors_roll_field($class_name);
             },
@@ -702,7 +693,7 @@ function render_competitors_dates_field() {
 }
 
 
-// This function shows the classes with a list to add rolls as it should. The numeric fields checkbox is stuck after saving.
+// This function shows the rolls in classes with a list which is fine. Except they are from an earlier dataset. 
 function render_competitors_roll_field($class = 'open') {
 	$options = get_option('competitors_options', []);
 	$roll_names = isset($options["custom_values_{$class}"]) ? $options["custom_values_{$class}"] : [];
@@ -902,13 +893,14 @@ function competitors_options_sanitize($input) {
  * @return array An array of roll names with their max scores and numeric status for the specified class.
  */
 function get_roll_names_and_max_scores($class = 'open') {
-    $roll_names = get_option("competitors_custom_values_{$class}", []);
-    $roll_max_scores = get_option("competitors_numeric_values_{$class}", []);
-    $is_numeric_fields = get_option("competitors_is_numeric_field_{$class}", []);
+	$options = get_option('competitors_options', []);
+	$roll_names = isset($options["custom_values_{$class}"]) ? $options["custom_values_{$class}"] : [];
+	$roll_max_scores = isset($options["numeric_values_{$class}"]) ? $options["numeric_values_{$class}"] : [];
+	$is_numeric_fields = isset($options["is_numeric_field_{$class}"]) ? $options["is_numeric_field_{$class}"] : [];
 
-    $roll_names = is_array($roll_names) ? $roll_names : [];
-    $roll_max_scores = is_array($roll_max_scores) ? $roll_max_scores : [];
-    $is_numeric_fields = is_array($is_numeric_fields) ? $is_numeric_fields : [];
+	$roll_names = is_array($roll_names) ? $roll_names : [];
+	$roll_max_scores = is_array($roll_max_scores) ? $roll_max_scores : [];
+	$is_numeric_fields = is_array($is_numeric_fields) ? $is_numeric_fields : [];
 
     // Default values if both arrays are empty
     if (empty($roll_names) && empty($roll_max_scores)) {

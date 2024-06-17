@@ -920,7 +920,7 @@ jQuery(document).ready(function ($) {
     if ($wrapper.find(".roll-item").length > 1) {
       $(this).parent().remove();
     } else {
-      alert("At least one roll must remain.");
+      alert("At least one roll must remain. Remove the class instead!");
     }
   });
 
