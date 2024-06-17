@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Competitors
  * Description:  For RollSM, A Greenland Rolling Championships registering and scoreboard plugin with live scores.
- * Version: 0.96
+ * Version: 0.97
  * Author: <a href="https://klickomaten.com">Tibor Berki</a>. /Tdude @Github.
  * Text Domain: competitors
  * Domain Path: /languages
  */
 
-define('COMPETITORS_PLUGIN_VERSION', '0.96');
+define('COMPETITORS_PLUGIN_VERSION', '0.97');
 
 
 // REMOVE OR COMMENT OUT AFTER DONE DEV!!!
@@ -51,6 +51,10 @@ function post_has_shortcodes($post, $shortcodes) {
     }
     return false;
 }
+
+
+
+
 
 
 /**
@@ -381,7 +385,6 @@ function add_competitors_admin_menu() {
         'dashicons-clipboard',             // Icon (optional)
         27                                 // Position
     );
-    add_action('admin_init', 'competitors_settings_section_callback'); // Ensure the callback is registered
 }
 add_action('admin_menu', 'add_competitors_admin_menu');
 
@@ -431,38 +434,6 @@ function add_competitors_submenu_for_judges_scoring() {
 }
 add_action('admin_menu', 'add_competitors_submenu_for_judges_scoring');
 
-/**
- *  Just HTML explanation for admins, presented with a toggle button
- */ 
-function competitors_settings_section_callback() {
-    $external_url = 'https://www.qajaqusa.org/content.aspx?page_id=22&club_id=349669&module_id=345648';
-
-    echo '<div class="wrap">';
-    // Button to toggle the collapsible content
-    echo '<button type="button" id="toggle-instructions" class="button button-secondary">';
-    echo __('Show/Hide Instructions', 'competitors');
-    echo '</button>';
-    
-    // Collapsible content
-    echo '<div id="instructions-content" class="instructions-content" style="display:none;">';
-    echo '<div class="two-cols">';
-    echo '<div>';
-    echo '<h2>' . __('Here you can set Custom Values for roll names. One roll name or maneuver on each row. Add rows with +.', 'competitors') . '</h2>';
-    echo '<p>' . __('These values correspond to what rolls competitors check with check boxes on the front end, as well as the admin area. See other tabs.', 'competitors') . '</p>';
-    echo '<p>' . __('If you choose a "Numeric" input, you should leave the points blank! It will be filled in by the judges for speedrolling and such.', 'competitors') . '</p>';
-    echo '<p>' . __('There are three different possible scoreboards by default, corresponding to what class the competitor will register to. A competitor can participate in one class only. You can add classes, rolls etc. but keep in mind you can NOT change the sequence later. Also, if you delete a class, all competitors will be unavailable (but the data is retrievable). If more freedom is needed, let me know, but keep in mind: Your favourite apps have thousands of developers and cost billions! Not joking.', 'competitors') . '</p>';
-    echo '</div>';
-    echo '<div>';
-    echo '<h2>' . __('How to use the registration and results page(s)', 'competitors') . '</h2>';
-    echo '<p>' . __('You can display either the registration form for competitors or the results on any WP Post or Page with the following shortcodes:', 'competitors') . '</p>';
-    echo '<pre>[competitors_form_public] or [competitors_scoring_public]</pre>';
-    echo '<p>' . __('There is a default page <a href="' . site_url('/competitors-display-page') . '" target="_blank">created here</a> for your convenience, which you can use, edit, or delete.', 'competitors') . '</p>';
-    echo '<p>' . __('Over at Qajaq USA there is an <a href="' . esc_url($external_url) . '" target="_blank" rel="noopener noreferrer">excellent page</a> but with dodgy links where you can learn the roll names in Inuit. If the link is a no-go, go to "QAANNAT KATTUFFIAT" > "GREENLAND CHAMPIONSHIP" and have a look at that page.', 'competitors') . '</p>';
-    echo '</div>';
-    echo '</div>';
-    echo '</div>';
-    echo '</div>';
-}
 
 /**
  * Everyone loves tabs in the admin, right?
@@ -490,6 +461,36 @@ function render_admin_page_header() {
 /**
  * Renders the form for the plugin's roll settings page.
  */
+function competitors_settings_section_callback() {
+    $external_url = 'https://www.qajaqusa.org/content.aspx?page_id=22&club_id=349669&module_id=345648';
+
+    echo '<div class="wrap">';
+    // Button to toggle the collapsible content
+    echo '<button type="button" id="toggle-instructions" class="button button-secondary">';
+    echo __('Show/Hide Instructions', 'competitors');
+    echo '</button>';
+    
+    // Collapsible content
+    echo '<div id="instructions-content" class="instructions-content">';
+    echo '<div class="two-cols">';
+    echo '<div>';
+    echo '<h2>' . __('Here you can set Custom Values for roll names. One roll name or maneuver on each row. Add rows with +.', 'competitors') . '</h2>';
+    echo '<p>' . __('These values correspond to what rolls competitors check with check boxes on the front end, as well as the admin area. See other tabs.', 'competitors') . '</p>';
+    echo '<p>' . __('If you choose a "Numeric" input, you should leave the points blank! It will be filled in by the judges for speedrolling and such.', 'competitors') . '</p>';
+    echo '<p>' . __('There are three different possible scoreboards by default, corresponding to what class the competitor will register to. A competitor can participate in one class only. You can add classes, rolls etc. but keep in mind you can NOT change the sequence later. Also, if you delete a class, all competitors will be unavailable (but the data is retrievable). If more freedom is needed, let me know, but keep in mind: Your favourite apps have thousands of developers and cost billions! Not joking.', 'competitors') . '</p>';
+    echo '</div>';
+    echo '<div>';
+    echo '<h2>' . __('How to use the registration and results page(s)', 'competitors') . '</h2>';
+    echo '<p>' . __('You can display either the registration form for competitors or the results on any WP Post or Page with the following shortcodes:', 'competitors') . '</p>';
+    echo '<pre>[competitors_form_public] or [competitors_scoring_public]</pre>';
+    echo '<p>' . __('There is a default page <a href="' . site_url('/competitors-display-page') . '" target="_blank">created here</a> for your convenience, which you can use, edit, or delete.', 'competitors') . '</p>';
+    echo '<p>' . __('Over at Qajaq USA there is an <a href="' . esc_url($external_url) . '" target="_blank" rel="noopener noreferrer">excellent page</a> but with dodgy links where you can learn the roll names in Inuit. If the link is a no-go, go to "QAANNAT KATTUFFIAT" > "GREENLAND CHAMPIONSHIP" and have a look at that page.', 'competitors') . '</p>';
+    echo '</div>';
+    echo '</div>';
+    echo '</div>';
+    echo '</div>';
+}
+
 function render_competitors_main_settings_page() {
     if (!current_user_can('manage_options')) {
         echo 'Access denied to settings dude, sorry.';
@@ -498,17 +499,38 @@ function render_competitors_main_settings_page() {
     render_admin_page_header();
 
     if (get_transient('competitors_settings_submitted')) {
-        echo '<div id="message" class="updated notice is-dismissible"><p>' . get_transient('competitors_settings_submitted') . '</p></div>';
+        echo '<div id="message" class="updated notice is-dismissible"><p>' . get_transient('competitors_settings_submitted') . '</p>';
+        echo '<button type="button" class="notice-dismiss"><span class="screen-reader-text">Dismiss this notice.</span></button></div>';
         delete_transient('competitors_settings_submitted');
     }
+
     echo '<div class="wrap" id="settings-page">';
     echo '<h1>' . __('Rolls Settings', 'competitors') . '</h1>';
+    
+    // Display the instructions section
+    competitors_settings_section_callback();
+    
     echo '<form method="post" action="options.php">';
     settings_fields('competitors_rollnames_settings_group');
     do_settings_sections('competitors_rollnames_settings');
     submit_button();
-    echo '</form></div>';
+    echo '</form>';
+    echo '</div>';
 }
+
+add_action('admin_menu', function() {
+    add_options_page(
+        __('Competitors Settings', 'competitors'),
+        __('Competitors', 'competitors'),
+        'manage_options',
+        'competitors',
+        'render_competitors_main_settings_page'
+    );
+});
+
+
+
+
 
 /**
  * Renders the Classes and Dates tab content
@@ -680,50 +702,49 @@ function render_competitors_dates_field() {
 }
 
 
-// This function shows the classes with a list to add rolls as it should. The adding/removal does not work
+// This function shows the classes with a list to add rolls as it should. The numeric fields checkbox is stuck after saving.
 function render_competitors_roll_field($class = 'open') {
-    // Retrieve the options for the given class
-    $options = get_option('competitors_options', []);
-    $roll_names = isset($options["custom_values_{$class}"]) ? $options["custom_values_{$class}"] : [];
-    $points_values = isset($options["numeric_values_{$class}"]) ? $options["numeric_values_{$class}"] : [];
-    $is_numeric_fields = isset($options["is_numeric_field_{$class}"]) ? $options["is_numeric_field_{$class}"] : [];
+	$options = get_option('competitors_options', []);
+	$roll_names = isset($options["custom_values_{$class}"]) ? $options["custom_values_{$class}"] : [];
+	$points_values = isset($options["numeric_values_{$class}"]) ? $options["numeric_values_{$class}"] : [];
+	$is_numeric_fields = isset($options["is_numeric_field_{$class}"]) ? $options["is_numeric_field_{$class}"] : [];
 
-    // Make arrays
-    $roll_names = is_array($roll_names) ? $roll_names : [];
-    $points_values = is_array($points_values) ? $points_values : array_fill(0, count($roll_names), '');
-    $is_numeric_fields = is_array($is_numeric_fields) ? $is_numeric_fields : array_fill(0, count($roll_names), false);
+	$roll_names = is_array($roll_names) ? $roll_names : [];
+	$points_values = is_array($points_values) ? $points_values : array_fill(0, count($roll_names), '');
+	$is_numeric_fields = is_array($is_numeric_fields) ? $is_numeric_fields : array_fill(0, count($roll_names), false);
 
-    ob_start();
-    ?>
-    <div id="competitors_roll_names_wrapper_<?php echo esc_attr($class); ?>">
-        <?php if (empty($roll_names)) {
-            $roll_names = [''];
-            $points_values = [''];
-            $is_numeric_fields = [false];
-        }
+	ob_start();
+	?>
+	<div id="competitors_roll_names_wrapper_<?php echo esc_attr($class); ?>">
+		<?php if (empty($roll_names)) {
+			$roll_names = [''];
+			$points_values = [''];
+			$is_numeric_fields = [false];
+		}
 
-        foreach ($roll_names as $index => $roll_name) {
-            $roll_name = trim($roll_name);
-            $point_value = isset($points_values[$index]) ? esc_attr($points_values[$index]) : '0';
-            $numeric_checked = isset($is_numeric_fields[$index]) && $is_numeric_fields[$index] ? 'checked' : '';
-            ?>
-            <p class="roll-item <?php echo $index % 2 == 0 ? 'alternate' : ''; ?>" data-index="<?php echo esc_attr($index); ?>">
-                <label for="maneuver_<?php echo esc_attr($class . '_' . $index); ?>">Maneuver </label>
-                <input type="text" id="maneuver_<?php echo esc_attr($class . '_' . $index); ?>" name="competitors_options[custom_values_<?php echo esc_attr($class); ?>][]" size="60" value="<?php echo esc_attr($roll_name); ?>" />
-                <label for="points_<?php echo esc_attr($class . '_' . $index); ?>"> Points: </label>
-                <input type="text" class="numeric-input" id="points_<?php echo esc_attr($class . '_' . $index); ?>" name="competitors_options[numeric_values_<?php echo esc_attr($class); ?>][]" size="2" maxlength="2" pattern="\d*" value="<?php echo esc_attr($point_value); ?>" />
-                <label for="numeric_<?php echo esc_attr($class . '_' . $index); ?>"> Numeric:</label>
-                <input type="checkbox" id="numeric_<?php echo esc_attr($class . '_' . $index); ?>" name="competitors_options[is_numeric_field_<?php echo esc_attr($class); ?>][<?php echo esc_attr($index); ?>]" value="1" <?php echo $numeric_checked; ?>>
-                <?php if ($index === 0) { ?>
-                    <button type="button" id="add_more_roll_names_<?php echo esc_attr($class); ?>" class="button custom-button button-primary plus-button"></button>
-                <?php } ?>
-                <button type="button" class="button custom-button button-secondary remove-row">Remove</button>
-            </p>
-        <?php } ?>
-    </div>
-    <?php
-    echo ob_get_clean();
+		foreach ($roll_names as $index => $roll_name) {
+			$roll_name = trim($roll_name);
+			$point_value = isset($points_values[$index]) ? esc_attr($points_values[$index]) : '0';
+            $numeric_checked = isset($is_numeric_fields[$index]) && $is_numeric_fields[$index] === '1' ? 'checked' : '';
+			?>
+			<p class="roll-item <?php echo $index % 2 == 0 ? 'alternate' : ''; ?>" data-index="<?php echo esc_attr($index); ?>">
+				<label for="maneuver_<?php echo esc_attr($class . '_' . $index); ?>">Maneuver </label>
+				<input type="text" id="maneuver_<?php echo esc_attr($class . '_' . $index); ?>" name="competitors_options[custom_values_<?php echo esc_attr($class); ?>][]" size="60" value="<?php echo esc_attr($roll_name); ?>" />
+				<label for="points_<?php echo esc_attr($class . '_' . $index); ?>"> Points: </label>
+				<input type="text" class="numeric-input" id="points_<?php echo esc_attr($class . '_' . $index); ?>" name="competitors_options[numeric_values_<?php echo esc_attr($class); ?>][]" size="2" maxlength="2" pattern="\d*" value="<?php echo esc_attr($point_value); ?>" />
+				<label for="numeric_<?php echo esc_attr($class . '_' . $index); ?>"> Numeric:</label>
+				<input type="checkbox" id="numeric_<?php echo esc_attr($class . '_' . $index); ?>" name="competitors_options[is_numeric_field_<?php echo esc_attr($class); ?>][<?php echo esc_attr($index); ?>]" value="1" <?php echo $numeric_checked; ?>>
+				<?php if ($index === 0) { ?>
+					<button type="button" id="add_more_roll_names_<?php echo esc_attr($class); ?>" class="button custom-button button-primary plus-button"></button>
+				<?php } ?>
+				<button type="button" class="button custom-button button-secondary remove-row">Remove</button>
+			</p>
+		<?php } ?>
+	</div>
+	<?php
+	echo ob_get_clean();
 }
+
 
 
 /**
@@ -814,66 +835,64 @@ function debug_competitors_options_submission() {
 
 
 function competitors_options_sanitize($input) {
-    $sanitized = get_option('competitors_options', []);
+	$sanitized = get_option('competitors_options', []);
 
-    // Sanitize available competition classes
-    if (isset($input['available_competition_classes'])) {
-        $sanitized['available_competition_classes'] = [];
-        foreach ($input['available_competition_classes'] as $class) {
-            if (is_array($class) && isset($class['name']) && isset($class['comment'])) {
-                $sanitized['available_competition_classes'][] = [
-                    'name' => sanitize_text_field($class['name']),
-                    'comment' => sanitize_text_field($class['comment']),
-                ];
-            } elseif (is_string($class)) {
-                $decoded_class = json_decode(urldecode($class), true);
-                if (is_array($decoded_class) && isset($decoded_class['name']) && isset($decoded_class['comment'])) {
-                    $sanitized['available_competition_classes'][] = [
-                        'name' => sanitize_text_field($decoded_class['name']),
-                        'comment' => sanitize_text_field($decoded_class['comment']),
-                    ];
-                }
-            }
-        }
-    }
+	// Sanitize available competition classes
+	if (isset($input['available_competition_classes'])) {
+		$sanitized['available_competition_classes'] = [];
+		foreach ($input['available_competition_classes'] as $class) {
+			if (is_array($class) && isset($class['name']) && isset($class['comment'])) {
+				$sanitized['available_competition_classes'][] = [
+					'name' => sanitize_text_field($class['name']),
+					'comment' => sanitize_text_field($class['comment']),
+				];
+			} elseif (is_string($class)) {
+				$decoded_class = json_decode(urldecode($class), true);
+				if (is_array($decoded_class) && isset($decoded_class['name']) && isset($decoded_class['comment'])) {
+					$sanitized['available_competition_classes'][] = [
+						'name' => sanitize_text_field($decoded_class['name']),
+						'comment' => sanitize_text_field($decoded_class['comment']),
+					];
+				}
+			}
+		}
+	}
 
-    // Sanitize available competition dates
-    if (isset($input['available_competition_dates'])) {
-        $sanitized['available_competition_dates'] = [];
-        foreach ($input['available_competition_dates'] as $event) {
-            if (is_array($event) && isset($event['date']) && isset($event['name'])) {
-                $sanitized['available_competition_dates'][] = [
-                    'date' => sanitize_text_field($event['date']),
-                    'name' => sanitize_text_field($event['name']),
-                ];
-            } elseif (is_string($event)) {
-                $decoded_event = json_decode(urldecode($event), true);
-                if (is_array($decoded_event) && isset($decoded_event['date']) && isset($decoded_event['name'])) {
-                    $sanitized['available_competition_dates'][] = [
-                        'date' => sanitize_text_field($decoded_event['date']),
-                        'name' => sanitize_text_field($decoded_event['name']),
-                    ];
-                }
-            }
-        }
-    }
+	// Sanitize available competition dates
+	if (isset($input['available_competition_dates'])) {
+		$sanitized['available_competition_dates'] = [];
+		foreach ($input['available_competition_dates'] as $event) {
+			if (is_array($event) && isset($event['date']) && isset($event['name'])) {
+				$sanitized['available_competition_dates'][] = [
+					'date' => sanitize_text_field($event['date']),
+					'name' => sanitize_text_field($event['name']),
+				];
+			} elseif (is_string($event)) {
+				$decoded_event = json_decode(urldecode($event), true);
+				if (is_array($decoded_event) && isset($decoded_event['date']) && isset($decoded_event['name'])) {
+					$sanitized['available_competition_dates'][] = [
+						'date' => sanitize_text_field($decoded_event['date']),
+						'name' => sanitize_text_field($decoded_event['name']),
+					];
+				}
+			}
+		}
+	}
 
-    // Sanitize custom values
-    foreach ($input as $key => $value) {
-        if (strpos($key, 'custom_values_') === 0) {
-            $sanitized[$key] = array_map('sanitize_text_field', (array) $value);
-        } elseif (strpos($key, 'numeric_values_') === 0) {
-            $sanitized[$key] = array_map('sanitize_text_field', (array) $value);
-        } elseif (strpos($key, 'is_numeric_field_') === 0) {
+	// Sanitize custom values and checkboxes
+	foreach ($input as $key => $value) {
+		if (strpos($key, 'custom_values_') === 0) {
+			$sanitized[$key] = array_map('sanitize_text_field', (array) $value);
+		} elseif (strpos($key, 'numeric_values_') === 0) {
+			$sanitized[$key] = array_map('sanitize_text_field', (array) $value);
+		} elseif (strpos($key, 'is_numeric_field_') === 0) {
             $sanitized[$key] = array_map(function($item) {
-                return filter_var($item, FILTER_VALIDATE_BOOLEAN);
+                return filter_var($item, FILTER_VALIDATE_BOOLEAN) ? '1' : '0';
             }, (array) $value);
         }
-    }
+	}
 
-    //error_log('Sanitized Data: ' . print_r($sanitized, true)); // Log sanitized data for debugging
-
-    return $sanitized;
+	return $sanitized;
 }
 
 

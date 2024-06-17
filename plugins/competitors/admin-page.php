@@ -1,5 +1,4 @@
 <?php
-// Utility Function 11 jun
 function echo_table_cell($content) {
     echo '<td>' . esc_html($content) . '</td>';
 }
