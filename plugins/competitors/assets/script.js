@@ -207,7 +207,7 @@ document.addEventListener("DOMContentLoaded", () => {
           form.reset();
           setTimeout(() => {
             window.location.href = `${competitorsPublicAjax.baseURL}/${competitorsPublicAjax.thankYouSlug}`;
-          }, 5000);
+          }, 2000);
         }
       } catch (error) {
         console.error("Error during form submission:", error);

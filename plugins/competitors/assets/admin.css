@@ -459,7 +459,9 @@ tr.competitor-header:hover,
   padding: 15px;
   background-color: #f9f9f9;
 }
-
+#instructions-content .two-cols p {
+  display: inline-block;
+}
 .two-cols {
   display: flex;
   flex-wrap: wrap;

@@ -483,7 +483,7 @@ function competitors_settings_section_callback() {
     echo '<h2>' . __('How to use the registration and results page(s)', 'competitors') . '</h2>';
     echo '<p>' . __('You can display either the registration form for competitors or the results on any WP Post or Page with the following shortcodes:', 'competitors') . '</p>';
     echo '<pre>[competitors_form_public] or [competitors_scoring_public]</pre>';
-    echo '<p>' . __('There is a default page <a href="' . site_url('/competitors-display-page') . '" target="_blank">created here</a> for your convenience, which you can use, edit, or delete.', 'competitors') . '</p>';
+    echo '<p>' . __('There is a default page <a href="' . site_url('/competitors-display-page') . '" target="_blank"> created here </a> for your convenience, which you can use, edit, or delete.', 'competitors') . '</p>';
     echo '<p>' . __('Over at Qajaq USA there is an <a href="' . esc_url($external_url) . '" target="_blank" rel="noopener noreferrer">excellent page</a> but with dodgy links where you can learn the roll names in Inuit. If the link is a no-go, go to "QAANNAT KATTUFFIAT" > "GREENLAND CHAMPIONSHIP" and have a look at that page.', 'competitors') . '</p>';
     echo '</div>';
     echo '</div>';
@@ -939,7 +939,7 @@ function get_roll_names_and_max_scores($class = 'open') {
 function custom_back_button_shortcode($atts) {
     $attributes = shortcode_atts(array(
         'url' => '', // Default is empty, meaning no custom URL is provided
-        'text' => 'Tillbaka', // Default button text
+        'text' => 'Back', // Default button text
     ), $atts);
 
     // Sanitize the button text to ensure it's safe to use
