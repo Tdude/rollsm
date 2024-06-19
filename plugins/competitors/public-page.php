@@ -7,7 +7,6 @@ $text_strings = include_once 'assets/text-strings.php';
 
 
 
-
 function render_competitors_date_field_public() {
     // Retrieve the events; assume they are stored as an array of associative arrays
     $options = get_option('competitors_options', []);
@@ -39,8 +38,6 @@ function render_competitors_date_field_public() {
 
 
 
-
-
 /**
  * The dynamic classes
  * Refactored according to the settings page
@@ -65,8 +62,6 @@ function render_competitors_classes_field_public() {
     <?php
     return ob_get_clean();
 }
-
-
 
 
 
@@ -133,8 +128,6 @@ add_shortcode('competitors_form_public', 'competitors_form_html');
 
 
 
-
-
 function render_performing_rolls_fieldset($class = 'open') {
     ob_start();
     ?>
@@ -163,8 +156,6 @@ function render_performing_rolls_fieldset($class = 'open') {
     <?php
     return ob_get_clean();
 }
-
-
 
 
 
@@ -240,7 +231,6 @@ function handle_competitors_form_submission() {
     foreach ($required_fields as $field) {
         if (!isset($_POST[$field])) {
             error_log("Required field {$field} is missing.");
-            echo "Required field {$field} is missing.";
             wp_send_json_error(['message' => "Error: Required field {$field} is missing."]);
         }
     }
@@ -248,7 +238,7 @@ function handle_competitors_form_submission() {
     // Sanitize and validate inputs.
     $name = sanitize_text_field($_POST['name']);
     $email = sanitize_email($_POST['email']);
-    $phone = sanitize_phone_number($_POST['phone']);
+    $phone = sanitize_text_field($_POST['phone']); // Updated sanitization
     $consent = isset($_POST['consent']) && $_POST['consent'] === 'yes' ? 'yes' : 'no';
 
     // Validate inputs.
@@ -309,9 +299,34 @@ function handle_competitors_form_submission() {
     }
 
     error_log('Post created with ID: ' . $competitor_id);
+
+    // Call function to send email to all WP administrators
+    send_admin_email($name, $email, $phone, $club, $sponsors, $participation_class, $competition_date);
+
     ob_clean(); // Clean (erase) the output buffer
     wp_send_json_success(['message' => 'Thanks for registering, this will be fun!']);
 }
+
+function send_admin_email($name, $email, $phone, $club, $sponsors, $participation_class, $competition_date) {
+    $admins = get_users(['role' => 'administrator']);
+    $admin_emails = wp_list_pluck($admins, 'user_email');
+    $subject = 'Ny registrering';
+    $message = "En till rollare har anmält sig, tjohoo!\n\n" .
+               "Namn: $name\n" .
+               "Email: $email\n" .
+               "Tel: $phone\n" .
+               "Klubb: $club\n" .
+               "Sponsorer: $sponsors\n" .
+               "Klass: $participation_class\n" .
+               "Datum för tävling: $competition_date\n";
+
+    if (!wp_mail($admin_emails, $subject, $message)) {
+        error_log('Failed to send email to administrators.');
+    } else {
+        error_log('Email sent to administrators.');
+    }
+}
+
 // Register AJAX actions for logged-in and non-logged-in users.
 add_action('wp_ajax_competitors_form_submit', 'handle_competitors_form_submission');
 add_action('wp_ajax_nopriv_competitors_form_submit', 'handle_competitors_form_submission');
@@ -390,12 +405,6 @@ function competitors_scoring_list_page() {
     </div>
     HTML;
 }
-
-
-
-
-
-
 
 
 
@@ -481,8 +490,6 @@ function build_competitors_list_html($competitors_data) {
 
 
 
-
-
 function load_competitor_details() {
     check_ajax_referer('competitors_nonce_action', 'security');
 
@@ -498,9 +505,6 @@ function load_competitor_details() {
 }
 add_action('wp_ajax_load_competitor_details', 'load_competitor_details');
 add_action('wp_ajax_nopriv_load_competitor_details', 'load_competitor_details');
-
-
-
 
 
 
