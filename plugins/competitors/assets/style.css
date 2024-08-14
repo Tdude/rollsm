@@ -138,7 +138,7 @@ tr.non-selected-roll {
 
 /* Utility nice-to-haves */
 .mega-text {
-  font-size: var(--wp--preset--font-size--x-large);
+  font-size: var(--wp--preset--font-size--x-large) !important;
   display: block;
   margin: var(--wp--preset--spacing--10) var(--wp--preset--spacing--20);
 }
