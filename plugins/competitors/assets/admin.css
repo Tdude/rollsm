@@ -570,3 +570,19 @@ tr.competitor-header:hover,
 .wrap .remove-row {
   margin-left: auto;
 }
+
+/* For printing admin pages */
+@media print {
+  #adminmenumain,
+  #wpadminbar,
+  #screen-meta,
+  #screen-meta-links,
+  #wpfooter {
+    display: none !important;
+  }
+
+  #wpcontent,
+  #wpbody-content {
+    margin-left: 0 !important;
+  }
+}
