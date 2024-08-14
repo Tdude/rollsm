@@ -1,8 +1,7 @@
 <?php
 /*
 * First, include text-strings.php, which localizes them if your theme has that. Then add strings as neccessary in that file.
-* Use like this: {$text_strings['messages']['no_competitors']}
-* I kinda gave up on all this language stuff
+* Use like this: {$text_strings['messages']['no_competitors']}'
 */
 $text_strings = include_once 'assets/text-strings.php';
 
@@ -143,7 +142,7 @@ function render_performing_rolls_fieldset($class = 'open') {
                 <th>Name of roll or maneuver. Uncheck the rolls you don't want to perform. You can change your mind during the event.</th>
             </tr>
             <?php
-            $rolls = get_roll_names_and_max_scores($class); // Ensure this function handles the class
+            $rolls = get_roll_names_and_max_scores($class); // Ensure this actually handles the class
             foreach ($rolls as $index => $roll) {
                 $max_score = isset($roll['max_score']) ? $roll['max_score'] : '';
                 $points_display = ($max_score == 0 || $max_score === '') ? 'N/A' : esc_html($max_score) . ' points';
@@ -650,7 +649,7 @@ function competitors_scoring_view_page($competitor_id = 0, $selected_date = null
 
     foreach ($rolls as $index => $roll) {
         $is_selected = in_array($index, $selected_rolls_indexes, true);
-        $selected_class = $is_selected ? 'selected-roll' : 'non-selected-roll';
+        $selected_css_class = $is_selected ? 'selected-roll' : 'non-selected-roll';
 
         $scores = $competitor_scores[$index] ?? [];
         if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -679,7 +678,7 @@ function competitors_scoring_view_page($competitor_id = 0, $selected_date = null
         // Output each roll's data
         echo sprintf(
             '<tr class="%s"><td>%s (%s)</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%d</td></tr>',
-            esc_attr($selected_class),
+            esc_attr($selected_css_class),
             esc_html($roll['name']),
             esc_html($roll['max_score']),
             $left_display_score,
