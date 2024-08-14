@@ -1004,3 +1004,32 @@ jQuery(document).ready(function ($) {
     });
   });
 });
+
+// For printing out in admin which rolls a competitor wants to perform
+function toggleSelectedRolls() {
+  document.querySelectorAll(".open-details").forEach((row) => {
+    row.addEventListener("click", () => {
+      // Hide all 'open-details' and 'selected-rolls' rows
+      document
+        .querySelectorAll(".open-details, .selected-rolls")
+        .forEach((row) => {
+          row.classList.add("hidden");
+        });
+
+      // Unhide the clicked 'open-details' row
+      row.classList.remove("hidden");
+
+      // Toggle the relevant 'selected-rolls' rows for the clicked 'open-details' row
+      let nextSibling = row.nextElementSibling;
+      while (nextSibling && !nextSibling.classList.contains("open-details")) {
+        if (nextSibling.classList.contains("selected-rolls")) {
+          nextSibling.classList.toggle("hidden");
+        }
+        nextSibling = nextSibling.nextElementSibling;
+      }
+    });
+  });
+}
+
+// Ensure the function runs after the DOM is fully loaded
+document.addEventListener("DOMContentLoaded", toggleSelectedRolls);
