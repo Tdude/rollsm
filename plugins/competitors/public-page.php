@@ -1,7 +1,8 @@
 <?php
 /*
 * First, include text-strings.php, which localizes them if your theme has that. Then add strings as neccessary in that file.
-' Use like this: {$text_strings['messages']['no_competitors']}'
+* Use like this: {$text_strings['messages']['no_competitors']}
+* I kinda gave up on all this language stuff
 */
 $text_strings = include_once 'assets/text-strings.php';
 
@@ -85,7 +86,7 @@ function competitors_form_html() {
             <input aria-label="Club" type="text" id="club" name="club"><br>
             <label for="sponsors">Your Sponsors</label>
             <input aria-label="Sponsors" type="text" id="sponsors"><br>
-            <label for="speaker_info">Support text (ICE phone number<span class="text-danger"> * </span>, info about you, allergies etc.)</label>
+            <label for="speaker_info">Support text (ICE phone number<span class="text-danger"> * </span>, info about you, food preferences/allergies etc.)</label>
             <textarea aria-label="Speaker Info" id="speaker_info" name="speaker_info"></textarea><br>
 
             <?php echo render_competitors_date_field_public(); ?>
@@ -96,8 +97,8 @@ function competitors_form_html() {
                 <label for="license">I have a competition license or will get one for this comp! (Read more about <a target="_blank" href="https://kanot.com/forening/administrativt-stod/licens-och-forsakring"> licensing rules here</a>)</label>
             </div>
             <div class="extra-visible" id="dinner-container">
-                <input aria-label="Join competition dinner" type="checkbox" id="dinner-check" name="dinner-check">
-                <label for="dinner-check">Join competition dinner (200 SEK). Allergies? Write in the Support text above please!</label>
+                <input aria-label="Join competition dinner" type="checkbox" id="dinner" name="dinner">
+                <label for="dinner">Join competition dinner (200 SEK). Allergies? Write in the Support text above please!</label>
             </div>
             <div class="extra-visible" id="consent-container">
                 <input aria-label="Consent" type="checkbox" id="consent" name="consent" value="yes" required>
@@ -211,7 +212,7 @@ function is_valid_name($name) {
  * After calling wp_send_json_error or wp_send_json_success, no further output should be sent, 
  * and there's no need for an explicit return because these functions call wp_die()
 */
-function handle_competitors_form_submission() {
+function handle_competitor_form_submission() {
     error_log('Form submission initiated.');
 
     // Check for nonce field existence.
@@ -238,7 +239,7 @@ function handle_competitors_form_submission() {
     // Sanitize and validate inputs.
     $name = sanitize_text_field($_POST['name']);
     $email = sanitize_email($_POST['email']);
-    $phone = sanitize_text_field($_POST['phone']); // Updated sanitization
+    $phone = sanitize_text_field($_POST['phone']);
     $consent = isset($_POST['consent']) && $_POST['consent'] === 'yes' ? 'yes' : 'no';
 
     // Validate inputs.
@@ -256,19 +257,34 @@ function handle_competitors_form_submission() {
     }
 
     // Additional sanitization for other fields.
-    $club = sanitize_text_field($_POST['club']);
-    $sponsors = sanitize_text_field($_POST['sponsors']);
-    $speaker_info = sanitize_textarea_field($_POST['speaker_info']);
+    $club = isset($_POST['club']) ? sanitize_text_field($_POST['club']) : '';
+    $sponsors = isset($_POST['sponsors']) ? sanitize_text_field($_POST['sponsors']) : '';
+    $speaker_info = isset($_POST['speaker_info']) ? sanitize_textarea_field($_POST['speaker_info']) : '';
     $participation_class = sanitize_text_field($_POST['participation_class']);
     $license = isset($_POST['license']) ? 'yes' : 'no';
     $dinner = isset($_POST['dinner']) ? 'yes' : 'no';
     $selected_rolls = isset($_POST['selected_rolls']) ? array_map('intval', array_keys($_POST['selected_rolls'])) : [];
-    // Fetch the competition date, sanitize and validate
     $competition_date = isset($_POST['competition_date']) ? sanitize_text_field($_POST['competition_date']) : '';
 
     if ($competition_date === '') {
         wp_send_json_error(['message' => 'Error: A valid competition date is required.']);
     }
+
+    // Get the dynamic price list from the utility function
+    $class_prices = get_competitor_price_list();
+
+    // Calculate sum based on class choices and dinner
+    $total_sum = 0;
+
+    if (array_key_exists($participation_class, $class_prices)) {
+        $total_sum += $class_prices[$participation_class];
+    }
+
+    if ($dinner === 'yes' && isset($class_prices['dinner'])) {
+        $total_sum += $class_prices['dinner'];
+    }
+
+    error_log('Total sum calculated: ' . $total_sum);
 
     // Prepare and insert post
     $competitor_data = [
@@ -288,7 +304,8 @@ function handle_competitors_form_submission() {
             'competitor_scores' => [],
             'selected_rolls' => $selected_rolls,
             '_competitors_custom_order' => 0,
-            'competition_date' => $competition_date, // Include selected competition date in metadata
+            'competition_date' => $competition_date,
+            'fee' => $total_sum,
         ],
     ];
 
@@ -300,16 +317,32 @@ function handle_competitors_form_submission() {
 
     error_log('Post created with ID: ' . $competitor_id);
 
-    // Call function to send email to all WP administrators
-    send_admin_email($name, $email, $phone, $club, $sponsors, $participation_class, $competition_date);
+    // Send email to all WP administrators
+    send_admin_email($name, $email, $phone, $club, $sponsors, $participation_class, $competition_date, $total_sum, $dinner);
+
+    // Send confirmation email to the form submitter
+    send_confirmation_email($name, $email, $competition_date, $total_sum, $dinner);
 
     ob_clean(); // Clean (erase) the output buffer
-    wp_send_json_success(['message' => 'Thanks for registering, this will be fun!']);
+    wp_send_json_success([
+        'message' => 'Thanks for registering, this will be fun!',
+        'total_sum' => $total_sum,
+        'redirect_url' => add_query_arg(['fee' => $total_sum], get_home_url() . '/competitors-thank-you'),
+    ]);
 }
 
-function send_admin_email($name, $email, $phone, $club, $sponsors, $participation_class, $competition_date) {
+function send_admin_email($name, $email, $phone, $club, $sponsors, $participation_class, $competition_date, $total_sum, $dinner) {
+    //$test_email = 'tibbecodes@gmail.com';
+
+    // Get all admin users emails
     $admins = get_users(['role' => 'administrator']);
     $admin_emails = wp_list_pluck($admins, 'user_email');
+
+    // Override the admin emails for testing purposes
+    //if (defined('WP_ENV') && WP_ENV === 'development') {
+    //    $admin_emails = [$test_email];
+    //}
+
     $subject = 'Ny registrering';
     $message = "En till rollare har anmält sig, tjohoo!\n\n" .
                "Namn: $name\n" .
@@ -318,7 +351,12 @@ function send_admin_email($name, $email, $phone, $club, $sponsors, $participatio
                "Klubb: $club\n" .
                "Sponsorer: $sponsors\n" .
                "Klass: $participation_class\n" .
-               "Datum för tävling: $competition_date\n";
+               "Datum för tävling: $competition_date\n" .
+               "Avgift: $total_sum:-\n";
+
+    if ($dinner === 'yes') {
+        $message .= "Middag: Ja (200 SEK)\n";
+    }
 
     if (!wp_mail($admin_emails, $subject, $message)) {
         error_log('Failed to send email to administrators.');
@@ -327,9 +365,69 @@ function send_admin_email($name, $email, $phone, $club, $sponsors, $participatio
     }
 }
 
+
+function send_confirmation_email($name, $email, $competition_date, $total_sum, $dinner) {
+    $subject = 'Registration Confirmation for RollSM';
+    $message = "Hej $name!\n\n" .
+                "Tack för din anmälan till RollSM $competition_date. Vi ser fram emot att få träffas!\n\n" .
+                "Din erlagda avgift som du har eller ska Swisha borde vara $total_sum.\n\n";
+
+    if ($dinner === 'yes') {
+        $message .= "Middag: Ja (200 SEK)\n";
+    }
+
+    $message .= "Hälsningar,\nRollSM organisationen\n\n\n\n".
+                "==============\n\n\n\n".
+                "Hi $name,\n\n".
+                "Thank you for registering for the RollSM competition on $competition_date. We look forward to seeing you there!\n\n".
+                "Your total fee is SEK $total_sum.\n\n";
+
+    if ($dinner === 'yes') {
+        $message .= "Dinner: Yes (200 SEK)\n";
+    }
+
+    $message .= "Best regards,\nThe Team\n".
+                "\nPS\nThis is an automated response. There is no mailbox on the other side so please don\'t return this email.";
+
+    if (!wp_mail($email, $subject, $message)) {
+        error_log('Failed to send confirmation email to registered competitor.');
+    } else {
+        error_log('Confirmation email sent to registered competitor.');
+    }
+}
+
 // Register AJAX actions for logged-in and non-logged-in users.
-add_action('wp_ajax_competitors_form_submit', 'handle_competitors_form_submission');
-add_action('wp_ajax_nopriv_competitors_form_submit', 'handle_competitors_form_submission');
+add_action('wp_ajax_competitors_form_submit', 'handle_competitor_form_submission');
+add_action('wp_ajax_nopriv_competitors_form_submit', 'handle_competitor_form_submission');
+
+function competitors_thank_you_content($content) {
+    if (is_page('competitors-thank-you') && isset($_GET['fee'])) {
+        $fee = sanitize_text_field($_GET['fee']);
+        $fee_message = '<p class="mega-text">Your total fee is SEK ' . esc_html($fee) . '.</p>';
+        return $content . $fee_message;
+    }
+    return $content;
+}
+add_filter('the_content', 'competitors_thank_you_content');
+
+
+function get_competitor_price_list() {
+    // Prices for each class
+    $competition_prices = [
+        'amateur' => 300,
+        'championship' => 500,
+        'open' => 500,
+    ];
+
+    // Dinner is optional
+    $optional_prices = [
+        'dinner' => 200,
+    ];
+    $prices = array_merge($competition_prices, $optional_prices);
+    return apply_filters('competitor_price_list', $prices);
+}
+
+
 
 
 
