@@ -577,7 +577,8 @@ tr.competitor-header:hover,
   #wpadminbar,
   #screen-meta,
   #screen-meta-links,
-  #wpfooter {
+  #wpfooter,
+  .nav-tab-wrapper {
     display: none !important;
   }
 
@@ -585,4 +586,43 @@ tr.competitor-header:hover,
   #wpbody-content {
     margin-left: 0 !important;
   }
+  .competitors-table,
+  .selected-rolls table {
+    border-collapse: collapse !important;
+  }
+  .non-selected-roll {
+    color: #ccc !important;
+    font-style: italic;
+  }
+}
+
+/* Apply to both parent and child tables */
+table.competitors-table {
+  border: 0;
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+table.competitors-table table td {
+  border: 1px solid var(--gray);
+}
+
+/* Optional: Remove the border spacing between cells */
+td.competitors-table,
+th.competitors-table {
+  padding: 0;
+  margin: 0;
+}
+
+/* Specific styles for the nested 'selected-rolls' table */
+tr.selected-rolls,
+tr.selected-rolls table {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  width: 100%;
+  box-sizing: border-box;
+  border-collapse: collapse;
 }
