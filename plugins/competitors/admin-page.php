@@ -30,7 +30,7 @@ function competitors_admin_page() {
         echo '<p>Click on headers to sort. This enables quick grouping and planning. <a href="' . esc_url(site_url('/' . $page_slug . '/')) . '">Public page</a> for this data.</p>';
         echo '<table class="competitors-table" id="sortable-table">';
         echo '<thead><tr class="competitors-header">';
-        echo '<th>Comp. Date</th><th>Name</th><th>Club</th><th>Class</th><th>Speaker Info</th><th>Sponsors</th><th>Email</th><th>Phone</th><th>Dinner</th><th>Consent</th>';
+        echo '<th>Comp. Date</th><th>Name</th><th>Club</th><th>Class</th><th>Info</th><th>Sponsors</th><th>Email</th><th>Phone</th><th>Dinner</th><th>Consent</th>';
         echo '</tr></thead><tbody>';
 
         while ($competitors_query->have_posts()) {
@@ -48,7 +48,7 @@ function competitors_admin_page() {
             $competition_date = get_post_meta(get_the_ID(), 'competition_date', true);
 
             // Render row content
-            echo '<tr>';
+            echo '<tr class="open-details">';
             echo_table_cell(esc_html($competition_date));
             echo_table_cell(get_the_title());
             echo_table_cell(esc_html($club));
@@ -60,6 +60,9 @@ function competitors_admin_page() {
             echo_table_cell(esc_html($dinner));
             echo_table_cell(esc_html($consent));
             echo '</tr>';
+
+            // Include the chosen rolls
+           echo render_performing_rolls_admin($participation_class);
         }
 
         echo '</tbody></table>';
@@ -69,6 +72,50 @@ function competitors_admin_page() {
 
     wp_reset_postdata();
 }
+
+
+
+
+// Printing the competitor scoring lists functionality
+function render_performing_rolls_admin($participation_class = 'open') {
+    ob_start();
+    ?>
+        <?php
+        $selected_rolls_indexes = (array) get_post_meta(get_the_ID(), 'selected_rolls', true);
+        $rolls = get_roll_names_and_max_scores($participation_class);
+        echo '<tr class="selected-rolls hidden">';
+        echo '<td colspan="10">';
+        echo '<table>';
+        echo '<tr>';
+        echo '<th colspan="6">Roll to perform</th>';
+        echo '<th colspan="2">' . __('Left (More/Less)', 'competitors') . '</th>';
+        echo '<th colspan="2">' . __('Right (More/Less)', 'competitors') . '</th>';
+        echo '<th>' . __('Score', 'competitors') . '</th>';
+        echo '</tr>';
+
+        foreach ($rolls as $index => $roll) {
+            $is_selected = in_array($index, $selected_rolls_indexes, true);
+            $selected_css_class = $is_selected ? 'selected-roll' : 'non-selected-roll';
+            $max_score = isset($roll['max_score']) ? $roll['max_score'] : '';
+            $points_display = ($max_score == 0 || $max_score === '') ? 'N/A' : esc_html($max_score) . ' points';
+
+            echo '<tr class="' . $selected_css_class . '">';
+            echo '<td colspan="6">' . esc_html($roll['name']) . ' (' . $points_display . ')</td>';
+            echo '<td width="8%"></td>';
+            echo '<td width="8%"></td>';
+            echo '<td width="8%"></td>';
+            echo '<td width="8%"></td>';
+            echo '<td width="8%"></td>';
+            echo '</tr>';
+        }
+
+        echo '</table>';
+        echo '</td></tr>'; ?>
+    <?php
+    return ob_get_clean();
+}
+
+
 
 
 
