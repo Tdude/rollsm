@@ -578,7 +578,8 @@ tr.competitor-header:hover,
   #screen-meta,
   #screen-meta-links,
   #wpfooter,
-  .nav-tab-wrapper {
+  .nav-tab-wrapper,
+  .hide-for-print {
     display: none !important;
   }
 
@@ -590,9 +591,23 @@ tr.competitor-header:hover,
   .selected-rolls table {
     border-collapse: collapse !important;
   }
+  .open-details td,
+  .selected-rolls td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+  }
   .non-selected-roll {
     color: #ccc !important;
-    font-style: italic;
+  }
+  .selected-rolls td {
+    padding: 8px 1px;
+    font-size: 16px !important;
+  }
+  .competitors-table th,
+  .competitors-table td {
+    padding: 6px 1px;
   }
 }
 
@@ -625,4 +640,25 @@ tr.selected-rolls table {
   width: 100%;
   box-sizing: border-box;
   border-collapse: collapse;
+}
+
+/* Truncate stuff if needed */
+.selected-rolls td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+/* Optional: Ensure table takes up full width, but content is truncated */
+.open-details,
+.selected-rolls {
+  table-layout: fixed;
+  width: 100%;
+}
+
+/* Mark styles more for bad screens and eyes */
+.non-selected-roll {
+  color: #999;
+  font-style: italic;
 }
