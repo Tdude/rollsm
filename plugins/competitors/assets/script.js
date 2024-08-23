@@ -404,10 +404,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function fetchCompetitorDetails(competitorId) {
+  function fetchCompetitorDetails(competitorId, participationClass) {
     const params = {
       action: "load_competitor_details",
       competitor_id: competitorId,
+      participation_class: participationClass, // Send the participation_class directly
       security: competitorsPublicAjax.nonce,
     };
 
@@ -435,8 +436,28 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   }
 
+  document
+    .getElementById("competitors-list")
+    .addEventListener("click", (event) => {
+      const target = event.target.closest(".competitors-list-item");
+      if (target) {
+        const competitorId = target.getAttribute("data-competitor-id");
+        const participationClass = target.getAttribute(
+          "data-participation-class"
+        );
+        fetchCompetitorDetails(competitorId, participationClass);
+      }
+    });
+
   const dateSelect = document.getElementById("date-select");
   const classSelect = document.getElementById("class-select");
+
+  // Pre-select the first available date (skip the "All Dates" option)
+  if (dateSelect && dateSelect.options.length > 1) {
+    dateSelect.selectedIndex = 1; // Select the first available date (index 1)
+    fetchCompetitorsList(); // Trigger fetching competitors for the selected date
+  }
+
   document
     .getElementById("competitors-list")
     .addEventListener("click", (event) => {
