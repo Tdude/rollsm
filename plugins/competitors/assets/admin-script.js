@@ -330,7 +330,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return 0;
     }
 
-    // Initialize event listeners for scoring
+    // Initialize event listeners for scoring and reset buttons
     function attachScoringEvents() {
       document
         .querySelectorAll(".score-input, .deduct-input, .numeric-input")
@@ -338,10 +338,18 @@ document.addEventListener("DOMContentLoaded", () => {
           input.addEventListener("change", function () {
             const row = this.closest("tr");
             const competitorId = row.getAttribute("data-competitor-id");
-            const index = row.getAttribute("data-index"); // Make sure to set this data attribute when rendering rows
+            const index = row.getAttribute("data-index");
             calculateAndUpdateTotalScore(row, competitorId, index);
           });
         });
+
+      // Attach event listeners for reset buttons
+      document.querySelectorAll(".reset-row").forEach((button) => {
+        button.addEventListener("click", function () {
+          const rowId = this.closest("tr").id;
+          resetRow(rowId);
+        });
+      });
     }
 
     // Calculate points and update row total
@@ -406,6 +414,49 @@ document.addEventListener("DOMContentLoaded", () => {
       updateCompetitorsTotal(competitorId);
     }
 
+    function resetRow(rowId) {
+      var row = document.getElementById(rowId);
+      if (!row) return;
+
+      // Reset radio buttons
+      row.querySelectorAll('input[type="radio"]').forEach(function (radio) {
+        radio.checked = false;
+      });
+
+      // Reset numeric inputs
+      row
+        .querySelectorAll(
+          'input[type="number"], input[type="text"].numeric-input'
+        )
+        .forEach(function (input) {
+          input.value = "";
+        });
+
+      // Reset total score
+      var totalCell = row.querySelector(".total-score-row");
+      if (totalCell) {
+        totalCell.textContent = "0";
+      }
+
+      // Reset hidden total score input
+      var hiddenInput = row.querySelector('input[name$="[total_score]"]');
+      if (hiddenInput) {
+        hiddenInput.value = "0";
+      }
+
+      var competitorId = row.getAttribute("data-competitor-id");
+      var index = row.getAttribute("data-index");
+
+      // Update the competitor's total score
+      updateCompetitorsTotal(competitorId);
+
+      // Update grand total
+      updateGrandTotal();
+
+      if (typeof initializeScores === "function") {
+        initializeScores();
+      }
+    }
     // Update total score for all competitors
     function updateCompetitorsTotal(competitorId) {
       let competitorTotal = 0;
@@ -419,7 +470,6 @@ document.addEventListener("DOMContentLoaded", () => {
           competitorTotal += score;
         });
 
-      // Update the individual competitor total points
       const competitorTotalCells = document.querySelectorAll(
         `[data-competitor-id='${competitorId}'] .total-points`
       );
@@ -427,14 +477,17 @@ document.addEventListener("DOMContentLoaded", () => {
         cell.innerHTML = competitorTotal;
       });
 
-      // Calculate the grand total across all competitors
+      updateGrandTotal();
+    }
+
+    // Update grand total
+    function updateGrandTotal() {
       let grandTotal = 0;
       document.querySelectorAll(".total-score-row").forEach((cell) => {
         const score = parseInt(cell.textContent) || 0;
         grandTotal += score;
       });
 
-      // Update the grand total display
       const grandTotalCell = document.querySelector(`#grand-total-value`);
       if (grandTotalCell) {
         grandTotalCell.innerHTML = grandTotal;
@@ -749,7 +802,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // From hereon there be jQuery because its included in WP
 jQuery(document).ready(function ($) {
-  // Sort columns in Personal Data view page when clicking html table headers
+  // Toggle rows for displaying which rolls a competitor wants to perform
+  $(".open-details").on("click", function () {
+    // Hide all 'open-details' and 'selected-rolls' rows
+    $(".open-details, .selected-rolls").addClass("hidden");
+
+    // Unhide the clicked 'open-details' row
+    $(this).removeClass("hidden");
+
+    // Find and toggle the relevant 'selected-rolls' rows
+    var nextSibling = $(this).next();
+    while (nextSibling.length && !nextSibling.hasClass("open-details")) {
+      if (nextSibling.hasClass("selected-rolls")) {
+        nextSibling.toggleClass("hidden");
+      }
+      nextSibling = nextSibling.next();
+    }
+  });
+
+  // Sort columns in the Personal Data view page when clicking html table headers
   if ($("#sortable-table").length) {
     $("#sortable-table th").each(function () {
       $(this).on("click", function () {
@@ -804,9 +875,8 @@ jQuery(document).ready(function ($) {
              <span class="input-text-wrap"><input type="number" name="competitors_custom_order" value="${customOrderValue.trim()}">
              </span></label></div>`;
 
-      // Append or prepend based on your layout needs
       $lastField.after(customOrderField);
-    }, 150); // A slight delay to ensure the Quick Edit form is fully rendered
+    }, 150); // A slight delay to ensure the Quick Edit form is rendered
   });
 
   // Initialize date picker
@@ -976,7 +1046,7 @@ jQuery(document).ready(function ($) {
         }
       });
 
-      // Ensure numeric inputs only accept two digits
+      // Ensure numeric inputs accept max two digits
       $wrapper.on("input", ".numeric-input", function (e) {
         const value = $(this).val();
         $(this).val(value.slice(0, 2));
@@ -1004,32 +1074,3 @@ jQuery(document).ready(function ($) {
     });
   });
 });
-
-// For printing out in admin which rolls a competitor wants to perform
-function toggleSelectedRolls() {
-  document.querySelectorAll(".open-details").forEach((row) => {
-    row.addEventListener("click", () => {
-      // Hide all 'open-details' and 'selected-rolls' rows
-      document
-        .querySelectorAll(".open-details, .selected-rolls")
-        .forEach((row) => {
-          row.classList.add("hidden");
-        });
-
-      // Unhide the clicked 'open-details' row
-      row.classList.remove("hidden");
-
-      // Toggle the relevant 'selected-rolls' rows for the clicked 'open-details' row
-      let nextSibling = row.nextElementSibling;
-      while (nextSibling && !nextSibling.classList.contains("open-details")) {
-        if (nextSibling.classList.contains("selected-rolls")) {
-          nextSibling.classList.toggle("hidden");
-        }
-        nextSibling = nextSibling.nextElementSibling;
-      }
-    });
-  });
-}
-
-// Ensure the function runs after the DOM is fully loaded
-document.addEventListener("DOMContentLoaded", toggleSelectedRolls);
