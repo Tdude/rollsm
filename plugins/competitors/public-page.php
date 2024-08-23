@@ -574,8 +574,9 @@ function build_competitors_list_html($competitors_data) {
         error_log('Competitor Total Converted: ' . $total_points);  // Check converted value
     
         $html .= sprintf(
-            '<li class="competitors-list-item" data-competitor-id="%d"><b>%s</b> - %s - %d points</li>',
+            '<li class="competitors-list-item" data-competitor-id="%d" data-participation-class="%s"><b>%s</b> - %s - %d points</li>',
             esc_attr($competitor['ID']),
+            esc_attr($competitor['participation_class']), // Include the participation class as a data attribute
             esc_html($competitor['title']),
             esc_html($competitor['club']),
             intval($competitor['total'])
@@ -587,17 +588,21 @@ function build_competitors_list_html($competitors_data) {
 
 
 
+
 function load_competitor_details() {
     check_ajax_referer('competitors_nonce_action', 'security');
 
     $competitor_id = isset($_POST['competitor_id']) ? intval($_POST['competitor_id']) : 0;
+    $participation_class = isset($_POST['participation_class']) ? sanitize_text_field($_POST['participation_class']) : '';
+    
 
     if (!$competitor_id || 'competitors' !== get_post_type($competitor_id)) {
         wp_send_json_error(['message' => 'Invalid Competitor ID or not a Competitor post type']);
         return;  // Exit early to avoid further execution
     }
 
-    competitors_scoring_view_page($competitor_id);
+    // Pass the $participation_class to the competitors_scoring_view_page function
+    competitors_scoring_view_page($competitor_id, null, $participation_class);
     wp_die(); // Ensure AJAX call termination
 }
 add_action('wp_ajax_load_competitor_details', 'load_competitor_details');
@@ -605,8 +610,10 @@ add_action('wp_ajax_nopriv_load_competitor_details', 'load_competitor_details');
 
 
 
-function competitors_scoring_view_page($competitor_id = 0, $selected_date = null) {
-    $rolls = get_roll_names_and_max_scores();
+function competitors_scoring_view_page($competitor_id = 0, $selected_date = null, $participation_class = null) {
+    // Pass the participation_class to get_roll_names_and_max_scores
+    $rolls = get_roll_names_and_max_scores($participation_class);
+
     if (defined('WP_DEBUG') && WP_DEBUG) {
         error_log("Rolls Data: " . print_r($rolls, true));
     }
@@ -693,5 +700,6 @@ function competitors_scoring_view_page($competitor_id = 0, $selected_date = null
     echo '<tr><td colspan="5"><b>' . __('Grand Total Competitor Score', 'competitors') . '</b></td><td><b>' . esc_html($grand_total) . '</b></td></tr>';
     echo '</table>';
 }
+
 
 
