@@ -2,7 +2,9 @@
 function echo_table_cell($content) {
     echo '<td>' . esc_html($content) . '</td>';
 }
-
+function echo_table_cell_hide_for_print($content) {
+    echo '<td class="hide-for-print">' . esc_html($content) . '</td>';
+}
 
 
 function competitors_admin_page() {
@@ -27,10 +29,10 @@ function competitors_admin_page() {
     // Display the data
     if ($competitors_query->have_posts()) {
         $page_slug = 'test-results-list-page';
-        echo '<p>Click on headers to sort. This enables quick grouping and planning. <a href="' . esc_url(site_url('/' . $page_slug . '/')) . '">Public page</a> for this data.</p>';
+        echo '<p class="hide-for-print">Click on headers to sort. This enables quick grouping and planning. <a href="' . esc_url(site_url('/' . $page_slug . '/')) . '">Public page</a> for this data.</p>';
         echo '<table class="competitors-table" id="sortable-table">';
         echo '<thead><tr class="competitors-header">';
-        echo '<th>Comp. Date</th><th>Name</th><th>Club</th><th>Class</th><th>Info</th><th>Sponsors</th><th>Email</th><th>Phone</th><th>Dinner</th><th>Consent</th>';
+        echo '<th>CompDate</th><th>Name</th><th>Club</th><th>Class</th><th>Info</th><th>Sponsors</th><th class="hide-for-print">Email</th><th>Phone</th><th class="hide-for-print">Dinner</th><th class="hide-for-print">Consent</th>';
         echo '</tr></thead><tbody>';
 
         while ($competitors_query->have_posts()) {
@@ -55,10 +57,10 @@ function competitors_admin_page() {
             echo_table_cell(esc_html($participation_class));
             echo_table_cell(esc_html($speaker_info));
             echo_table_cell(esc_html($sponsors));
-            echo_table_cell(esc_html($email));
+            echo_table_cell_hide_for_print(esc_html($email));
             echo_table_cell(esc_html($phone));
-            echo_table_cell(esc_html($dinner));
-            echo_table_cell(esc_html($consent));
+            echo_table_cell_hide_for_print(esc_html($dinner));
+            echo_table_cell_hide_for_print(esc_html($consent));
             echo '</tr>';
 
             // Include the chosen rolls
@@ -72,6 +74,303 @@ function competitors_admin_page() {
 
     wp_reset_postdata();
 }
+
+
+
+// Send email to the list of competitors
+function send_email_to_selected_competitors($subject, $content, $selected_competitors) {
+    if (!current_user_can('manage_options') && !current_user_can('edit_competitors')) {
+        wp_die('Access denied. You do not have permission to send emails.');
+    }
+
+    $sent_count = 0;
+    $failed_count = 0;
+    $sent_to = array();
+
+    foreach ($selected_competitors as $competitor_id) {
+        $email = get_post_meta($competitor_id, 'email', true);
+        $name = get_the_title($competitor_id);
+
+        if (!empty($email)) {
+            $message = str_replace('{name}', $name, $content);
+            $headers = array('Content-Type: text/html; charset=UTF-8');
+
+            if (wp_mail($email, $subject, $message, $headers)) {
+                $sent_count++;
+                $sent_to[] = array(
+                    'id' => $competitor_id,
+                    'name' => $name,
+                    'email' => $email
+                );
+            } else {
+                $failed_count++;
+            }
+        }
+    }
+
+    store_sent_email($subject, $content, $sent_to);
+    echo "<p>Emails sent: {$sent_count}</p>";
+    echo "<p>Emails failed: {$failed_count}</p>";
+}
+
+function store_sent_email($subject, $content, $recipients) {
+    $email_history = array(
+        'post_title'    => $subject,
+        'post_content'  => $content,
+        'post_status'   => 'private',
+        'post_type'     => 'sent_emails',
+        'post_author'   => get_current_user_id(),
+    );
+
+    $email_id = wp_insert_post($email_history);
+
+    if ($email_id) {
+        update_post_meta($email_id, 'recipients', $recipients);
+        update_post_meta($email_id, 'sent_date', current_time('mysql'));
+    }
+
+    return $email_id;
+}
+
+function create_sent_emails_post_type() {
+    register_post_type('sent_emails',
+        array(
+            'labels' => array(
+                'name' => __('Sent Emails'),
+                'singular_name' => __('Sent Email')
+            ),
+            'public' => false,
+            'show_ui' => true,
+            'show_in_menu' => false, // Change this to false
+            'capability_type' => 'post',
+            'hierarchical' => false,
+            'rewrite' => array('slug' => 'sent-emails'),
+            'query_var' => true,
+            'supports' => array(
+                'title',
+                'editor',
+            )
+        )
+    );
+}
+add_action('init', 'create_sent_emails_post_type');
+
+
+function display_email_form() {
+    if (!current_user_can('manage_options') && !current_user_can('edit_competitors')) {
+        wp_die('Access denied. You do not have permission to send emails.');
+    }
+
+    if (isset($_POST['send_emails'])) {
+        $subject = sanitize_text_field($_POST['email_subject']);
+        $content = wp_kses_post($_POST['email_content']);
+        $selected_competitors = isset($_POST['selected_competitors']) ? array_map('intval', $_POST['selected_competitors']) : array();
+        send_email_to_selected_competitors($subject, $content, $selected_competitors);
+    }
+
+    $competitors_query = new WP_Query(array(
+        'post_type' => 'competitors',
+        'posts_per_page' => -1,
+        'orderby' => 'title',
+        'order' => 'ASC'
+    ));
+
+    ?>
+    <div class="wrap">
+        <h1>Send Emails to Competitors</h1>
+        <form method="post" action="">
+            <table class="form-table">
+                <tr>
+                    <th><label for="email_subject">Email Subject</label></th>
+                    <td><input type="text" name="email_subject" id="email_subject" class="regular-text" required></td>
+                </tr>
+                <tr>
+                    <th><label for="email_content">Email Content</label></th>
+                    <td>
+                        <?php
+                        wp_editor('', 'email_content', array(
+                            'textarea_name' => 'email_content',
+                            'media_buttons' => false,
+                            'textarea_rows' => 10
+                        ));
+                        ?>
+                        <p class="description">Use {name} to include the competitor's name in the email.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th><label>Select Recipients</label></th>
+                    <td>
+                        <div class="competitors-list" style="border: 1px solid #ddd; padding: 10px;">
+                            <?php
+                            if ($competitors_query->have_posts()) :
+                                while ($competitors_query->have_posts()) : $competitors_query->the_post();
+                                    $competitor_id = get_the_ID();
+                                    $email = get_post_meta($competitor_id, 'email', true);
+                                    ?>
+                                    <label>
+                                        <input type="checkbox" name="selected_competitors[]" value="<?php echo $competitor_id; ?>">
+                                        <?php echo get_the_title() . ' (' . $email . ')'; ?>
+                                    </label><br>
+                                    <?php
+                                endwhile;
+                                wp_reset_postdata();
+                            else :
+                                echo 'No competitors found.';
+                            endif;
+                            ?>
+                        </div>
+                        <p>
+                            <a href="#" id="select-all">Select All</a> | 
+                            <a href="#" id="deselect-all">Deselect All</a>
+                        </p>
+                    </td>
+                </tr>
+            </table>
+            <?php submit_button('Send Emails', 'primary', 'send_emails'); ?>
+        </form>
+    </div>
+
+    <style>
+    .competitors-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    </style>
+    <script>
+    jQuery(document).ready(function($) {
+        $('#select-all').click(function(e) {
+            e.preventDefault();
+            $('input[name="selected_competitors[]"]').prop('checked', true);
+        });
+
+        $('#deselect-all').click(function(e) {
+            e.preventDefault();
+            $('input[name="selected_competitors[]"]').prop('checked', false);
+        });
+    });
+    </script>
+    <?php
+}
+
+function display_email_history() {
+    if (!current_user_can('manage_options') && !current_user_can('edit_competitors')) {
+        wp_die('Access denied. You do not have permission to view email history.');
+    }
+
+    $paged = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
+    $args = array(
+        'post_type' => 'sent_emails',
+        'posts_per_page' => 10,
+        'paged' => $paged,
+        'orderby' => 'date',
+        'order' => 'DESC'
+    );
+
+    $query = new WP_Query($args);
+
+    ?>
+    <div class="wrap">
+        <h1>Email History</h1>
+        <table class="wp-list-table widefat fixed striped">
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th>Sent Date</th>
+                    <th>Recipients</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                if ($query->have_posts()) :
+                    while ($query->have_posts()) : $query->the_post();
+                        $recipients = get_post_meta(get_the_ID(), 'recipients', true);
+                        $sent_date = get_post_meta(get_the_ID(), 'sent_date', true);
+                        ?>
+                        <tr>
+                            <td><?php the_title(); ?></td>
+                            <td><?php echo $sent_date; ?></td>
+                            <td><?php echo count($recipients); ?> recipients</td>
+                            <td>
+                                <a href="<?php echo admin_url('post.php?post=' . get_the_ID() . '&action=edit'); ?>">View Details</a>
+                            </td>
+                        </tr>
+                        <?php
+                    endwhile;
+                else :
+                    ?>
+                    <tr>
+                        <td colspan="4">No emails sent yet.</td>
+                    </tr>
+                    <?php
+                endif;
+                ?>
+            </tbody>
+        </table>
+        <?php
+        echo paginate_links(array(
+            'total' => $query->max_num_pages,
+            'current' => $paged,
+            'base' => add_query_arg('paged', '%#%'),
+        ));
+        ?>
+    </div>
+    <?php
+    wp_reset_postdata();
+}
+
+function adjust_sent_emails_parent_file($parent_file) {
+    global $current_screen;
+    if ($current_screen->post_type == 'sent_emails') {
+        $parent_file = 'edit.php?post_type=competitors';
+    }
+    return $parent_file;
+}
+add_filter('parent_file', 'adjust_sent_emails_parent_file');
+
+function add_email_menu_items() {
+    // Add "Send Emails" submenu
+    add_submenu_page(
+        'edit.php?post_type=competitors',
+        'Send Emails to Competitors',
+        'Send Emails',
+        'manage_options',
+        'send-competitor-emails',
+        'display_email_form'
+    );
+
+    // Add "Email History" submenu
+    add_submenu_page(
+        'edit.php?post_type=competitors',
+        'Email History',
+        'Email History',
+        'manage_options',
+        'email-history',
+        'display_email_history'
+    );
+
+    // Move "Sent Emails" post type under Competitors
+    global $submenu;
+    if (isset($submenu['edit.php?post_type=sent_emails'])) {
+        foreach ($submenu['edit.php?post_type=sent_emails'] as $key => $value) {
+            if ($value[2] == 'edit.php?post_type=sent_emails') {
+                $submenu['edit.php?post_type=competitors'][] = array(
+                    'Sent Emails',
+                    'manage_options',
+                    'edit.php?post_type=sent_emails'
+                );
+            } elseif ($value[2] == 'post-new.php?post_type=sent_emails') {
+                // We don't need "Add New" for sent emails
+                continue;
+            } else {
+                $submenu['edit.php?post_type=competitors'][] = $value;
+            }
+        }
+        // Remove the original "Sent Emails" menu
+        remove_menu_page('edit.php?post_type=sent_emails');
+    }
+}
+add_action('admin_menu', 'add_email_menu_items', 11);
 
 
 
@@ -97,7 +396,7 @@ function render_performing_rolls_admin($participation_class = 'open') {
             $is_selected = in_array($index, $selected_rolls_indexes, true);
             $selected_css_class = $is_selected ? 'selected-roll' : 'non-selected-roll';
             $max_score = isset($roll['max_score']) ? $roll['max_score'] : '';
-            $points_display = ($max_score == 0 || $max_score === '') ? 'N/A' : esc_html($max_score) . ' points';
+            $points_display = ($max_score == 0 || $max_score === '') ? 'N/A ' : esc_html($max_score) . 'p';
 
             echo '<tr class="' . $selected_css_class . '">';
             echo '<td colspan="6">' . esc_html($roll['name']) . ' (' . $points_display . ')</td>';
@@ -189,8 +488,6 @@ function display_filter_form($filter_date = '', $filter_class = '') {
 
 
 
-
-
 function get_filtered_competitors_query($filter_date = '', $filter_class = '') {
     $query_args = [
         'post_type' => 'competitors',
@@ -233,7 +530,7 @@ function filter_competitors() {
 
     ob_start(); // Start a new buffer to capture HTML output
     if ($competitors_query->have_posts()) {
-        display_competitors_table($competitors_query);
+        display_competitors_table($competitors_query, $filter_class);
         $html = ob_get_clean(); // Get the HTML content and clean the buffer
         wp_send_json_success(['html' => $html]);
     } else {
@@ -252,31 +549,32 @@ add_action('wp_ajax_filter_competitors', 'filter_competitors');
 // Render the whole page
 function judges_scoring_page() {
     if (!current_user_can('manage_options') && !current_user_can('competitors_judge')) {
-        echo '<p>Access denied to scoring, dude. You don’t seem to be The Judge.</p>';
+        echo '<p>Access denied to scoring, dude. You don\'t seem to be The Judge.</p>';
         return;
     }
+
     // For nav tabs
     render_admin_page_header();
+
     // The page title
     $judges_scoring_page_title = esc_html__('Judges Scoring Page', 'competitors');
     echo '<h1 class="distance-large">' . $judges_scoring_page_title . '</h1>';
-    // Retrieve the filter date and class from the query string or initialize them as empty
+
+    // Retrieve filter date and class or initialize as empty
     $filter_date = isset($_GET['filter_date']) ? sanitize_text_field($_GET['filter_date']) : '';
     $filter_class = isset($_GET['filter_class']) ? sanitize_text_field($_GET['filter_class']) : '';
     $competitors_query = get_filtered_competitors_query($filter_date, $filter_class);
+
     display_filter_form($filter_date, $filter_class);
     echo '<div id="judges-scoring-container">';
-    display_competitors_table($competitors_query);
+    display_competitors_table($competitors_query, $filter_class);
     echo '</div>';
 }
 
 
 
 
-
-
-
-function display_competitors_table($competitors_query) {
+function display_competitors_table($competitors_query, $filter_class = 'championship') {
     if (!$competitors_query->have_posts()) {
         $no_competitors_message = esc_html__('Looks like there are no competitors to score here right now. Please add some competitors, choose another date or check back later.', 'competitors');
         echo "<h2>\\(o_o)/</h2><p>{$no_competitors_message}</p>";
@@ -318,7 +616,9 @@ function display_competitors_table($competitors_query) {
     while ($competitors_query->have_posts()) {
         $competitors_query->the_post();
         $competitor_id = get_the_ID();
-        $rolls = get_roll_names_and_max_scores(); // from competitors-settings.php
+        
+        // Fetching the roll data, including roll names, max scores, and numeric status
+        $rolls = get_roll_names_and_max_scores($filter_class); // Pass the $class parameter here
         $competitor_scores = get_competitor_scores($competitor_id) ?: [];
         $selected_rolls = get_post_meta($competitor_id, 'selected_rolls', true) ?: [];
         $competitor_total_score = 0;
@@ -366,15 +666,17 @@ function display_competitors_table($competitors_query) {
                 $total_rolls_performed++;
             }
 
+            // Render each row of competitor score
             $tempHTML .= render_competitor_score_row($competitor_id, $index, $roll, $roll_scores, $selected_rolls);
         }
 
+        // Render the header and info rows
         $layoutHTML .= render_competitor_header_row($competitor_id, $competitor_total_score);
         $layoutHTML .= render_competitor_info_row($competitor_id);
         $layoutHTML .= $tempHTML;
 
         $layoutHTML .= '<tr class="competitor-totals hidden" data-competitor-id="' . $competitor_id . '">
-        <td colspan="5"><b>Total</b></td><td><span class="total-points">' . $competitor_total_score . '</span> points</td></tr>';
+        <td colspan="6"><b>Total</b></td><td><span class="total-points">' . $competitor_total_score . '</span> points</td></tr>';
 
         if ($competitor_total_score > 0) {
             $grand_total += $competitor_total_score;
@@ -384,6 +686,7 @@ function display_competitors_table($competitors_query) {
         echo $layoutHTML;
     }
 
+    // Calculating and displaying the grand total and averages
     $average_score = $valid_scores_count > 0 ? $grand_total / $valid_scores_count : 0;
     $average_rolls = $valid_scores_count > 0 ? $total_rolls_performed / $valid_scores_count : 0;
     $average_score_formatted = number_format($average_score, 1, '.', '');
@@ -402,6 +705,8 @@ function display_competitors_table($competitors_query) {
 
 
 
+
+
 // This would be before the form closing tag
 // <p><input type="submit" value="Save new scores NOT TIME" class="button button-primary save-scores" title="Saves scores NOT TIME. Just like the button on top."></p>
 
@@ -410,12 +715,12 @@ function render_competitor_header_row($competitor_id, $competitor_total_score) {
     $title = get_the_title($competitor_id);
     return <<<HTML
     <tr class="competitor-header" data-competitor-id="$competitor_id" title="Clicking here always resets Timer. Careful!">
-        <th colspan="5">
+        <th colspan="6">
             <span class="toggle-details-icon dashicons dashicons-arrow-down-alt2"></span>
             <b class="competitor-name larger-text">$title</b>
             <span class="show-on-hover">(click to see info and scoresheet)</span>
         </th>
-        <th width="7%"><span class="total-points">$competitor_total_score points</span></th>
+        <th width="7%"><span class="total-points">$competitor_total_score</span>p</th>
     </tr>
     HTML;
 }
@@ -438,20 +743,20 @@ function render_competitor_info_row($competitor_id) {
 
     return <<<HTML
     <tr class="competitor-info hidden" data-competitor-id="$competitor_id">
-        <td colspan="6">
+        <td colspan="7">
             <table>
                 <tbody>
                     <tr>
-                        <th>Info</th>
-                        <th width="7%">Sponsors</th>
+                        <th class="hide-for-print">Info</th>
+                        <th width="7%" class="hide-for-print">Sponsors</th>
                         <th width="7%">Club</th>
                         <th width="7%">Class</th>
                         <th width="7%">Start - Stop</th>
                         <th width="7%">Elapsed Time</th>
                     </tr>
                     <tr>
-                        <td class="overflow-ellipsis">$speaker_info</td>
-                        <td class="overflow-ellipsis">$sponsors</td>
+                        <td class="overflow-ellipsis hide-for-print">$speaker_info</td>
+                        <td class="overflow-ellipsis hide-for-print">$sponsors</td>
                         <td>$club</td>
                         <td>$participation_class</td>
                         <td>$start_time - $stop_time</td>
@@ -466,6 +771,7 @@ function render_competitor_info_row($competitor_id) {
         <th width="10%" colspan="2" class="">Left</th>
         <th width="10%" colspan="2" class="">Right</th>
         <th width="7%">Sum</th>
+        <th width="7%">Reset</th>
     </tr>
     HTML;
 }
@@ -566,59 +872,77 @@ function render_competitor_score_row($competitor_id, $index, $roll, $scores, $se
     $selected_class = $is_selected ? 'selected-roll' : '';
 
     $input_prefix = "competitor_scores[$competitor_id][$index]";
+    $is_numeric_field = ($roll['is_numeric'] === 'Yes');
 
-    // Determine checked states
+    $row_contents = "<td>{$roll_name} (" . ($is_numeric_field ? $max_score : $max_score . "p") . ")</td>";
+
+    if ($is_numeric_field) {
+        $row_contents .= render_numeric_inputs($input_prefix, $scores);
+    } else {
+        $row_contents .= render_radio_inputs($input_prefix, $max_score, $less_score, $scores);
+    }
+
+    $total_score = calculate_total_score($is_numeric_field, $scores, $max_score, $less_score);
+    $row_contents .= render_total_score($input_prefix, $total_score);
+
+    $row_id = "competitor-row-{$competitor_id}-{$index}";
+    $reset_button = <<<HTML
+    <td>
+        <button type="button" class="reset-row button">X</button>
+    </td>
+    HTML;
+    $row_contents .= $reset_button;
+    return "<tr id='{$row_id}' class='competitor-scores {$selected_class} hidden' data-competitor-id='{$competitor_id}' data-index='{$index}'>{$row_contents}</tr>";
+}
+
+function render_numeric_inputs($input_prefix, $scores) {
+    $left_numeric_value = isset($scores['left_score']) ? intval($scores['left_score']) : '';
+    $right_numeric_value = isset($scores['right_score']) ? intval($scores['right_score']) : '';
+
+    return <<<HTML
+    <td><input type="number" name="{$input_prefix}[left_score]" class="numeric-input" min="0" max="99" value="{$left_numeric_value}" /></td>
+    <td></td>
+    <td><input type="number" name="{$input_prefix}[right_score]" class="numeric-input" min="0" max="99" value="{$right_numeric_value}" /></td>
+    <td></td>
+    HTML;
+}
+
+function render_radio_inputs($input_prefix, $max_score, $less_score, $scores) {
+    $left_name = "{$input_prefix}[left_group]";
+    $right_name = "{$input_prefix}[right_group]";
+
     $left_score_checked = isset($scores['left_group']) && $scores['left_group'] == $max_score ? 'checked' : '';
     $left_deduct_checked = isset($scores['left_group']) && $scores['left_group'] == $less_score ? 'checked' : '';
     $right_score_checked = isset($scores['right_group']) && $scores['right_group'] == $max_score ? 'checked' : '';
     $right_deduct_checked = isset($scores['right_group']) && $scores['right_group'] == $less_score ? 'checked' : '';
 
-    $is_numeric_field = ($roll['is_numeric'] === 'Yes');
+    return <<<HTML
+    <td class="success-light"><label><input type="radio" class="score-input" name="{$left_name}" value="{$max_score}" {$left_score_checked}> More</label></td>
+    <td class="danger-light"><label><input type="radio" class="deduct-input" name="{$left_name}" value="{$less_score}" {$left_deduct_checked}> Less</label></td>
+    <td class="success-light"><label><input type="radio" class="score-input" name="{$right_name}" value="{$max_score}" {$right_score_checked}> More</label></td>
+    <td class="danger-light"><label><input type="radio" class="deduct-input" name="{$right_name}" value="{$less_score}" {$right_deduct_checked}> Less</label></td>
+    HTML;
+}
 
-    if ($is_numeric_field) {
-        $left_numeric_value = isset($scores['left_score']) ? intval($scores['left_score']) : '';
-        $right_numeric_value = isset($scores['right_score']) ? intval($scores['right_score']) : '';
-
-        $row_contents = <<<HTML
-        <td>{$roll_name} ({$max_score})</td>
-        <td><input type="text" name="{$input_prefix}[left_score]" class="numeric-input" maxlength="2" value="{$left_numeric_value}" /></td>
-        <td></td>
-        <td><input type="text" name="{$input_prefix}[right_score]" class="numeric-input" maxlength="2" value="{$right_numeric_value}" /></td>
-        <td></td>
-        HTML;
-    } else {
-        // Group left and right inputs to ensure mutual exclusivity
-        $left_name = "{$input_prefix}[left_group]";
-        $right_name = "{$input_prefix}[right_group]";
-
-        $row_contents = <<<HTML
-        <td>{$roll_name} ({$max_score}p)</td>
-        <td class="success-light"><label><input type="radio" class="score-input" name="{$left_name}" value="{$max_score}" {$left_score_checked}> More</label></td>
-        <td class="danger-light"><label><input type="radio" class="deduct-input" name="{$left_name}" value="{$less_score}" {$left_deduct_checked}> Less</label></td>
-        <td class="success-light"><label><input type="radio" class="score-input" name="{$right_name}" value="{$max_score}" {$right_score_checked}> More</label></td>
-        <td class="danger-light"><label><input type="radio" class="deduct-input" name="{$right_name}" value="{$less_score}" {$right_deduct_checked}> Less</label></td>
-        HTML;
-    }
-
-    // Points calculation
-    $left_points = $left_score_checked ? $max_score : ($left_deduct_checked ? $less_score : 0);
-    $right_points = $right_score_checked ? $max_score : ($right_deduct_checked ? $less_score : 0);
-
+function calculate_total_score($is_numeric_field, $scores, $max_score, $less_score) {
     if ($is_numeric_field) {
         $left_points = isset($scores['left_score']) ? intval($scores['left_score']) : 0;
         $right_points = isset($scores['right_score']) ? intval($scores['right_score']) : 0;
+    } else {
+        $left_points = isset($scores['left_group']) && $scores['left_group'] == $max_score ? $max_score : 
+                      (isset($scores['left_group']) && $scores['left_group'] == $less_score ? $less_score : 0);
+        $right_points = isset($scores['right_group']) && $scores['right_group'] == $max_score ? $max_score : 
+                       (isset($scores['right_group']) && $scores['right_group'] == $less_score ? $less_score : 0);
     }
+    return $left_points + $right_points;
+}
 
-    $total_score = $left_points + $right_points;
-
-    $row_contents .= <<<HTML
+function render_total_score($input_prefix, $total_score) {
+    return <<<HTML
     <td class="total-score-row">{$total_score}</td>
     <input type="hidden" name="{$input_prefix}[total_score]" value="{$total_score}" />
     HTML;
-
-    return "<tr class='competitor-scores {$selected_class} hidden' data-competitor-id='{$competitor_id}' data-index='{$index}'>{$row_contents}</tr>";
 }
-
 
 
 
