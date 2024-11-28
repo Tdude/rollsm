@@ -1,4 +1,5 @@
 <?php
+
 function echo_table_cell($content) {
     echo '<td>' . esc_html($content) . '</td>';
 }
@@ -438,7 +439,7 @@ add_action('manage_competitors_posts_custom_column', 'show_meta_keys_in_competit
 
 
 
-function display_filter_form($filter_date = '', $filter_class = '') {
+function display_filter_form($filter_date = '', $filter_class = '', $filter_gender = '') {
     // Retrieve options
     $options = get_option('competitors_options');
     
@@ -479,6 +480,13 @@ function display_filter_form($filter_date = '', $filter_class = '') {
             <?php endforeach; ?>
         </select>
 
+        <label for="filter_gender">Select Gender: </label>
+        <select id="filter_gender" name="filter_gender">
+            <option value=""><?php _e('All Genders', 'competitors'); ?></option>
+            <option value="woman" <?php selected($filter_gender, 'woman'); ?>>Woman</option>
+            <option value="man" <?php selected($filter_gender, 'man'); ?>>Man</option>
+        </select>
+
         <button type="button" id="filter_button" class="button button-primary">Filter</button>
         <button type="button" id="reset_button" class="button button-secondary">Reset</button>
     </div>
@@ -486,9 +494,7 @@ function display_filter_form($filter_date = '', $filter_class = '') {
 }
 
 
-
-
-function get_filtered_competitors_query($filter_date = '', $filter_class = '') {
+function get_filtered_competitors_query($filter_date = '', $filter_class = '', $filter_gender = '') {
     $query_args = [
         'post_type' => 'competitors',
         'posts_per_page' => -1,
@@ -512,6 +518,14 @@ function get_filtered_competitors_query($filter_date = '', $filter_class = '') {
         ];
     }
 
+    if (!empty($filter_gender)) {
+        $meta_query[] = [
+            'key' => 'gender',
+            'value' => $filter_gender,
+            'compare' => '='
+        ];
+    }
+
     if (!empty($meta_query)) {
         $query_args['meta_query'] = $meta_query;
     }
@@ -519,14 +533,12 @@ function get_filtered_competitors_query($filter_date = '', $filter_class = '') {
     return new WP_Query($query_args);
 }
 
-
-
-
 function filter_competitors() {
     check_ajax_referer('competitors_nonce_action', 'nonce');
     $filter_date = sanitize_text_field($_POST['filter_date']);
     $filter_class = sanitize_text_field($_POST['filter_class']);
-    $competitors_query = get_filtered_competitors_query($filter_date, $filter_class);
+    $filter_gender = sanitize_text_field($_POST['filter_gender']);
+    $competitors_query = get_filtered_competitors_query($filter_date, $filter_class, $filter_gender);
 
     ob_start(); // Start a new buffer to capture HTML output
     if ($competitors_query->have_posts()) {
@@ -542,8 +554,7 @@ function filter_competitors() {
     wp_die();
 }
 add_action('wp_ajax_filter_competitors', 'filter_competitors');
-
-
+add_action('wp_ajax_nopriv_filter_competitors', 'filter_competitors');
 
 
 // Render the whole page
@@ -560,12 +571,13 @@ function judges_scoring_page() {
     $judges_scoring_page_title = esc_html__('Judges Scoring Page', 'competitors');
     echo '<h1 class="distance-large">' . $judges_scoring_page_title . '</h1>';
 
-    // Retrieve filter date and class or initialize as empty
+    // Retrieve filter date, class, and gender or initialize as empty
     $filter_date = isset($_GET['filter_date']) ? sanitize_text_field($_GET['filter_date']) : '';
     $filter_class = isset($_GET['filter_class']) ? sanitize_text_field($_GET['filter_class']) : '';
-    $competitors_query = get_filtered_competitors_query($filter_date, $filter_class);
+    $filter_gender = isset($_GET['filter_gender']) ? sanitize_text_field($_GET['filter_gender']) : '';
+    $competitors_query = get_filtered_competitors_query($filter_date, $filter_class, $filter_gender);
 
-    display_filter_form($filter_date, $filter_class);
+    display_filter_form($filter_date, $filter_class, $filter_gender);
     echo '<div id="judges-scoring-container">';
     display_competitors_table($competitors_query, $filter_class);
     echo '</div>';
@@ -574,12 +586,33 @@ function judges_scoring_page() {
 
 
 
-function display_competitors_table($competitors_query, $filter_class = 'championship') {
+function display_competitors_table($competitors_query, $filter_class = '') {
     if (!$competitors_query->have_posts()) {
-        $no_competitors_message = esc_html__('Looks like there are no competitors to score here right now. Please add some competitors, choose another date or check back later.', 'competitors');
-        echo "<h2>\\(o_o)/</h2><p>{$no_competitors_message}</p>";
-        return; // Exit the function early
+        echo "<h2>\\(o_o)/</h2><p>" . esc_html__('Looks like there are no competitors to score here right now. Please add some competitors, choose another date or check back later.', 'competitors') . "</p>";
+        return;
     }
+
+    $competitors_data = array();
+
+    while ($competitors_query->have_posts()) {
+        $competitors_query->the_post();
+        $competitor_id = get_the_ID();
+        
+        // Fetch the total score for each competitor
+        $total_score = get_post_meta($competitor_id, 'total_score', true);
+        $total_score = is_numeric($total_score) ? intval($total_score) : 0;
+
+        $competitors_data[] = array(
+            'id' => $competitor_id,
+            'name' => get_the_title(),
+            'total_score' => $total_score,
+        );
+    }
+
+    // Sort competitors by total score, highest to lowest
+    usort($competitors_data, function($a, $b) {
+        return $b['total_score'] - $a['total_score'];
+    });
 
     $action_url = esc_url(admin_url('admin-ajax.php'));
     $nonce_field = wp_nonce_field('competitors_nonce_action', 'competitors_score_update_nonce');
@@ -611,17 +644,18 @@ function display_competitors_table($competitors_query, $filter_class = 'champion
 
     $grand_total = 0;
     $total_rolls_performed = 0;
-    $valid_scores_count = 0; // Initialize a counter for valid scores
+    $valid_scores_count = 0;
 
-    while ($competitors_query->have_posts()) {
-        $competitors_query->the_post();
-        $competitor_id = get_the_ID();
+    foreach ($competitors_data as $rank => $competitor) {
+        $competitor_id = $competitor['id'];
+        // If no class is selected, use the competitor's own class
+        $participation_class = $filter_class ?: get_post_meta($competitor_id, 'participation_class', true);
         
         // Fetching the roll data, including roll names, max scores, and numeric status
-        $rolls = get_roll_names_and_max_scores($filter_class); // Pass the $class parameter here
+        $rolls = get_roll_names_and_max_scores($participation_class);
         $competitor_scores = get_competitor_scores($competitor_id) ?: [];
         $selected_rolls = get_post_meta($competitor_id, 'selected_rolls', true) ?: [];
-        $competitor_total_score = 0;
+        $competitor_total_score = $competitor['total_score'];
         $tempHTML = $layoutHTML = '';
 
         $tempHTML .= <<<HTML
@@ -630,14 +664,8 @@ function display_competitors_table($competitors_query, $filter_class = 'champion
         <input type="hidden" name="elapsed_time[{$competitor_id}]" id="elapsed-time-{$competitor_id}" value="">
         HTML;
 
-        // Scoring logic to get the sums right
         foreach ($rolls as $index => $roll) {
             $roll_scores = $competitor_scores[$index] ?? [];
-
-            // Add logging to verify the scores structure
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                //error_log("Processing roll $index for competitor $competitor_id: " . print_r($roll_scores, true));
-            }
 
             // Initialize points
             $left_points = 0;
@@ -660,9 +688,8 @@ function display_competitors_table($competitors_query, $filter_class = 'champion
             // Calculate total points for the roll
             $roll_total = $left_points + $right_points;
 
-            // Update competitor total score and roll count
+            // Update roll count
             if ($roll_total != 0) {
-                $competitor_total_score += $roll_total;
                 $total_rolls_performed++;
             }
 
@@ -671,7 +698,7 @@ function display_competitors_table($competitors_query, $filter_class = 'champion
         }
 
         // Render the header and info rows
-        $layoutHTML .= render_competitor_header_row($competitor_id, $competitor_total_score);
+        $layoutHTML .= render_competitor_header_row($competitor_id, $competitor_total_score, $rank + 1);
         $layoutHTML .= render_competitor_info_row($competitor_id);
         $layoutHTML .= $tempHTML;
 
@@ -686,17 +713,18 @@ function display_competitors_table($competitors_query, $filter_class = 'champion
         echo $layoutHTML;
     }
 
-    // Calculating and displaying the grand total and averages
+    // Calculating and displaying the grand total and averages. 
     $average_score = $valid_scores_count > 0 ? $grand_total / $valid_scores_count : 0;
     $average_rolls = $valid_scores_count > 0 ? $total_rolls_performed / $valid_scores_count : 0;
     $average_score_formatted = number_format($average_score, 1, '.', '');
     $average_rolls_formatted = number_format($average_rolls, 1, '.', '');
 
     echo <<<HTML
-    <tr class="competitors-totals grand-total" data-competitor-id="$competitor_id">
-    <td colspan="2"><b>Rolls to perform</b> (Avg: <b>{$average_rolls_formatted}</b> per competitor)</td>
-    <td colspan="3"><b>Grand Total Score</b> (Avg: <b>{$average_score_formatted}</b> points per scored competitor)</td>
-    <td><b><span id="grand-total-value">{$grand_total}</span></b></td></tr></tbody></table>
+    <tr class="competitors-totals grand-total">
+        <td colspan="2"><b>Rolls to perform</b> (Avg: <b>{$average_rolls_formatted}</b> per competitor)</td>
+        <td colspan="2"><b>Average Score:</b> <b>{$average_score_formatted}</b> points per scored competitor in current class</td>
+        <td colspan="2"><b>Grand Total Score:</b> <b><span id="grand-total-value">{$grand_total}</span></b></td>
+    </tr></tbody></table>
     <div id="spinner" class="fade-inout hidden"></div>
     <div id="message-overlay" class="fade-inout hidden"></div>
     </form>
@@ -711,20 +739,19 @@ function display_competitors_table($competitors_query, $filter_class = 'champion
 // <p><input type="submit" value="Save new scores NOT TIME" class="button button-primary save-scores" title="Saves scores NOT TIME. Just like the button on top."></p>
 
 
-function render_competitor_header_row($competitor_id, $competitor_total_score) {
+function render_competitor_header_row($competitor_id, $competitor_total_score, $rank) {
     $title = get_the_title($competitor_id);
     return <<<HTML
     <tr class="competitor-header" data-competitor-id="$competitor_id" title="Clicking here always resets Timer. Careful!">
-        <th colspan="6">
+        <th colspan="5">
             <span class="toggle-details-icon dashicons dashicons-arrow-down-alt2"></span>
-            <b class="competitor-name larger-text">$title</b>
+            <b class="competitor-name larger-text">$rank. $title</b>
             <span class="show-on-hover">(click to see info and scoresheet)</span>
         </th>
         <th width="7%"><span class="total-points">$competitor_total_score</span>p</th>
     </tr>
     HTML;
 }
-
 
 
 function render_competitor_info_row($competitor_id) {
@@ -777,9 +804,6 @@ function render_competitor_info_row($competitor_id) {
 }
 
 
-
-
-
 function handle_competitors_score_update_serialized() {
     if (!current_user_can('manage_options')) {
         wp_send_json_error(['message' => 'Insufficient permissions']);
@@ -814,8 +838,13 @@ function handle_competitors_score_update_serialized() {
             foreach ($score_types as $score_type => $score_value) {
                 $score_value = intval($score_value);
                 $scores_array[intval($roll_index)][sanitize_key($score_type)] = $score_value;
-                $roll_total += $score_value;
+                
+                // Only add to roll_total if it's not the 'total_score' field
+                if ($score_type !== 'total_score') {
+                    $roll_total += $score_value;
+                }
             }
+
 
             $scores_array[intval($roll_index)]['total_score'] = $roll_total;
             $total_score += $roll_total;
@@ -843,8 +872,6 @@ function handle_competitors_score_update_serialized() {
 add_action('wp_ajax_competitors_score_update', 'handle_competitors_score_update_serialized');
 
 
-
-
 function get_competitor_scores($competitor_id) {
     $serialized_scores = get_post_meta($competitor_id, 'competitor_scores', true);
     if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -862,8 +889,6 @@ function get_competitor_scores($competitor_id) {
 }
 
 
-
-
 function render_competitor_score_row($competitor_id, $index, $roll, $scores, $selected_rolls) {
     $roll_name = esc_html($roll['name']);
     $max_score = isset($roll['max_score']) ? intval($roll['max_score']) : 0;
@@ -873,16 +898,17 @@ function render_competitor_score_row($competitor_id, $index, $roll, $scores, $se
 
     $input_prefix = "competitor_scores[$competitor_id][$index]";
     $is_numeric_field = ($roll['is_numeric'] === 'Yes');
+    $no_right_left = ($roll['no_right_left'] === 'Yes');
 
     $row_contents = "<td>{$roll_name} (" . ($is_numeric_field ? $max_score : $max_score . "p") . ")</td>";
 
     if ($is_numeric_field) {
-        $row_contents .= render_numeric_inputs($input_prefix, $scores);
+        $row_contents .= render_numeric_inputs($input_prefix, $scores, $no_right_left);
     } else {
         $row_contents .= render_radio_inputs($input_prefix, $max_score, $less_score, $scores);
     }
 
-    $total_score = calculate_total_score($is_numeric_field, $scores, $max_score, $less_score);
+    $total_score = calculate_total_score($is_numeric_field, $scores, $max_score, $less_score, $no_right_left);
     $row_contents .= render_total_score($input_prefix, $total_score);
 
     $row_id = "competitor-row-{$competitor_id}-{$index}";
@@ -895,47 +921,78 @@ function render_competitor_score_row($competitor_id, $index, $roll, $scores, $se
     return "<tr id='{$row_id}' class='competitor-scores {$selected_class} hidden' data-competitor-id='{$competitor_id}' data-index='{$index}'>{$row_contents}</tr>";
 }
 
-function render_numeric_inputs($input_prefix, $scores) {
-    $left_numeric_value = isset($scores['left_score']) ? intval($scores['left_score']) : '';
-    $right_numeric_value = isset($scores['right_score']) ? intval($scores['right_score']) : '';
 
-    return <<<HTML
-    <td><input type="number" name="{$input_prefix}[left_score]" class="numeric-input" min="0" max="99" value="{$left_numeric_value}" /></td>
-    <td></td>
-    <td><input type="number" name="{$input_prefix}[right_score]" class="numeric-input" min="0" max="99" value="{$right_numeric_value}" /></td>
-    <td></td>
-    HTML;
-}
-
-function render_radio_inputs($input_prefix, $max_score, $less_score, $scores) {
-    $left_name = "{$input_prefix}[left_group]";
-    $right_name = "{$input_prefix}[right_group]";
-
-    $left_score_checked = isset($scores['left_group']) && $scores['left_group'] == $max_score ? 'checked' : '';
-    $left_deduct_checked = isset($scores['left_group']) && $scores['left_group'] == $less_score ? 'checked' : '';
-    $right_score_checked = isset($scores['right_group']) && $scores['right_group'] == $max_score ? 'checked' : '';
-    $right_deduct_checked = isset($scores['right_group']) && $scores['right_group'] == $less_score ? 'checked' : '';
-
-    return <<<HTML
-    <td class="success-light"><label><input type="radio" class="score-input" name="{$left_name}" value="{$max_score}" {$left_score_checked}> More</label></td>
-    <td class="danger-light"><label><input type="radio" class="deduct-input" name="{$left_name}" value="{$less_score}" {$left_deduct_checked}> Less</label></td>
-    <td class="success-light"><label><input type="radio" class="score-input" name="{$right_name}" value="{$max_score}" {$right_score_checked}> More</label></td>
-    <td class="danger-light"><label><input type="radio" class="deduct-input" name="{$right_name}" value="{$less_score}" {$right_deduct_checked}> Less</label></td>
-    HTML;
-}
-
-function calculate_total_score($is_numeric_field, $scores, $max_score, $less_score) {
-    if ($is_numeric_field) {
-        $left_points = isset($scores['left_score']) ? intval($scores['left_score']) : 0;
-        $right_points = isset($scores['right_score']) ? intval($scores['right_score']) : 0;
+function render_numeric_inputs($input_prefix, $scores, $no_right_left) {
+    if ($no_right_left) {
+        $left_numeric_value = isset($scores['left_score']) ? intval($scores['left_score']) : '';
+        return <<<HTML
+        <td><input type="number" name="{$input_prefix}[left_score]" class="numeric-input" min="0" max="99" value="{$left_numeric_value}" /></td>
+        <td></td>
+        HTML;
     } else {
-        $left_points = isset($scores['left_group']) && $scores['left_group'] == $max_score ? $max_score : 
-                      (isset($scores['left_group']) && $scores['left_group'] == $less_score ? $less_score : 0);
-        $right_points = isset($scores['right_group']) && $scores['right_group'] == $max_score ? $max_score : 
-                       (isset($scores['right_group']) && $scores['right_group'] == $less_score ? $less_score : 0);
+        $left_numeric_value = isset($scores['left_score']) ? intval($scores['left_score']) : '';
+        $right_numeric_value = isset($scores['right_score']) ? intval($scores['right_score']) : '';
+        return <<<HTML
+        <td><input type="number" name="{$input_prefix}[left_score]" class="numeric-input" min="0" max="99" value="{$left_numeric_value}" /></td>
+        <td></td>
+        <td><input type="number" name="{$input_prefix}[right_score]" class="numeric-input" min="0" max="99" value="{$right_numeric_value}" /></td>
+        <td></td>
+        HTML;
     }
-    return $left_points + $right_points;
 }
+
+function render_radio_inputs($input_prefix, $max_score, $less_score, $scores, $no_right_left = false) {
+    if ($no_right_left) {
+        $name = "{$input_prefix}[score]";
+        $score_checked = isset($scores['score']) && $scores['score'] == $max_score ? 'checked' : '';
+        $deduct_checked = isset($scores['score']) && $scores['score'] == $less_score ? 'checked' : '';
+
+        return <<<HTML
+        <td class="success-light"><label><input type="radio" class="score-input" name="{$name}" value="{$max_score}" {$score_checked}> More</label></td>
+        <td class="danger-light"><label><input type="radio" class="deduct-input" name="{$name}" value="{$less_score}" {$deduct_checked}> Less</label></td>
+        HTML;
+    } else {
+        $left_name = "{$input_prefix}[left_group]";
+        $right_name = "{$input_prefix}[right_group]";
+
+        $left_score_checked = isset($scores['left_group']) && $scores['left_group'] == $max_score ? 'checked' : '';
+        $left_deduct_checked = isset($scores['left_group']) && $scores['left_group'] == $less_score ? 'checked' : '';
+        $right_score_checked = isset($scores['right_group']) && $scores['right_group'] == $max_score ? 'checked' : '';
+        $right_deduct_checked = isset($scores['right_group']) && $scores['right_group'] == $less_score ? 'checked' : '';
+
+        return <<<HTML
+        <td class="success-light"><label><input type="radio" class="score-input" name="{$left_name}" value="{$max_score}" {$left_score_checked}> More</label></td>
+        <td class="danger-light"><label><input type="radio" class="deduct-input" name="{$left_name}" value="{$less_score}" {$left_deduct_checked}> Less</label></td>
+        <td class="success-light"><label><input type="radio" class="score-input" name="{$right_name}" value="{$max_score}" {$right_score_checked}> More</label></td>
+        <td class="danger-light"><label><input type="radio" class="deduct-input" name="{$right_name}" value="{$less_score}" {$right_deduct_checked}> Less</label></td>
+        HTML;
+    }
+}
+
+
+function calculate_total_score($is_numeric_field, $scores, $max_score, $less_score, $no_right_left = false) {
+    if ($is_numeric_field) {
+        if ($no_right_left) {
+            return isset($scores['score']) ? intval($scores['score']) : 0;
+        } else {
+            $left_points = isset($scores['left_score']) ? intval($scores['left_score']) : 0;
+            $right_points = isset($scores['right_score']) ? intval($scores['right_score']) : 0;
+            return $left_points + $right_points;
+        }
+    } else {
+        if ($no_right_left) {
+            return isset($scores['score']) && $scores['score'] == $max_score ? $max_score : 
+                  (isset($scores['score']) && $scores['score'] == $less_score ? $less_score : 0);
+        } else {
+            $left_points = isset($scores['left_group']) && $scores['left_group'] == $max_score ? $max_score : 
+                          (isset($scores['left_group']) && $scores['left_group'] == $less_score ? $less_score : 0);
+            $right_points = isset($scores['right_group']) && $scores['right_group'] == $max_score ? $max_score : 
+                           (isset($scores['right_group']) && $scores['right_group'] == $less_score ? $less_score : 0);
+            return $left_points + $right_points;
+        }
+    }
+}
+
 
 function render_total_score($input_prefix, $total_score) {
     return <<<HTML
