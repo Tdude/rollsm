@@ -1,42 +1,140 @@
-// JS stuff
 document.addEventListener("DOMContentLoaded", () => {
-  let form = "";
-  if (document.getElementById("competitors-registration-form")) {
-    form = document.getElementById("competitors-registration-form");
+  // Utility Functions
+  const toggleClass = (element, className, condition) =>
+    element?.classList.toggle(className, condition);
+
+  const toggleElementDisplay = (element, displayStyle, opacity = null) => {
+    if (!element) return;
+    element.style.display = displayStyle;
+    if (opacity !== null) {
+      requestAnimationFrame(() => {
+        element.style.opacity = opacity;
+      });
+    }
+  };
+
+  const form = document.getElementById("competitors-registration-form");
+  const detailsContainer = document.getElementById(
+    "competitors-details-container"
+  );
+  const competitorsList = document.getElementById("competitors-list");
+  const dateSelect = document.getElementById("date-select");
+  const classSelect = document.getElementById("class-select");
+  const genderSelect = document.getElementById("gender-select");
+  const spinner = document.getElementById("spinner");
+
+  const showSpinner = () => {
+    if (!spinner) return;
+    toggleElementDisplay(spinner, "flex", "1");
+  };
+
+  const hideSpinner = () => {
+    if (!spinner) return;
+    spinner.style.opacity = "0";
+    spinner.addEventListener("transitionend", function handler(e) {
+      if (e.propertyName === "opacity") {
+        spinner.style.display = "none";
+        spinner.removeEventListener("transitionend", handler);
+      }
+    });
+  };
+
+  const isRegistrationPage = !!form;
+  const isListingPage = !!competitorsList;
+  if (isRegistrationPage) {
+    setupForm();
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === "childList") {
+          mutation.addedNodes.forEach((node) => {
+            if (node.classList && node.classList.contains("clickable-row")) {
+              setupRowsAndCheckboxes();
+            }
+          });
+        }
+      });
+    });
+    observer.observe(form, { childList: true, subtree: true });
+  }
+
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+
+  const debouncedFetchCompetitorsList = debounce(fetchCompetitorsList, 300);
+
+  if (isListingPage) {
+    if (
+      (dateSelect && dateSelect.options.length > 1) ||
+      (classSelect && classSelect.options.length > 1) ||
+      (genderSelect && genderSelect.options.length > 1)
+    ) {
+      dateSelect && dateSelect.options.length > 1
+        ? (dateSelect.selectedIndex = 1)
+        : null;
+      fetchCompetitorsList();
+    }
+
+    dateSelect?.addEventListener("change", debouncedFetchCompetitorsList);
+    classSelect?.addEventListener("change", debouncedFetchCompetitorsList);
+    genderSelect?.addEventListener("change", debouncedFetchCompetitorsList);
+    loadCompetitorFromURL();
+  }
+
+  // Fetch Function
+  async function fetchData(action, params = {}) {
+    const url = competitorsPublicAjax.ajaxurl;
+    const defaultParams = {
+      action,
+      security: competitorsPublicAjax.nonce,
+      ...params,
+    };
+
+    //console.log(`Fetching data for action: ${action}`, defaultParams);
+
+    try {
+      showSpinner();
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams(defaultParams),
+      });
+
+      if (!response.ok)
+        throw new Error(`HTTP error, status = ${response.status}`);
+
+      const contentType = response.headers.get("content-type");
+      const data =
+        contentType && contentType.includes("application/json")
+          ? await response.json()
+          : await response.text();
+
+      //console.log(`Received data for action: ${action}`, data);
+      return data;
+    } catch (error) {
+      console.error(`Error fetching ${action}:`, error);
+      throw error;
+    } finally {
+      hideSpinner();
+    }
+  }
+
+  // Form Handling Functions
+  function setupForm() {
+    if (!form) return;
+
     const validationMessageContainer = form.querySelector(
       "#validation-message"
     );
     const submitButton = form.querySelector("#submit-button");
-    const radioButtons = form.querySelectorAll(
-      'input[type="radio"][name="participation_class"]'
-    );
-    const spinner = document.getElementById("spinner");
-
-    if (!form) {
-      return;
-    }
-
-    function showButtonLoading(button, isLoading) {
-      button.disabled = isLoading;
-      button.value = isLoading ? "Processing..." : "Submit";
-    }
-
-    function displayValidationMessage(message, isSuccess) {
-      validationMessageContainer.textContent = message;
-      validationMessageContainer.classList.remove("hidden");
-      validationMessageContainer.classList.toggle("danger", !isSuccess);
-      validationMessageContainer.classList.toggle("success", isSuccess);
-    }
-
-    function closeValidationMessage() {
-      validationMessageContainer.classList.add("hidden");
-      validationMessageContainer.textContent = "";
-      validationMessageContainer.classList.remove(
-        "danger",
-        "success",
-        "fade-out"
-      );
-    }
 
     function handleValidationMessage({
       message = "Error",
@@ -57,23 +155,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (fadeOut) {
         validationMessageContainer.classList.add("fade-out");
-        setTimeout(() => closeValidationMessage(), 8000);
+        setTimeout(() => {
+          validationMessageContainer.classList.add("hidden");
+          validationMessageContainer.textContent = "";
+          validationMessageContainer.classList.remove(
+            "danger",
+            "success",
+            "fade-out"
+          );
+        }, 8000);
       }
     }
 
     function validateForm() {
-      closeValidationMessage();
       let isValid = true;
 
       ["phone", "email", "name"].forEach((fieldName) => {
         const field = form.querySelector(`[name="${fieldName}"]`);
         if (!field.value.trim()) {
-          displayValidationMessage(
-            `${
+          handleValidationMessage({
+            message: `${
               fieldName.charAt(0).toUpperCase() + fieldName.slice(1)
             } is required.`,
-            false
-          );
+            success: false,
+            show: true,
+          });
           toggleClass(field, "border-danger", true);
           isValid = false;
         } else {
@@ -88,10 +194,12 @@ document.addEventListener("DOMContentLoaded", () => {
       isValid &= validateCheckbox("consent", "Your consent is required.");
 
       const dateField = form.querySelector("#competition_date");
-      const selectedDate = dateField.value.trim();
-
-      if (!selectedDate) {
-        displayValidationMessage("A competition date is required.", false);
+      if (!dateField.value.trim()) {
+        handleValidationMessage({
+          message: "A competition date is required.",
+          success: false,
+          show: true,
+        });
         toggleClass(dateField, "border-danger", true);
         isValid = false;
       } else {
@@ -104,7 +212,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function validateRadioSection(name, message) {
       const container = form.querySelector(`#${name}-container`);
       if (!form.querySelector(`input[name="${name}"]:checked`)) {
-        displayValidationMessage(message, false);
+        handleValidationMessage({ message, success: false, show: true });
         toggleClass(container, "border-danger", true);
         return false;
       } else {
@@ -117,7 +225,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const checkbox = form.querySelector(`[name="${name}"]`);
       const container = checkbox.closest(".form-group");
       if (!checkbox.checked) {
-        displayValidationMessage(message, false);
+        handleValidationMessage({ message, success: false, show: true });
         toggleClass(container, "border-danger", true);
         return false;
       } else {
@@ -126,82 +234,56 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    function resetSubmitButton() {
-      submitButton.removeAttribute("disabled");
-      submitButton.value = "Submit";
-    }
-
     async function submitForm() {
       const formData = new FormData(form);
       formData.append("action", "competitors_form_submit");
-      formData.append("competitors_nonce", competitorsPublicAjax.nonce);
 
       try {
-        const response = await fetch(competitorsPublicAjax.ajaxurl, {
-          method: "POST",
-          credentials: "same-origin",
-          body: formData,
+        const data = await fetchData(
+          "competitors_form_submit",
+          Object.fromEntries(formData)
+        );
+
+        if (!data.success)
+          throw new Error(data.data.message || "Form submission failed");
+
+        handleValidationMessage({
+          message: `Thank you for your registration! Your total fee is SEK ${data.data.total_sum}. Please check your inbox and spam folder for a confirmation. Pay with Swish on the next page.`,
+          success: true,
+          show: true,
+          fadeOut: true,
         });
 
-        if (!response.ok) {
-          throw new Error(
-            "Oops! Server not reachable. Please try again later."
-          );
-        }
-
-        let data;
-        try {
-          data = await response.json();
-        } catch (e) {
-          throw new Error("Invalid server response. Please try again later.");
-        }
-
-        if (!data.success) {
-          throw new Error(`Error from server: ${data.data.message}`);
-        } else {
-          handleValidationMessage({
-            message: `Yay, thank you for your registration! Your total fee is SEK ${data.data.total_sum}. Please check your inbox and spam folder for a confirmation. Pay with Swish on the next page.`,
-            success: true,
-            show: true,
-            fadeOut: true,
-          });
-
-          form.reset();
-          setTimeout(() => {
-            window.location.href = data.data.redirect_url;
-          }, 2000);
-        }
+        form.reset();
+        setTimeout(() => {
+          window.location.href = data.data.redirect_url;
+        }, 2000);
       } catch (error) {
         console.error("Error during form submission:", error);
-        let errorMessage = "Oops! There was a problem with your submission.";
-        if (error.message) {
-          errorMessage = `Oops! ${error.message}`;
-        }
         handleValidationMessage({
-          message: errorMessage,
+          message: `Oops! ${
+            error.message || "There was a problem with your submission."
+          }`,
           success: false,
           show: true,
           fadeOut: true,
         });
       } finally {
-        resetSubmitButton();
+        submitButton.disabled = false;
+        submitButton.value = "Submit";
       }
     }
 
     async function handleSubmit(event) {
       event.preventDefault();
-      showButtonLoading(submitButton, true);
+      submitButton.disabled = true;
+      submitButton.value = "Processing...";
 
       if (validateForm()) {
-        try {
-          await submitForm();
-        } catch (error) {
-          console.error("Failed to submit form:", error);
-          alert("Failed to submit form, please try again.");
-          showButtonLoading(submitButton, false);
-        }
+        await submitForm();
       } else {
-        showButtonLoading(submitButton, false);
+        submitButton.disabled = false;
+        submitButton.value = "Submit";
       }
     }
 
@@ -224,150 +306,89 @@ document.addEventListener("DOMContentLoaded", () => {
             )
           );
         });
-      radioButtons.forEach((radio) =>
-        radio.addEventListener("change", toggleLicenseCheckbox)
-      );
+      form
+        .querySelectorAll('input[name="participation_class"]')
+        .forEach((radio) => {
+          radio.addEventListener("change", () => {
+            toggleLicenseCheckbox();
+            updatePerformingRolls(radio.value);
+          });
+        });
       toggleLicenseCheckbox();
     }
 
-    function addRowEventListeners(row) {
+    setupEventListeners();
+  }
+
+  // Competitor List and Details Functions
+  function setupRowsAndCheckboxes() {
+    const rows = document.querySelectorAll(".clickable-row");
+    rows.forEach((row) => {
       row.addEventListener("click", function (event) {
-        const isCheckbox = event.target.type === "checkbox";
-        const checkbox = isCheckbox
-          ? event.target
-          : this.querySelector(".roll-checkbox");
+        const checkbox =
+          event.target.type === "checkbox"
+            ? event.target
+            : this.querySelector(".roll-checkbox");
         if (checkbox) {
-          if (!isCheckbox) {
-            checkbox.checked = !checkbox.checked;
-          }
+          checkbox.checked = !checkbox.checked;
           toggleClass(checkbox.closest("tr"), "grayed-out", !checkbox.checked);
-          if (!isCheckbox) {
-            checkbox.dispatchEvent(new Event("change", { bubbles: true }));
-          }
+          checkbox.dispatchEvent(new Event("change", { bubbles: true }));
         }
       });
-    }
+    });
 
-    function setupRowsAndCheckboxes() {
-      const rows = form.querySelectorAll(".clickable-row");
-      rows.forEach((row) => addRowEventListeners(row));
-
-      const masterCheckbox = form.querySelector("#check_all");
-      masterCheckbox?.addEventListener("change", function () {
-        const checkboxes = form.querySelectorAll(
-          'input[type="checkbox"].roll-checkbox'
-        );
-        checkboxes.forEach((checkbox) => {
+    const masterCheckbox = document.querySelector("#check_all");
+    masterCheckbox?.addEventListener("change", function () {
+      document
+        .querySelectorAll('input[type="checkbox"].roll-checkbox')
+        .forEach((checkbox) => {
           if (checkbox !== masterCheckbox) {
             checkbox.checked = masterCheckbox.checked;
             checkbox.dispatchEvent(new Event("change"));
           }
         });
-      });
-    }
-
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-          mutation.addedNodes.forEach((node) => {
-            if (node.classList && node.classList.contains("clickable-row")) {
-              addRowEventListeners(node);
-            }
-          });
-        }
-      });
     });
-
-    if (form) {
-      observer.observe(form, { childList: true, subtree: true });
-    }
-
-    setupRowsAndCheckboxes();
-    setupEventListeners();
-  } // End page with form
-
-  // Utility Functions
-  function toggleClass(element, className, condition) {
-    if (element) {
-      element.classList.toggle(className, condition);
-    }
   }
-  function toggleElementDisplay(
-    element,
-    displayStyle,
-    opacity = null,
-    addClasses = [],
-    removeClasses = []
-  ) {
-    if (element) {
-      element.style.display = displayStyle;
-      if (opacity !== null) {
-        requestAnimationFrame(() => {
-          element.style.opacity = opacity;
-        });
+
+  async function updatePerformingRolls(classType) {
+    try {
+      const data = await fetchData("get_performing_rolls", {
+        class_type: classType,
+      });
+      if (data.success) {
+        document.getElementById("performing-rolls-container").innerHTML =
+          data.data.html;
+        setupRowsAndCheckboxes();
+      } else {
+        throw new Error("Failed to update performing rolls.");
       }
-      addClasses.forEach((className) => element.classList.add(className));
-      removeClasses.forEach((className) => element.classList.remove(className));
+    } catch (error) {
+      console.error("Error updating performing rolls:", error);
+      alert(error.message);
     }
   }
 
-  const showSpinner = () => toggleElementDisplay(spinner, "flex", "1");
-  const hideSpinner = () => {
-    spinner.style.opacity = "0";
-    spinner.addEventListener("transitionend", function handler(e) {
-      if (e.propertyName === "opacity") {
-        spinner.style.display = "none";
-        spinner.removeEventListener("transitionend", handler);
-      }
-    });
-  };
-
-  function updatePerformingRolls(classType) {
-    const params = new URLSearchParams({
-      action: "get_performing_rolls",
-      class_type: classType,
-      nonce: competitorsPublicAjax.nonce,
-    });
-
-    fetch(competitorsPublicAjax.ajaxurl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-      },
-      body: params,
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.success) {
-          document.getElementById("performing-rolls-container").innerHTML =
-            data.data.html;
-          if (form) {
-            setupRowsAndCheckboxes(); // Event listeners to new content after AJAX load
-          }
-        } else {
-          alert("Failed to update performing rolls.");
-        }
-      })
-      .catch((error) => {
-        alert("An error occurred while updating performing rolls.");
-        console.error("Error:", error);
+  async function fetchCompetitorDetails(competitorId, participationClass) {
+    try {
+      const html = await fetchData("load_competitor_details", {
+        competitor_id: competitorId,
+        participation_class: participationClass,
       });
-  }
+      detailsContainer.innerHTML = html.trim()
+        ? html
+        : "<p>No details available for this competitor.</p>";
+      detailsContainer.style.display = "block";
+      document
+        .getElementById("close-details")
+        .scrollIntoView({ behavior: "smooth" });
+      addCloseButtonListener();
 
-  document
-    .querySelectorAll('input[name="participation_class"]')
-    .forEach((radio) => {
-      radio.addEventListener("change", function () {
-        const selectedClass = this.value;
-        updatePerformingRolls(selectedClass);
-      });
-    });
-
-  const detailsContainer = document.getElementById(
-    "competitors-details-container"
-  );
-  if (!detailsContainer) {
-    return;
+      // Update URL with competitor ID
+      updateURL(competitorId);
+    } catch (error) {
+      console.error("Error loading competitor details:", error);
+      alert("Error loading details: " + error.message);
+    }
   }
 
   function addCloseButtonListener() {
@@ -378,145 +399,162 @@ document.addEventListener("DOMContentLoaded", () => {
         e.preventDefault();
         detailsContainer.style.display = "none";
         detailsContainer.innerHTML = "";
-        document
-          .getElementById("competitors-list")
-          .scrollIntoView({ behavior: "smooth" });
+        competitorsList.scrollIntoView({ behavior: "smooth" });
+
+        // Remove competitor ID from URL
+        updateURL(null);
       },
       { once: true }
     );
   }
 
-  function fetchCompetitorsData(url, params) {
-    return fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams(params),
-    }).then((response) => {
-      if (!response.ok) {
-        throw new Error(`HTTP error, status = ${response.status}`);
-      }
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        return response.json();
-      } else {
-        return response.text();
-      }
-    });
+  function updateURL(competitorId) {
+    if (competitorId) {
+      const newUrl = new URL(window.location);
+      newUrl.searchParams.set("competitor", competitorId);
+      window.history.pushState({}, "", newUrl);
+    } else {
+      const newUrl = new URL(window.location);
+      newUrl.searchParams.delete("competitor");
+      window.history.pushState({}, "", newUrl);
+    }
   }
 
-  function fetchCompetitorDetails(competitorId, participationClass) {
-    const params = {
-      action: "load_competitor_details",
-      competitor_id: competitorId,
-      participation_class: participationClass, // Send the participation_class directly
-      security: competitorsPublicAjax.nonce,
-    };
-
-    showSpinner();
-    fetchCompetitorsData(competitorsPublicAjax.ajaxurl, params)
-      .then((html) => {
-        if (!html.trim()) {
-          detailsContainer.innerHTML =
-            "<p>No details available for this competitor.</p>";
-        } else {
-          detailsContainer.innerHTML = html;
-        }
-        detailsContainer.style.display = "block";
-        document
-          .getElementById("close-details")
-          .scrollIntoView({ behavior: "smooth" });
-        addCloseButtonListener();
-      })
-      .catch((error) => {
-        console.error("Fetch Error:", error);
-        alert("Error loading details: " + error.message);
-      })
-      .finally(() => {
-        hideSpinner();
-      });
+  function getCompetitorIdFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get("competitor");
   }
 
-  document
-    .getElementById("competitors-list")
-    .addEventListener("click", (event) => {
+  async function loadCompetitorFromURL() {
+    const competitorId = getCompetitorIdFromURL();
+    if (competitorId) {
+      // You might need to fetch the participation class separately or modify your backend to not require it
+      await fetchCompetitorDetails(competitorId, null);
+    }
+  }
+
+  if (competitorsList) {
+    competitorsList.addEventListener("click", (event) => {
       const target = event.target.closest(".competitors-list-item");
       if (target) {
-        const competitorId = target.getAttribute("data-competitor-id");
-        const participationClass = target.getAttribute(
-          "data-participation-class"
+        fetchCompetitorDetails(
+          target.getAttribute("data-competitor-id"),
+          target.getAttribute("data-participation-class")
         );
-        fetchCompetitorDetails(competitorId, participationClass);
       }
     });
-
-  const dateSelect = document.getElementById("date-select");
-  const classSelect = document.getElementById("class-select");
-
-  // Pre-select the first available date (skip the "All Dates" option)
-  if (dateSelect && dateSelect.options.length > 1) {
-    dateSelect.selectedIndex = 1; // Select the first available date (index 1)
-    fetchCompetitorsList(); // Trigger fetching competitors for the selected date
   }
-
-  document
-    .getElementById("competitors-list")
-    .addEventListener("click", (event) => {
-      const target = event.target.closest(".competitors-list-item");
-      if (target) {
-        fetchCompetitorDetails(target.getAttribute("data-competitor-id"));
-      }
-    });
-
-  dateSelect.addEventListener("change", fetchCompetitorsList);
-  classSelect.addEventListener("change", fetchCompetitorsList);
 
   async function fetchCompetitorsList() {
-    const selectedDate = dateSelect.value;
-    const selectedClass = classSelect.value;
-    const params = {
-      action: "load_competitors_list",
-      date_select: selectedDate,
-      class_select: selectedClass,
-      security: competitorsPublicAjax.nonce,
-    };
-
     try {
-      showSpinner();
-      const data = await fetchCompetitorsData(
-        competitorsPublicAjax.ajaxurl,
-        params
-      );
-      updateCompetitorsTable(data);
-      if (form) {
-        setupRowsAndCheckboxes();
+      //console.log("Fetching competitors list...");
+      console.log("Filter values:", {
+        date: dateSelect.value,
+        class: classSelect.value,
+        gender: genderSelect.value,
+      });
+
+      const data = await fetchData("load_competitors_list", {
+        date_select: dateSelect.value,
+        class_select: classSelect.value,
+        gender_select: genderSelect.value,
+      });
+
+      //console.log("Received competitors list data:", data);
+
+      if (!data || !data.success) {
+        throw new Error(data?.data?.message || "Invalid response from server");
       }
+
+      updateCompetitorsTable(data);
+      setupRowsAndCheckboxes();
     } catch (error) {
-      console.error("Fetch Error:", error);
+      console.error("Error loading competitors list:", error);
+      console.error("Error details:", error.message);
       alert("Error loading competitors: " + error.message);
-    } finally {
-      hideSpinner();
     }
   }
 
   function updateCompetitorsTable(data) {
     const competitorsTable = document.querySelector(".competitors-table");
+    //console.log("Updating competitors table with data:", data);
     competitorsTable.innerHTML = "";
 
-    if (typeof data === "string") {
-      if (
-        !data.trim() ||
-        data.trim() === '<ul class="competitors-table"></ul>'
-      ) {
-        competitorsTable.innerHTML =
-          "<p>No competitors registered for this date.</p>";
-      } else {
-        competitorsTable.innerHTML = data;
-      }
-    } else if (data.success && data.data.content) {
-      competitorsTable.innerHTML = data.data.content;
-    } else {
-      console.error("Error or missing content:", data.message);
-      throw new Error(data.message || "Missing content.");
+    if (!data) {
+      console.error("No data received");
+      competitorsTable.innerHTML =
+        "<p>No competitors found with current filters</p>";
+      return;
     }
+
+    if (typeof data === "string") {
+      console.log("Data is a string:", data);
+      competitorsTable.innerHTML =
+        data.trim() && data.trim() !== '<ul class="competitors-table"></ul>'
+          ? data
+          : "<p>No competitors found for these selections</p>";
+    } else if (
+      typeof data === "object" &&
+      data.success &&
+      data.data &&
+      data.data.content
+    ) {
+      competitorsTable.innerHTML =
+        data.data.content || "<p>No competitors match your filter criteria</p>";
+    } else {
+      console.error("Unexpected data format:", data);
+      competitorsTable.innerHTML = "<p>No competitors found</p>";
+    }
+  }
+
+  // Event Listeners
+  if (competitorsList) {
+    competitorsList.addEventListener("click", (event) => {
+      const target = event.target.closest(".competitors-list-item");
+      if (target) {
+        fetchCompetitorDetails(
+          target.getAttribute("data-competitor-id"),
+          target.getAttribute("data-participation-class")
+        );
+      }
+    });
+  }
+
+  if (
+    (dateSelect && dateSelect.options.length > 1) ||
+    (classSelect && classSelect.options.length > 1) ||
+    (genderSelect && genderSelect.options.length > 1)
+  ) {
+    dateSelect && dateSelect.options.length > 1
+      ? (dateSelect.selectedIndex = 1)
+      : null;
+    fetchCompetitorsList();
+  } else {
+    console.warn("No select elements found or have insufficient options");
+  }
+
+  dateSelect?.addEventListener("change", debouncedFetchCompetitorsList);
+  classSelect?.addEventListener("change", debouncedFetchCompetitorsList);
+  genderSelect?.addEventListener("change", debouncedFetchCompetitorsList);
+
+  // Initialize
+  setupForm();
+  loadCompetitorFromURL(); // Load competitor details if ID is in URL
+
+  // Observe for dynamically added rows
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === "childList") {
+        mutation.addedNodes.forEach((node) => {
+          if (node.classList && node.classList.contains("clickable-row")) {
+            setupRowsAndCheckboxes();
+          }
+        });
+      }
+    });
+  });
+
+  if (form) {
+    observer.observe(form, { childList: true, subtree: true });
   }
 });
