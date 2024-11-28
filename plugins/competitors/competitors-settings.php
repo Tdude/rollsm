@@ -19,16 +19,12 @@ ini_set('display_errors', 1);
 /**
  * Removes the admin color scheme picker from user profiles for non-admin users.
  */
-if (!function_exists('remove_admin_color_scheme_for_non_admins')) {
-    function remove_admin_color_scheme_for_non_admins() {
-        // Check if the current user is not an admin
-        if (!current_user_can('manage_options')) {
-            // Remove the color scheme picker
-            remove_action('admin_color_scheme_picker', 'admin_color_scheme_picker');
-        }
+function competitors_remove_admin_color_scheme_for_non_admins() {
+    if (!current_user_can('manage_options')) {
+        remove_action('admin_color_scheme_picker', 'admin_color_scheme_picker');
     }
 }
-add_action('admin_init', 'remove_admin_color_scheme_for_non_admins');
+add_action('admin_init', 'competitors_remove_admin_color_scheme_for_non_admins');
 
 
 // Include admin and public page functionalities
@@ -39,7 +35,7 @@ include_once plugin_dir_path(__FILE__) . 'public-page.php';
 /**
  * Checks if the current post has any of the provided shortcodes.
  */
-function post_has_shortcodes($post, $shortcodes) {
+function competitors_post_has_shortcodes($post, $shortcodes) {
     if (!$post || !is_a($post, 'WP_Post')) {
         return false;
     }
@@ -60,14 +56,14 @@ function post_has_shortcodes($post, $shortcodes) {
 /**
  * Enqueues styles and scripts for the front-end part of the site.
  */
-function enqueue_competitors_public_scripts() {
+function competitors_enqueue_public_scripts() {
     if (!wp_script_is('jquery', 'enqueued')) {
         wp_enqueue_script('jquery');
     }
     $shortcodes = ['competitors_form_public', 'competitors_scoring_public'];
     global $post;
 
-    if (post_has_shortcodes($post, $shortcodes)) {
+    if (competitors_post_has_shortcodes($post, $shortcodes)) {
         wp_enqueue_style('dashicons');
         wp_enqueue_style('competitors-style', plugins_url('assets/style.css', __FILE__));
         wp_enqueue_script('competitors_scoring_view_page', plugins_url('assets/script.js', __FILE__), array('jquery'), COMPETITORS_PLUGIN_VERSION, true);
@@ -77,22 +73,61 @@ function enqueue_competitors_public_scripts() {
             'baseURL' => get_home_url(),
             'thankYouSlug' => 'competitors-thank-you'
         ));
-        // Additional script for competitors-registration page
-        // if (is_page('competitors-registration')) {
-        //     wp_enqueue_script('common-js', get_template_directory_uri() . '/assets/common.js', [], '1.0', true);
-        //     wp_enqueue_script('competitors-registration-js', get_template_directory_uri() . '/assets/competitors-registration.js', ['common-js'], '1.0', true);
-        // }
     }
 }
-add_action('wp_enqueue_scripts', 'enqueue_competitors_public_scripts');
+add_action('wp_enqueue_scripts', 'competitors_enqueue_public_scripts');
 
 
-
+function competitors_debug_admin_hook($hook) {
+    error_log('Current admin page hook: ' . $hook);
+    
+    global $post_type;
+    if ($post_type) {
+        error_log('Current post type: ' . $post_type);
+    }
+    
+    // Log the current screen object
+    $screen = get_current_screen();
+    if ($screen) {
+        error_log('Current screen ID: ' . $screen->id);
+        error_log('Current screen base: ' . $screen->base);
+    }
+}
+add_action('admin_enqueue_scripts', 'competitors_debug_admin_hook', 1);
 
 /**
  * Enqueues for admin area.
  */
-function enqueue_competitors_admin_scripts() {
+function competitors_enqueue_admin_scripts($hook) {
+   // Define an array of page hooks that should include your scripts
+   $competitors_pages = [
+    'toplevel_page_competitors-settings',
+    'competitors-settings_page_competitors-scoring',
+    'competitors-settings_page_competitors-detailed-data',
+    'competitors-settings_page_competitors-classes-dates',
+    'competitors_page_email-history',
+    'competitors_page_send-competitor-emails',
+    'edit-competitors',
+    'edit.php',  // Include the main edit.php page for your custom post type
+    'post.php',  // Include individual post edit pages
+    'post-new.php'  // Include the "Add New" page
+];
+
+// Check if the current page hook starts with any of the defined pages
+$should_enqueue = false;
+foreach ($competitors_pages as $page) {
+    if (strpos($hook, $page) === 0) {
+        $should_enqueue = true;
+        break;
+    }
+}
+
+// If it's not a competitors page, return early
+if (!$should_enqueue) {
+    return;
+}
+
+
     if (!wp_script_is('jquery', 'enqueued')) {
         wp_enqueue_script('jquery');
     }
@@ -104,101 +139,146 @@ function enqueue_competitors_admin_scripts() {
         'nonce' => wp_create_nonce('competitors_nonce_action')
     ));
 }
-add_action('admin_enqueue_scripts', 'enqueue_competitors_admin_scripts');
+add_action('admin_enqueue_scripts', 'competitors_enqueue_admin_scripts');
+
+
 
 
 /**
  * Registers a custom post type for competitors.
  */
-function register_competitors_post_type() {
-    register_post_type('competitors', array(
-        'labels' => array(
-            'name' => __('Competitors', 'competitors-plugin'),
-            'singular_name' => __('Competitor', 'competitors-plugin')
-        ),
+function competitors_register_post_type() {
+    $labels = array(
+        'name' => __('Competitors', 'competitors-plugin'),
+        'singular_name' => __('Competitor', 'competitors-plugin'),
+        // Add more labels as needed
+    );
+
+    $args = array(
+        'labels' => $labels,
         'public' => true,
         'has_archive' => true,
         'supports' => array('title', 'editor', 'custom-fields'),
-        'menu_icon' => 'dashicons-groups'
-    ));
+        'menu_icon' => 'dashicons-groups',
+        'show_in_rest' => false, // This enables the block editor
+        'template' => array(
+            array('core/paragraph', array(
+                'placeholder' => __('Add competitor description...', 'competitors-plugin')
+            ))
+        ),
+        'template_lock' => 'all', // This locks the template so users can't add/remove blocks
+    );
+
+    register_post_type('competitors', $args);
 }
-add_action('init', 'register_competitors_post_type');
+add_action('init', 'competitors_register_post_type');
 
 
 /**
  * Sets up a meta box for custom ordering of competitor posts in the admin.
  */
-function setup_competitors_custom_order_meta_box() {
-    // Add Meta Box
-    add_action('add_meta_boxes', function() {
-        add_meta_box(
-            'competitors_custom_order',
-            __('Custom Order', 'competitors-plugin'),
-            'competitors_custom_order_meta_box_callback',
-            'competitors',
-            'side',
-            'high'
-        );
-    });
+function competitors_add_custom_meta_boxes() {
+    add_meta_box(
+        'competitors_custom_order',
+        __('Custom Order', 'competitors-plugin'),
+        'competitors_custom_order_meta_box_callback',
+        'competitors',
+        'side',
+        'high'
+    );
 
-    // Meta Box Display Callback
-    function competitors_custom_order_meta_box_callback($post) {
-        wp_nonce_field('competitors_custom_order_save', 'competitors_custom_order_nonce');
-        $value = get_post_meta($post->ID, '_competitors_custom_order', true);
-        echo '<label for="competitors_custom_order_field">' . __('Order', 'competitors-plugin') . '</label> ';
-        echo '<input type="number" id="competitors_custom_order_field" name="competitors_custom_order_field" value="' . esc_attr($value) . '" size="25" />';
+    add_meta_box(
+        'competitors_details',
+        __('Competitor Details', 'competitors-plugin'),
+        'competitors_details_meta_box_callback',
+        'competitors',
+        'normal',
+        'high'
+    );
+}
+add_action('add_meta_boxes', 'competitors_add_custom_meta_boxes');
+
+// Meta Box Display Callback
+function competitors_custom_order_meta_box_callback($post) {
+    wp_nonce_field('competitors_custom_order_save', 'competitors_custom_order_nonce');
+    $value = get_post_meta($post->ID, '_competitors_custom_order', true);
+    echo '<label for="competitors_custom_order_field">' . __('Order', 'competitors-plugin') . '</label> ';
+    echo '<input type="number" id="competitors_custom_order_field" name="competitors_custom_order_field" value="' . esc_attr($value) . '" size="25" />';
+}
+
+    
+function competitors_details_meta_box_callback($post) {
+    wp_nonce_field('competitors_details_save', 'competitors_details_nonce');
+
+    $club = get_post_meta($post->ID, 'club', true);
+    $participation_class = get_post_meta($post->ID, 'participation_class', true);
+    $email = get_post_meta($post->ID, 'email', true);
+    $speaker_info = get_post_meta($post->ID, 'speaker_info', true);
+    $gender = get_post_meta($post->ID, 'gender', true);  // Add this line
+
+    ?>
+    <p>
+        <label for="competitors_club"><?php _e('Club:', 'competitors-plugin'); ?></label>
+        <input type="text" id="competitors_club" name="competitors_club" value="<?php echo esc_attr($club); ?>">
+    </p>
+    <p>
+        <label for="competitors_participation_class"><?php _e('Participation Class:', 'competitors-plugin'); ?></label>
+        <input type="text" id="competitors_participation_class" name="competitors_participation_class" value="<?php echo esc_attr($participation_class); ?>">
+    </p>
+    <p>
+        <label for="competitors_email"><?php _e('Email:', 'competitors-plugin'); ?></label>
+        <input type="email" id="competitors_email" name="competitors_email" value="<?php echo esc_attr($email); ?>">
+    </p>
+    <p>
+        <label for="competitors_speaker_info"><?php _e('Speaker Info:', 'competitors-plugin'); ?></label>
+        <input type="text" id="competitors_speaker_info" name="competitors_speaker_info" value="<?php echo esc_attr($speaker_info); ?>">
+    </p>
+    <p>
+        <label><?php _e('Gender:', 'competitors-plugin'); ?></label><br>
+        <input type="radio" id="competitors_gender_woman" name="competitors_gender" value="woman" <?php checked($gender, 'woman'); ?>>
+        <label for="competitors_gender_woman">Woman</label>
+        <input type="radio" id="competitors_gender_man" name="competitors_gender" value="man" <?php checked($gender, 'man'); ?>>
+        <label for="competitors_gender_man">Man</label>
+    </p>
+    <?php
+}
+
+
+function competitors_save_custom_data($post_id, $post) {
+    if ($post->post_type !== 'competitors') {
+        return;
     }
 
-    // Save Meta Box Content and Quick Edit Data
-    add_action('save_post', function($post_id) {
-        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
-        if (!isset($_POST['competitors_custom_order_nonce']) || !wp_verify_nonce($_POST['competitors_custom_order_nonce'], 'competitors_custom_order_save')) return;
-        if (!current_user_can('edit_post', $post_id)) return;
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
+
+    // Save custom order
+    if (isset($_POST['competitors_custom_order_nonce']) && wp_verify_nonce($_POST['competitors_custom_order_nonce'], 'competitors_custom_order_save')) {
         if (isset($_POST['competitors_custom_order_field'])) {
             $custom_order = sanitize_text_field($_POST['competitors_custom_order_field']);
             update_post_meta($post_id, '_competitors_custom_order', $custom_order);
         }
-    });
+    }
 
-    // Add Custom Column to Admin List
-    add_filter('manage_competitors_posts_columns', function($columns) {
-        $columns['custom_order'] = __('Order prio', 'competitors-plugin');
-        return $columns;
-    });
-
-    // Populate Custom Column with Custom Order Value
-    add_action('manage_competitors_posts_custom_column', function($column, $post_id) {
-        if ($column == 'custom_order') {
-            $order = get_post_meta($post_id, '_competitors_custom_order', true);
-            echo esc_html($order);
+    // Save competitor details
+    if (isset($_POST['competitors_details_nonce']) && wp_verify_nonce($_POST['competitors_details_nonce'], 'competitors_details_save')) {
+        if (isset($_POST['competitors_club'])) {
+            update_post_meta($post_id, 'club', sanitize_text_field($_POST['competitors_club']));
         }
-    }, 10, 2);
-}
-
-// Initialize meta box setup
-setup_competitors_custom_order_meta_box();
-
-// Extra for meta box saving order in listing, directly from Quick Edit. @Todo: refactor if possible
-function save_competitors_custom_order($post_id) {
-    // Check if this is a Quick Edit save by verifying the DOING_AJAX constant and the action
-    if (defined('DOING_AJAX') && DOING_AJAX && isset($_POST['action']) && $_POST['action'] == 'inline-save') {
-        // Quick Edit save logic
-        if (isset($_POST['competitors_custom_order'])) {
-            $custom_order = sanitize_text_field($_POST['competitors_custom_order']);
-            update_post_meta($post_id, '_competitors_custom_order', $custom_order);
+        if (isset($_POST['competitors_participation_class'])) {
+            update_post_meta($post_id, 'participation_class', sanitize_text_field($_POST['competitors_participation_class']));
         }
-    } else {
-        // Standard Edit Form save logic
-        if (!isset($_POST['competitors_custom_order_nonce']) || !wp_verify_nonce($_POST['competitors_custom_order_nonce'], 'competitors_custom_order_save')) return;
-        if (!current_user_can('edit_post', $post_id)) return;
-        if (isset($_POST['competitors_custom_order_field'])) {
-            $custom_order = sanitize_text_field($_POST['competitors_custom_order_field']);
-            update_post_meta($post_id, '_competitors_custom_order', $custom_order);
+        if (isset($_POST['competitors_email'])) {
+            update_post_meta($post_id, 'email', sanitize_email($_POST['competitors_email']));
+        }
+        if (isset($_POST['competitors_speaker_info'])) {
+            update_post_meta($post_id, 'speaker_info', sanitize_text_field($_POST['competitors_speaker_info']));
+        }
+        if (isset($_POST['competitors_gender'])) {
+            update_post_meta($post_id, 'gender', sanitize_text_field($_POST['competitors_gender']));
         }
     }
 }
-add_action('save_post_competitors', 'save_competitors_custom_order');
-
+add_action('save_post_competitors', 'competitors_save_custom_data', 10, 2);
 
 /**
  * Flushes rewrite rules on plugin activation/deactivation to make custom post type URLs work well.
@@ -362,7 +442,7 @@ function set_default_competition_classes() {
     $default_classes = [
         ['name' => 'open', 'comment' => 'Open (International participants)'],
         ['name' => 'championship', 'comment' => 'Championship (club member and competition license holder)'],
-        ['name' => 'amateur', 'comment' => 'Amateur (No license needed)']
+        ['name' => 'amateur', 'comment' => 'Motionsklass (No license needed)']
     ];
 
     // Set default classes if not already set
@@ -517,6 +597,7 @@ function render_competitors_main_settings_page() {
     echo '</form>';
     echo '</div>';
 }
+
 
 
 
@@ -693,47 +774,52 @@ function render_competitors_dates_field() {
 }
 
 
-// This function shows the rolls in classes with a list which is fine. Except they are from an earlier dataset. 
 function render_competitors_roll_field($class = 'open') {
-	$options = get_option('competitors_options', []);
-	$roll_names = isset($options["custom_values_{$class}"]) ? $options["custom_values_{$class}"] : [];
-	$points_values = isset($options["numeric_values_{$class}"]) ? $options["numeric_values_{$class}"] : [];
-	$is_numeric_fields = isset($options["is_numeric_field_{$class}"]) ? $options["is_numeric_field_{$class}"] : [];
+    $options = get_option('competitors_options', []);
+    $roll_names = isset($options["custom_values_{$class}"]) ? $options["custom_values_{$class}"] : [];
+    $points_values = isset($options["numeric_values_{$class}"]) ? $options["numeric_values_{$class}"] : [];
+    $is_numeric_fields = isset($options["is_numeric_field_{$class}"]) ? $options["is_numeric_field_{$class}"] : [];
+    $no_right_left = isset($options["no_right_left_{$class}"]) ? $options["no_right_left_{$class}"] : [];
 
-	$roll_names = is_array($roll_names) ? $roll_names : [];
-	$points_values = is_array($points_values) ? $points_values : array_fill(0, count($roll_names), '');
-	$is_numeric_fields = is_array($is_numeric_fields) ? $is_numeric_fields : array_fill(0, count($roll_names), false);
+    $roll_names = is_array($roll_names) ? $roll_names : [];
+    $points_values = is_array($points_values) ? $points_values : array_fill(0, count($roll_names), '');
+    $is_numeric_fields = is_array($is_numeric_fields) ? $is_numeric_fields : array_fill(0, count($roll_names), false);
+    $no_right_left = is_array($no_right_left) ? $no_right_left : array_fill(0, count($roll_names), false);
 
-	ob_start();
-	?>
-	<div id="competitors_roll_names_wrapper_<?php echo esc_attr($class); ?>">
-		<?php if (empty($roll_names)) {
-			$roll_names = [''];
-			$points_values = [''];
-			$is_numeric_fields = [false];
-		}
+    ob_start();
+    ?>
+    <div id="competitors_roll_names_wrapper_<?php echo esc_attr($class); ?>">
+        <?php if (empty($roll_names)) {
+            $roll_names = [''];
+            $points_values = [''];
+            $is_numeric_fields = [false];
+            $no_right_left = [false];
+        }
 
-		foreach ($roll_names as $index => $roll_name) {
-			$roll_name = trim($roll_name);
-			$point_value = isset($points_values[$index]) ? esc_attr($points_values[$index]) : '0';
+        foreach ($roll_names as $index => $roll_name) {
+            $roll_name = trim($roll_name);
+            $point_value = isset($points_values[$index]) ? esc_attr($points_values[$index]) : '0';
             $numeric_checked = isset($is_numeric_fields[$index]) && $is_numeric_fields[$index] === '1' ? 'checked' : '';
-			?>
-			<p class="roll-item <?php echo $index % 2 == 0 ? 'alternate' : ''; ?>" data-index="<?php echo esc_attr($index); ?>">
-				<label for="maneuver_<?php echo esc_attr($class . '_' . $index); ?>">Maneuver </label>
-				<input type="text" id="maneuver_<?php echo esc_attr($class . '_' . $index); ?>" name="competitors_options[custom_values_<?php echo esc_attr($class); ?>][]" size="60" value="<?php echo esc_attr($roll_name); ?>" />
-				<label for="points_<?php echo esc_attr($class . '_' . $index); ?>"> Points: </label>
-				<input type="text" class="numeric-input" id="points_<?php echo esc_attr($class . '_' . $index); ?>" name="competitors_options[numeric_values_<?php echo esc_attr($class); ?>][]" size="2" maxlength="2" pattern="\d*" value="<?php echo esc_attr($point_value); ?>" />
-				<label for="numeric_<?php echo esc_attr($class . '_' . $index); ?>"> Numeric:</label>
-				<input type="checkbox" id="numeric_<?php echo esc_attr($class . '_' . $index); ?>" name="competitors_options[is_numeric_field_<?php echo esc_attr($class); ?>][<?php echo esc_attr($index); ?>]" value="1" <?php echo $numeric_checked; ?>>
-				<?php if ($index === 0) { ?>
-					<button type="button" id="add_more_roll_names_<?php echo esc_attr($class); ?>" class="button custom-button button-primary plus-button"></button>
-				<?php } ?>
-				<button type="button" class="button custom-button button-secondary remove-row">Remove</button>
-			</p>
-		<?php } ?>
-	</div>
-	<?php
-	echo ob_get_clean();
+            $no_right_left_checked = isset($no_right_left[$index]) && $no_right_left[$index] === '1' ? 'checked' : '';
+            ?>
+            <p class="roll-item <?php echo $index % 2 == 0 ? 'alternate' : ''; ?>" data-index="<?php echo esc_attr($index); ?>">
+                <label for="maneuver_<?php echo esc_attr($class . '_' . $index); ?>"><?php echo esc_html($index + 1); ?>. </label>
+                <input type="text" id="maneuver_<?php echo esc_attr($class . '_' . $index); ?>" name="competitors_options[custom_values_<?php echo esc_attr($class); ?>][]" size="60" value="<?php echo esc_attr($roll_name); ?>" />
+                <label for="points_<?php echo esc_attr($class . '_' . $index); ?>"> Points: </label>
+                <input type="text" class="numeric-input" id="points_<?php echo esc_attr($class . '_' . $index); ?>" name="competitors_options[numeric_values_<?php echo esc_attr($class); ?>][]" size="2" maxlength="2" pattern="\d*" value="<?php echo esc_attr($point_value); ?>" />
+                <label for="numeric_<?php echo esc_attr($class . '_' . $index); ?>"> Numeric:</label>
+                <input type="checkbox" id="numeric_<?php echo esc_attr($class . '_' . $index); ?>" name="competitors_options[is_numeric_field_<?php echo esc_attr($class); ?>][<?php echo esc_attr($index); ?>]" value="1" <?php echo $numeric_checked; ?>>
+                <label for="no_right_left_<?php echo esc_attr($class . '_' . $index); ?>"> No Right/Left:</label>
+                <input type="checkbox" id="no_right_left_<?php echo esc_attr($class . '_' . $index); ?>" name="competitors_options[no_right_left_<?php echo esc_attr($class); ?>][<?php echo esc_attr($index); ?>]" value="1" <?php echo $no_right_left_checked; ?>>
+                <?php if ($index === 0) { ?>
+                    <button type="button" id="add_more_roll_names_<?php echo esc_attr($class); ?>" class="button custom-button button-primary plus-button"></button>
+                <?php } ?>
+                <button type="button" class="button custom-button button-secondary remove-row">Remove</button>
+            </p>
+        <?php } ?>
+    </div>
+    <?php
+    echo ob_get_clean();
 }
 
 
@@ -871,17 +957,21 @@ function competitors_options_sanitize($input) {
 	}
 
 	// Sanitize custom values and checkboxes
-	foreach ($input as $key => $value) {
-		if (strpos($key, 'custom_values_') === 0) {
-			$sanitized[$key] = array_map('sanitize_text_field', (array) $value);
-		} elseif (strpos($key, 'numeric_values_') === 0) {
-			$sanitized[$key] = array_map('sanitize_text_field', (array) $value);
-		} elseif (strpos($key, 'is_numeric_field_') === 0) {
+    foreach ($input as $key => $value) {
+        if (strpos($key, 'custom_values_') === 0) {
+            $sanitized[$key] = array_map('sanitize_text_field', (array) $value);
+        } elseif (strpos($key, 'numeric_values_') === 0) {
+            $sanitized[$key] = array_map('sanitize_text_field', (array) $value);
+        } elseif (strpos($key, 'is_numeric_field_') === 0) {
+            $sanitized[$key] = array_map(function($item) {
+                return filter_var($item, FILTER_VALIDATE_BOOLEAN) ? '1' : '0';
+            }, (array) $value);
+        } elseif (strpos($key, 'no_right_left_') === 0) {
             $sanitized[$key] = array_map(function($item) {
                 return filter_var($item, FILTER_VALIDATE_BOOLEAN) ? '1' : '0';
             }, (array) $value);
         }
-	}
+    }
 
 	return $sanitized;
 }
@@ -892,42 +982,36 @@ function competitors_options_sanitize($input) {
  * @param string $class The participation class.
  * @return array An array of roll names with their max scores and numeric status for the specified class.
  */
-function get_roll_names_and_max_scores($class = 'open') {
-	$options = get_option('competitors_options', []);
-	$roll_names = isset($options["custom_values_{$class}"]) ? $options["custom_values_{$class}"] : [];
-	$roll_max_scores = isset($options["numeric_values_{$class}"]) ? $options["numeric_values_{$class}"] : [];
-	$is_numeric_fields = isset($options["is_numeric_field_{$class}"]) ? $options["is_numeric_field_{$class}"] : [];
-
-	$roll_names = is_array($roll_names) ? $roll_names : [];
-	$roll_max_scores = is_array($roll_max_scores) ? $roll_max_scores : [];
-	$is_numeric_fields = is_array($is_numeric_fields) ? $is_numeric_fields : [];
-
-    // Default values if both arrays are empty
-    if (empty($roll_names) && empty($roll_max_scores)) {
-        $roll_names = ['Default Roll Name'];
-        $roll_max_scores = [1]; // Default to a numeric value
-        $is_numeric_fields = [false]; // Default boolean
+function get_roll_names_and_max_scores($class = '') {
+    if (empty($class)) {
+        $class = 'open';
     }
+    $options = get_option('competitors_options', []);
+    $roll_names = isset($options["custom_values_{$class}"]) ? $options["custom_values_{$class}"] : [];
+    $roll_max_scores = isset($options["numeric_values_{$class}"]) ? $options["numeric_values_{$class}"] : [];
+    $is_numeric_fields = isset($options["is_numeric_field_{$class}"]) ? $options["is_numeric_field_{$class}"] : [];
+    $no_right_left = isset($options["no_right_left_{$class}"]) ? $options["no_right_left_{$class}"] : [];
 
     // Combining roll data
     $combined = [];
     foreach ($roll_names as $index => $name) {
         $name = trim($name);
-
         if (!empty($name)) {
             $max_score = isset($roll_max_scores[$index]) && $roll_max_scores[$index] !== '' ? $roll_max_scores[$index] : 'N/A';
             $is_numeric = isset($is_numeric_fields[$index]) && $is_numeric_fields[$index] ? 'Yes' : 'No';
+            $no_right_left_value = isset($no_right_left[$index]) && $no_right_left[$index] ? 'Yes' : 'No';
 
             $combined[] = [
-                'name' => $name,
+                'name' => ($index + 1) . '. ' . $name, // Adding index number
                 'max_score' => $max_score,
                 'is_numeric' => $is_numeric,
+                'no_right_left' => $no_right_left_value,
             ];
         }
     }
 
     // Return combined array or default value
-    return !empty($combined) ? $combined : [['name' => 'No roll names defined', 'max_score' => 'N/A', 'is_numeric' => 'N/A']];
+    return !empty($combined) ? $combined : [['name' => '1. No roll names defined', 'max_score' => 'N/A', 'is_numeric' => 'N/A', 'no_right_left' => 'N/A']];
 }
 
 
@@ -1051,7 +1135,7 @@ function customize_admin_footer_text() {
     // Check if the current screen ID is in the array of plugin pages
     if (in_array($screen->id, $plugin_pages)) {
         $version_text = 'This WP Competitors plugin is version: ' . COMPETITORS_PLUGIN_VERSION . ' and still in Beta. If you have encountered bugs or have ideas on how to do it better, don\'t be a stranger!';
-        echo 'Thank you for creating friendly rolling events with this plugin! You can reach the developer on Insta @tdudesthlm or on <a href="https://rugd.se/">RUGD.se</a>. ' . $version_text;
+        echo 'Thank you for creating friendly kayak rolling events with this plugin! You can reach the developer on <a href="https://github.com/Tdude/">Github</a>, <a href="https://www.instagram.com/tdudesthlm/">Insta</a> or on my kayak rant site <a href="https://rugd.se/">RUGD.se</a>. ' . $version_text;
     }
 }
 add_filter('admin_footer_text', 'customize_admin_footer_text');
