@@ -1,5 +1,5 @@
 <?php
-/*
+/* PUBLIC-PAGE WITH GENDER CHOICE
 * First, include text-strings.php, which localizes them if your theme has that. Then add strings as neccessary in that file.
 * Use like this: {$text_strings['messages']['no_competitors']}'
 */
@@ -45,9 +45,9 @@ function render_competitors_date_field_public() {
 function render_competitors_classes_field_public() {
     $options = get_option('competitors_options', []);
     $competitor_classes = isset($options['available_competition_classes']) ? $options['available_competition_classes'] : [
-        ['name' => 'open', 'comment' => 'Open (International participants, 30 minutes max. SEK 500)'],
-        ['name' => 'championship', 'comment' => 'Championship (club member and competition license holder, 30 minutes max. SEK 500)'],
-        ['name' => 'amateur', 'comment' => 'Amateur (No license needed, 10 minutes max. SEK 300)']
+        ['name' => 'open', 'comment' => 'Open (International participants, 30 minutes max)'],
+        ['name' => 'championship', 'comment' => 'Mästerskapsklass (30 minuter max)'],
+        ['name' => 'amateur', 'comment' => 'Motionsklass (10 minuter max)']
     ];
     
     ob_start();
@@ -83,6 +83,15 @@ function competitors_form_html() {
             <input aria-label="Phone" type="text" id="phone" name="phone"><br>
             <label for="club">Club</label>
             <input aria-label="Club" type="text" id="club" name="club"><br>
+            
+            <div class="extra-visible gender-container">
+            <label>Gender <span class="text-danger">*</span></label><br>
+            <input aria-label="Gender: Woman" type="radio" id="gender_woman" name="gender" value="woman" required>
+            <label for="gender_woman">Woman</label>
+            <input aria-label="Gender: Man" type="radio" id="gender_man" name="gender" value="man">
+            <label for="gender_man">Man</label>
+            </div>
+
             <label for="sponsors">Your Sponsors</label>
             <input aria-label="Sponsors" type="text" id="sponsors"><br>
             <label for="speaker_info">Support text (ICE phone number<span class="text-danger"> * </span>, info about you, food preferences/allergies etc.)</label>
@@ -257,6 +266,7 @@ function handle_competitor_form_submission() {
 
     // Additional sanitization for other fields.
     $club = isset($_POST['club']) ? sanitize_text_field($_POST['club']) : '';
+    $gender = isset($_POST['gender']) ? sanitize_text_field($_POST['gender']) : '';
     $sponsors = isset($_POST['sponsors']) ? sanitize_text_field($_POST['sponsors']) : '';
     $speaker_info = isset($_POST['speaker_info']) ? sanitize_textarea_field($_POST['speaker_info']) : '';
     $participation_class = sanitize_text_field($_POST['participation_class']);
@@ -294,6 +304,7 @@ function handle_competitor_form_submission() {
             'email' => $email,
             'phone' => $phone,
             'club' => $club,
+            'gender' => $gender,
             'sponsors' => $sponsors,
             'speaker_info' => $speaker_info,
             'participation_class' => $participation_class,
@@ -316,8 +327,15 @@ function handle_competitor_form_submission() {
 
     error_log('Post created with ID: ' . $competitor_id);
 
+    // Invalidate relevant caches
+    delete_transient('competitors_list_all');
+    delete_transient('competitors_list_' . md5(json_encode([$competition_date, $participation_class])));
+    // Optionally, delete any other related cached entries
+    global $wpdb;
+    $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_competitors_list_%'");
+
     // Send email to all WP administrators
-    send_admin_email($name, $email, $phone, $club, $sponsors, $participation_class, $competition_date, $total_sum, $dinner);
+    send_admin_email($name, $email, $phone, $club, $gender, $sponsors, $participation_class, $competition_date, $total_sum, $dinner);
 
     // Send confirmation email to the form submitter
     send_confirmation_email($name, $email, $competition_date, $total_sum, $dinner);
@@ -330,7 +348,7 @@ function handle_competitor_form_submission() {
     ]);
 }
 
-function send_admin_email($name, $email, $phone, $club, $sponsors, $participation_class, $competition_date, $total_sum, $dinner) {
+function send_admin_email($name, $email, $phone, $club, $gender, $sponsors, $participation_class, $competition_date, $total_sum, $dinner) {
     //$test_email = 'tibbecodes@gmail.com';
 
     // Get all admin users emails
@@ -348,6 +366,7 @@ function send_admin_email($name, $email, $phone, $club, $sponsors, $participatio
                "Email: $email\n" .
                "Tel: $phone\n" .
                "Klubb: $club\n" .
+               "Kön: $gender\n" .
                "Sponsorer: $sponsors\n" .
                "Klass: $participation_class\n" .
                "Datum för tävling: $competition_date\n" .
@@ -458,7 +477,7 @@ function competitors_scoring_list_page() {
     }
 
     // Generate the options for the dates dropdown
-    $list_of_dates = '<option value="">' . __('All Dates', 'competitors') . '</option>';
+    $list_of_dates = '<option value="">' . __('Alla Datum', 'competitors') . '</option>';
     foreach ($dates as $date) {
         if (isset($date['date']) && isset($date['name'])) {
             $date_value = esc_attr($date['date']);
@@ -474,7 +493,7 @@ function competitors_scoring_list_page() {
     }
 
     // Generate the options for the competitor classes dropdown
-    $list_of_classes = '<option value="">' . __('Select Class', 'competitors') . '</option>';
+    $list_of_classes = '<option value="">' . __('Alla klasser', 'competitors') . '</option>';
     foreach ($classes as $class) {
         if (isset($class['name']) && isset($class['comment'])) {
             $class_value = esc_attr($class['name']);
@@ -483,17 +502,25 @@ function competitors_scoring_list_page() {
         }
     }
 
+    // Generate the options for the gender dropdown
+    $list_of_genders = '<option value="">' . __('Kön', 'competitors') . '</option>';
+    $list_of_genders .= '<option value="woman">Kvinna</option>';
+    $list_of_genders .= '<option value="man">Man</option>';
+
     // Output the HTML
     echo <<<HTML
     <div id="competitors-list">
-        <h2>List of Competitors</h2>
+        <h2>Deltagarlista</h2>
         <fieldset>
-            <legend>Select filters</legend>
+            <legend>Välj filter</legend>
             <select id="date-select" name="date_select">
                 {$list_of_dates}
             </select>
             <select id="class-select" name="class_select">
                 {$list_of_classes}
+            </select>
+            <select id="gender-select" name="gender_select">
+                {$list_of_genders}
             </select>
         </fieldset>
         <div id="spinner"></div>
@@ -504,9 +531,7 @@ function competitors_scoring_list_page() {
 }
 
 
-
 function load_competitors_list() {
-    // Check if the nonce and the date_select are passed correctly
     if (!check_ajax_referer('competitors_nonce_action', 'security', false)) {
         wp_send_json_error(['message' => 'Nonce verification failed']);
         return;
@@ -514,9 +539,20 @@ function load_competitors_list() {
 
     $selected_date = isset($_POST['date_select']) ? sanitize_text_field($_POST['date_select']) : '';
     $selected_class = isset($_POST['class_select']) ? sanitize_text_field($_POST['class_select']) : '';
+    $selected_gender = isset($_POST['gender_select']) ? sanitize_text_field($_POST['gender_select']) : '';
 
+    // Generate a unique cache key
+    $cache_key = 'competitors_list_' . md5($selected_date . $selected_class . $selected_gender);
+
+    // Check if cached data exists
+    $cached_data = get_transient($cache_key);
+    if ($cached_data !== false) {
+        wp_send_json_success(['content' => $cached_data]);
+        return;
+    }
+
+    // Build the query args
     $args = ['post_type' => 'competitors', 'posts_per_page' => -1];
-
     $meta_query = [];
 
     if (!empty($selected_date)) {
@@ -526,11 +562,17 @@ function load_competitors_list() {
             'compare' => '='
         ];
     }
-
     if (!empty($selected_class)) {
         $meta_query[] = [
             'key' => 'participation_class',
             'value' => $selected_class,
+            'compare' => '='
+        ];
+    }
+    if (!empty($selected_gender)) {
+        $meta_query[] = [
+            'key' => 'gender',
+            'value' => $selected_gender,
             'compare' => '='
         ];
     }
@@ -550,17 +592,21 @@ function load_competitors_list() {
             'total' => get_post_meta(get_the_ID(), 'total_score', true),
             'club' => get_post_meta(get_the_ID(), 'club', true),
             'participation_class' => get_post_meta(get_the_ID(), 'participation_class', true),
+            'gender' => get_post_meta(get_the_ID(), 'gender', true),
         ];
     }
     wp_reset_postdata();
-    
-    // Send the JSON response with HTML content built
-    wp_send_json_success(['content' => build_competitors_list_html($competitors_data)]);
+
+    $html = build_competitors_list_html($competitors_data);
+
+    // Cache the result 12 h
+    set_transient($cache_key, $html, 12 * HOUR_IN_SECONDS);
+
+    wp_send_json_success(['content' => $html]);
 }
+
 add_action('wp_ajax_load_competitors_list', 'load_competitors_list');
 add_action('wp_ajax_nopriv_load_competitors_list', 'load_competitors_list');
-
-
 
 
 function build_competitors_list_html($competitors_data) {
@@ -569,16 +615,20 @@ function build_competitors_list_html($competitors_data) {
 
     $html = '';
     foreach ($competitors_data as $competitor) {
-        error_log('Competitor Total Raw: ' . $competitor['total']);  // Check raw value
+        error_log('Competitor Total Raw: ' . $competitor['total']);  
         $total_points = intval($competitor['total']);
-        error_log('Competitor Total Converted: ' . $total_points);  // Check converted value
+        error_log('Competitor Total Converted: ' . $total_points);  
+
+        // Create club display string only if club exists
+        $club_display = !empty($competitor['club']) ? ' - ' . esc_html($competitor['club']) : '';
     
         $html .= sprintf(
-            '<li class="competitors-list-item" data-competitor-id="%d" data-participation-class="%s"><b>%s</b> - %s - %d points</li>',
+            '<li class="competitors-list-item" data-competitor-id="%d" data-participation-class="%s" data-gender="%s"><b>%s</b>%s - %d points</li>',
             esc_attr($competitor['ID']),
-            esc_attr($competitor['participation_class']), // Include the participation class as a data attribute
+            esc_attr($competitor['participation_class']), 
+            esc_attr($competitor['gender']),
             esc_html($competitor['title']),
-            esc_html($competitor['club']),
+            $club_display,
             intval($competitor['total'])
         );
     }
@@ -594,34 +644,66 @@ function load_competitor_details() {
 
     $competitor_id = isset($_POST['competitor_id']) ? intval($_POST['competitor_id']) : 0;
     $participation_class = isset($_POST['participation_class']) ? sanitize_text_field($_POST['participation_class']) : '';
-    
 
     if (!$competitor_id || 'competitors' !== get_post_type($competitor_id)) {
         wp_send_json_error(['message' => 'Invalid Competitor ID or not a Competitor post type']);
-        return;  // Exit early to avoid further execution
+        return;
     }
 
-    // Pass the $participation_class to the competitors_scoring_view_page function
+    // Generate a cache key
+    $cache_key = 'competitor_details_' . $competitor_id . '_' . md5($participation_class);
+
+    // Check if cached data exists
+    $cached_html = get_transient($cache_key);
+    if ($cached_html !== false) {
+        echo $cached_html;
+        wp_die();
+    }
+
+    ob_start(); // Start output buffering
     competitors_scoring_view_page($competitor_id, null, $participation_class);
-    wp_die(); // Ensure AJAX call termination
+    $html = ob_get_clean();
+
+    // Cache the HTML output for 12h
+    set_transient($cache_key, $html, 12 * HOUR_IN_SECONDS);
+
+    echo $html;
+    wp_die();
 }
+
 add_action('wp_ajax_load_competitor_details', 'load_competitor_details');
 add_action('wp_ajax_nopriv_load_competitor_details', 'load_competitor_details');
 
 
 
 function competitors_scoring_view_page($competitor_id = 0, $selected_date = null, $participation_class = null) {
+    // Valid participation class?
+    if (empty($participation_class)) {
+        $participation_class = get_post_meta($competitor_id, 'participation_class', true);
+        if (empty($participation_class)) {
+            $participation_class = 'open';
+        }
+    }
     // Pass the participation_class to get_roll_names_and_max_scores
     $rolls = get_roll_names_and_max_scores($participation_class);
-
-    if (defined('WP_DEBUG') && WP_DEBUG) {
-        error_log("Rolls Data: " . print_r($rolls, true));
+    // Determine the last numeric roll
+    $last_numeric_index = -1;
+    foreach (array_reverse($rolls, true) as $index => $roll) {
+        if ($roll['is_numeric'] === 'Yes') {
+            $last_numeric_index = $index;
+            break;
+        }
     }
 
     // Retrieve competitor scores and selected rolls
     $competitor_scores = get_post_meta($competitor_id, 'competitor_scores', true);
+    // Unserialize the competitor scores if they are serialized
+    if (is_serialized($competitor_scores)) {
+        $competitor_scores = unserialize($competitor_scores);
+    }
+
     if (defined('WP_DEBUG') && WP_DEBUG) {
-        error_log("Competitor Scores Data: " . print_r($competitor_scores, true));
+        error_log("Competitor Scores Data (after potential unserialization): " . print_r($competitor_scores, true));
     }
 
     $selected_rolls_indexes = (array) get_post_meta($competitor_id, 'selected_rolls', true);
@@ -639,16 +721,8 @@ function competitors_scoring_view_page($competitor_id = 0, $selected_date = null
     echo '<table class="competitors-table">';
     echo '<tr>';
     echo '<th>' . __('Roll Name', 'competitors') . '</th>';
-    echo '<th colspan="2">' . __('Left/Saamik', 'competitors') . '</th>';
-    echo '<th colspan="2">' . __('Right/Talerpik', 'competitors') . '</th>';
-    echo '<th>' . __('Score', 'competitors') . '</th>';
-    echo '</tr>';
-    echo '<tr>';
-    echo '<th></th>';
-    echo '<th>' . __('More', 'competitors') . '</th>';
-    echo '<th>' . __('Less', 'competitors') . '</th>';
-    echo '<th>' . __('More', 'competitors') . '</th>';
-    echo '<th>' . __('Less', 'competitors') . '</th>';
+    echo '<th>' . __('Left/Saamik', 'competitors') . '</th>';
+    echo '<th>' . __('Right/Talerpik', 'competitors') . '</th>';
     echo '<th>' . __('Score', 'competitors') . '</th>';
     echo '</tr>';
 
@@ -657,49 +731,48 @@ function competitors_scoring_view_page($competitor_id = 0, $selected_date = null
     foreach ($rolls as $index => $roll) {
         $is_selected = in_array($index, $selected_rolls_indexes, true);
         $selected_css_class = $is_selected ? 'selected-roll' : 'non-selected-roll';
-
-        $scores = $competitor_scores[$index] ?? [];
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("Scores for roll index $index: " . print_r($scores, true));
-        }
-
-        // Retrieve the scores and handle inconsistencies
-        $left_score = $scores['left_score'] ?? 0;
-        $left_group = $scores['left_group'] ?? 0;
-        $right_score = $scores['right_score'] ?? 0;
-        $right_group = $scores['right_group'] ?? 0;
-
+        $scores = isset($competitor_scores[$index]) ? $competitor_scores[$index] : [];
+        $is_numeric = ($roll['is_numeric'] === 'Yes');
+        $is_last_numeric = ($index === $last_numeric_index);
+        // Retrieve and format scores
+        $left_score = isset($scores['left_score']) ? intval($scores['left_score']) : 0;
+        $left_group = isset($scores['left_group']) ? intval($scores['left_group']) : 0;
+        $right_score = isset($scores['right_score']) ? intval($scores['right_score']) : 0;
+        $right_group = isset($scores['right_group']) ? intval($scores['right_group']) : 0;
         // Determine the values to display for left and right scores and groups
-        $left_display_score = $left_score ? esc_html($left_score) : '';
-        $left_display_group = $left_group ? esc_html($left_group) : '';
-        $right_display_score = $right_score ? esc_html($right_score) : '';
-        $right_display_group = $right_group ? esc_html($right_group) : '';
-
+        $left_display_group = $left_group !== 0 ? esc_html($left_group) : '';
+        $right_display_group = $right_group !== 0 ? esc_html($right_group) : '';
         // Calculate total points
         $total_left = $left_score + $left_group;
         $total_right = $right_score + $right_group;
         $total = $total_left + $total_right;
-
         $grand_total += $total;
+        // Determine whether to display max_score
+        $max_score_display = $is_numeric ? '' : " (" . esc_html($roll['max_score']) . ")";
+        // Start the table row
+        echo '<tr class="' . esc_attr($selected_css_class) . '">';
+        // Roll name column
+        echo '<td>' . esc_html($roll['name']) . $max_score_display . '</td>';
+        
+        if ($is_last_numeric) {
+            // Last numeric field: only show total score
+            echo '<td colspan="2"></td>';
+            echo '<td>' . esc_html($total) . '</td>';
+        } elseif ($is_numeric) {
+            // Numeric field: show left and right scores
+            echo '<td>' . esc_html($left_score) . '</td>';
+            echo '<td>' . esc_html($right_score) . '</td>';
+            echo '<td>' . esc_html($total) . '</td>';
+        } else {
+            echo '<td>' . esc_html($left_display_group) . '</td>';
+            echo '<td>' . esc_html($right_display_group) . '</td>';
+            echo '<td>' . esc_html($total) . '</td>';
+        }
 
-        // Output each roll's data
-        echo sprintf(
-            '<tr class="%s"><td>%s (%s)</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%d</td></tr>',
-            esc_attr($selected_css_class),
-            esc_html($roll['name']),
-            esc_html($roll['max_score']),
-            $left_display_score,
-            $left_display_group,
-            $right_display_score,
-            $right_display_group,
-            $total
-        );
+        echo '</tr>';
     }
 
     // Output the grand total row
-    echo '<tr><td colspan="5"><b>' . __('Grand Total Competitor Score', 'competitors') . '</b></td><td><b>' . esc_html($grand_total) . '</b></td></tr>';
+    echo '<tr><td colspan="3"><b>' . __('Score Grand Total', 'competitors') . '</b></td><td><b>' . esc_html($grand_total) . '</b></td></tr>';
     echo '</table>';
 }
-
-
-
