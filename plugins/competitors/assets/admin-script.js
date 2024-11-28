@@ -490,9 +490,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const grandTotalCell = document.querySelector(`#grand-total-value`);
       if (grandTotalCell) {
-        grandTotalCell.innerHTML = grandTotal;
+        grandTotalCell.textContent = grandTotal;
+        console.log("Updated Grand Total:", grandTotal); // Debug log
+      } else {
+        console.error("Grand Total Cell not found!"); // Error log
       }
     }
+
+    // Call this function whenever scores are updated
+    document.addEventListener("DOMContentLoaded", updateGrandTotal);
+    // You might also want to call this function after any score updates
 
     // Timer logic, off/online saving here...
     function attachTimerEvents() {
@@ -962,16 +969,20 @@ jQuery(document).ready(function ($) {
   // Function to create a new roll field
   function createNewRollField(classType, index) {
     return `
-		<p class="roll-item" data-index="${index}">
-			<label for="maneuver_${classType}_${index}">Maneuver: </label>
-			<input type="text" id="maneuver_${classType}_${index}" name="competitors_options[custom_values_${classType}][]" size="60" value="" />
-			<label for="points_${classType}_${index}"> Points: </label>
-			<input type="text" class="numeric-input" id="points_${classType}_${index}" name="competitors_options[numeric_values_${classType}][]" size="2" maxlength="2" pattern="\\d*" value="0" />
-			<label for="numeric_${classType}_${index}"> Numeric:</label>
-			<input type="checkbox" id="numeric_${classType}_${index}" name="competitors_options[is_numeric_field_${classType}][${index}]" value="1">
-			<button type="button" class="button custom-button button-secondary remove-row">Remove</button>
-		</p>
-	`;
+      <p class="roll-item ${
+        index % 2 === 0 ? "alternate" : ""
+      }" data-index="${index}">
+        <label for="maneuver_${classType}_${index}">${index + 1}. Maneuver </label>
+        <input type="text" id="maneuver_${classType}_${index}" name="competitors_options[custom_values_${classType}][]" size="60" value="" />
+        <label for="points_${classType}_${index}"> Points: </label>
+        <input type="text" class="numeric-input" id="points_${classType}_${index}" name="competitors_options[numeric_values_${classType}][]" size="2" maxlength="2" pattern="\\d*" value="0" />
+        <label for="numeric_${classType}_${index}"> Numeric:</label>
+        <input type="checkbox" id="numeric_${classType}_${index}" name="competitors_options[is_numeric_field_${classType}][${index}]" value="1">
+        <label for="no_right_left_${classType}_${index}"> No Right/Left:</label>
+        <input type="checkbox" id="no_right_left_${classType}_${index}" name="competitors_options[no_right_left_${classType}][${index}]" value="1">
+        <button type="button" class="button custom-button button-secondary remove-row">Remove</button>
+      </p>
+    `;
   }
 
   // Event listener for adding roll names
