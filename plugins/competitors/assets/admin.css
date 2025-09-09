@@ -294,10 +294,15 @@ tr.competitor-header:hover,
 }
 
 /* Show the element when the parent tr is hovered over */
-.showonhover {
+.show-on-hover {
   opacity: 0;
   padding-left: 1em;
 }
+.competitor-header:hover .show-on-hover {
+  opacity: 0.8;
+  transition: opacity 0.5s ease;
+}
+
 /* + Button */
 .wp-admin .plus-button {
   line-height: unset;
@@ -310,11 +315,6 @@ tr.competitor-header:hover,
   transform: scale(1.2);
   display: inline-block;
   vertical-align: middle;
-}
-
-.competitor-header:hover .showonhover {
-  opacity: 1;
-  transition: opacity 0.5s ease;
 }
 
 /* Input Field Styling */

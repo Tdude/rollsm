@@ -224,6 +224,25 @@ tr.non-selected-roll {
   width: 31%;
   margin-bottom: 1rem;
 }
+#competitors-list fieldset {
+  margin-bottom: 1rem;
+}
+
+/* Responsive layout for small screens */
+@media (max-width: 768px) {
+    #competitors-list select {
+        width: 100%; /* Stack selects to take full width */
+        margin-bottom: 1rem; /* Add spacing between fields */
+    }
+
+    #competitors-list fieldset {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    margin-bottom: 1rem;
+    }
+}
+
 
 /* Spinner is also overlay */
 #spinner {

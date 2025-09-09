@@ -2,18 +2,27 @@
 /**
  * Plugin Name: Competitors
  * Description:  For RollSM, A Greenland Rolling Championships registering and scoreboard plugin with live scores.
- * Version: 0.98
+ * Version: 0.99
  * Author: <a href="https://klickomaten.com">Tibor Berki</a>. /Tdude @Github.
  * Text Domain: competitors
  * Domain Path: /languages
  */
 
-define('COMPETITORS_PLUGIN_VERSION', '0.98');
+define('COMPETITORS_PLUGIN_VERSION', '0.99');
 
 
 // REMOVE OR COMMENT OUT AFTER DONE DEV!!!
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+// error_reporting(E_ALL);
+// ini_set('display_errors', 1);
+
+
+/**
+ * Load text domain for translation
+ */
+function competitors_load_textdomain() {
+    load_plugin_textdomain('competitors', false, dirname(plugin_basename(__FILE__)) . '/languages');
+}
+add_action('plugins_loaded', 'competitors_load_textdomain');
 
 
 /**
@@ -47,9 +56,6 @@ function competitors_post_has_shortcodes($post, $shortcodes) {
     }
     return false;
 }
-
-
-
 
 
 
@@ -111,21 +117,21 @@ function competitors_enqueue_admin_scripts($hook) {
     'edit.php',  // Include the main edit.php page for your custom post type
     'post.php',  // Include individual post edit pages
     'post-new.php'  // Include the "Add New" page
-];
+    ];
 
-// Check if the current page hook starts with any of the defined pages
-$should_enqueue = false;
-foreach ($competitors_pages as $page) {
-    if (strpos($hook, $page) === 0) {
-        $should_enqueue = true;
-        break;
+    // Check if the current page hook starts with any of the defined pages
+    $should_enqueue = false;
+    foreach ($competitors_pages as $page) {
+        if (strpos($hook, $page) === 0) {
+            $should_enqueue = true;
+            break;
+        }
     }
-}
 
-// If it's not a competitors page, return early
-if (!$should_enqueue) {
-    return;
-}
+    // If it's not a competitors page, escape escape
+    if (!$should_enqueue) {
+        return;
+    }
 
 
     if (!wp_script_is('jquery', 'enqueued')) {
@@ -145,12 +151,12 @@ add_action('admin_enqueue_scripts', 'competitors_enqueue_admin_scripts');
 
 
 /**
- * Registers a custom post type for competitors.
+ * Registers a custom post type for the competitors plugin.
  */
 function competitors_register_post_type() {
     $labels = array(
-        'name' => __('Competitors', 'competitors-plugin'),
-        'singular_name' => __('Competitor', 'competitors-plugin'),
+        'name' => __('Competitors', 'competitors'),
+        'singular_name' => __('Competitor', 'competitors'),
         // Add more labels as needed
     );
 
@@ -163,7 +169,7 @@ function competitors_register_post_type() {
         'show_in_rest' => false, // This enables the block editor
         'template' => array(
             array('core/paragraph', array(
-                'placeholder' => __('Add competitor description...', 'competitors-plugin')
+                'placeholder' => __('This is the Competitors Plugin for roll competition scoring', 'competitors')
             ))
         ),
         'template_lock' => 'all', // This locks the template so users can't add/remove blocks
@@ -180,7 +186,7 @@ add_action('init', 'competitors_register_post_type');
 function competitors_add_custom_meta_boxes() {
     add_meta_box(
         'competitors_custom_order',
-        __('Custom Order', 'competitors-plugin'),
+        __('Custom Order', 'competitors'),
         'competitors_custom_order_meta_box_callback',
         'competitors',
         'side',
@@ -189,7 +195,7 @@ function competitors_add_custom_meta_boxes() {
 
     add_meta_box(
         'competitors_details',
-        __('Competitor Details', 'competitors-plugin'),
+        __('Competitor Details', 'competitors'),
         'competitors_details_meta_box_callback',
         'competitors',
         'normal',
@@ -198,50 +204,63 @@ function competitors_add_custom_meta_boxes() {
 }
 add_action('add_meta_boxes', 'competitors_add_custom_meta_boxes');
 
-// Meta Box Display Callback
+// Meta Box Display Callback for Custom Order
 function competitors_custom_order_meta_box_callback($post) {
+    // Add a nonce field for security
     wp_nonce_field('competitors_custom_order_save', 'competitors_custom_order_nonce');
+
+    // Get the current value of the meta field
     $value = get_post_meta($post->ID, '_competitors_custom_order', true);
-    echo '<label for="competitors_custom_order_field">' . __('Order', 'competitors-plugin') . '</label> ';
+
+    // Display the input field
+    echo '<p>';
+    echo '<label for="competitors_custom_order_field">' . esc_html__('Order:', 'competitors') . '</label> ';
     echo '<input type="number" id="competitors_custom_order_field" name="competitors_custom_order_field" value="' . esc_attr($value) . '" size="25" />';
+    echo '</p>';
 }
 
+
     
+// Meta Box Display Callback for Competitors Details
 function competitors_details_meta_box_callback($post) {
+    // Add a nonce field for security
     wp_nonce_field('competitors_details_save', 'competitors_details_nonce');
 
+    // Get the current values of the meta fields
     $club = get_post_meta($post->ID, 'club', true);
     $participation_class = get_post_meta($post->ID, 'participation_class', true);
     $email = get_post_meta($post->ID, 'email', true);
     $speaker_info = get_post_meta($post->ID, 'speaker_info', true);
-    $gender = get_post_meta($post->ID, 'gender', true);  // Add this line
+    $gender = get_post_meta($post->ID, 'gender', true);
 
+    // Display the input fields
     ?>
     <p>
-        <label for="competitors_club"><?php _e('Club:', 'competitors-plugin'); ?></label>
-        <input type="text" id="competitors_club" name="competitors_club" value="<?php echo esc_attr($club); ?>">
+        <label for="competitors_club"><?php echo esc_html__('Club:', 'competitors'); ?></label>
+        <input type="text" id="competitors_club" name="competitors_club" value="<?php echo esc_attr($club); ?>" size="25">
     </p>
     <p>
-        <label for="competitors_participation_class"><?php _e('Participation Class:', 'competitors-plugin'); ?></label>
-        <input type="text" id="competitors_participation_class" name="competitors_participation_class" value="<?php echo esc_attr($participation_class); ?>">
+        <label for="competitors_participation_class"><?php echo esc_html__('Participation Class:', 'competitors'); ?></label>
+        <input type="text" id="competitors_participation_class" name="competitors_participation_class" value="<?php echo esc_attr($participation_class); ?>" size="25">
     </p>
     <p>
-        <label for="competitors_email"><?php _e('Email:', 'competitors-plugin'); ?></label>
-        <input type="email" id="competitors_email" name="competitors_email" value="<?php echo esc_attr($email); ?>">
+        <label for="competitors_email"><?php echo esc_html__('Email:', 'competitors'); ?></label>
+        <input type="email" id="competitors_email" name="competitors_email" value="<?php echo esc_attr($email); ?>" size="25">
     </p>
     <p>
-        <label for="competitors_speaker_info"><?php _e('Speaker Info:', 'competitors-plugin'); ?></label>
-        <input type="text" id="competitors_speaker_info" name="competitors_speaker_info" value="<?php echo esc_attr($speaker_info); ?>">
+        <label for="competitors_speaker_info"><?php echo esc_html__('Speaker Info:', 'competitors'); ?></label>
+        <input type="text" id="competitors_speaker_info" name="competitors_speaker_info" value="<?php echo esc_attr($speaker_info); ?>" size="25">
     </p>
     <p>
-        <label><?php _e('Gender:', 'competitors-plugin'); ?></label><br>
+        <label><?php echo esc_html__('Gender:', 'competitors'); ?></label><br>
         <input type="radio" id="competitors_gender_woman" name="competitors_gender" value="woman" <?php checked($gender, 'woman'); ?>>
-        <label for="competitors_gender_woman">Woman</label>
+        <label for="competitors_gender_woman"><?php echo esc_html__('Woman', 'competitors'); ?></label>
         <input type="radio" id="competitors_gender_man" name="competitors_gender" value="man" <?php checked($gender, 'man'); ?>>
-        <label for="competitors_gender_man">Man</label>
+        <label for="competitors_gender_man"><?php echo esc_html__('Man', 'competitors'); ?></label>
     </p>
     <?php
 }
+
 
 
 function competitors_save_custom_data($post_id, $post) {
@@ -435,14 +454,13 @@ function create_default_competitor_if_none_exists() {
 
 
 /**
- * Sets default competition classes to make initiation smoother. Is this smart? Maybe remove for testing and debugging?
+ * Sets default competition classes to make initiation smoother. 
  */
-
 function set_default_competition_classes() {
     $default_classes = [
-        ['name' => 'open', 'comment' => 'Open (International participants)'],
-        ['name' => 'championship', 'comment' => 'Championship (club member and competition license holder)'],
-        ['name' => 'amateur', 'comment' => 'Motionsklass (No license needed)']
+        ['name' => 'open', 'comment' => esc_html__('Open (International participants)', 'competitors')],
+        ['name' => 'championship', 'comment' => esc_html__('Championship (club member and competition license holder)', 'competitors')],
+        ['name' => 'amateur', 'comment' => esc_html__('Motionsklass (No license needed)', 'competitors')]
     ];
 
     // Set default classes if not already set
@@ -452,18 +470,19 @@ function set_default_competition_classes() {
 }
 add_action('admin_init', 'set_default_competition_classes');
 
+
 /**
  * Adds a top-level admin menu page for the plugin's settings.
  */
 function add_competitors_admin_menu() {
     add_menu_page(
-        'Competitors Custom Settings',     // Page title
-        'Competitors settings',             // Menu title
-        'manage_options',                  // Capability
-        'competitors-settings',            // Menu slug
-        'render_competitors_main_settings_page', // Function to display the page
-        'dashicons-clipboard',             // Icon (optional)
-        27                                 // Position
+        esc_html__('Competitors Custom Settings', 'competitors'),  // Page title
+        esc_html__('Competitors settings', 'competitors'),        // Menu title
+        'manage_options',                                         // Capability
+        'competitors-settings',                                   // Menu slug
+        'render_competitors_main_settings_page',                  // Function to display the page
+        'dashicons-clipboard',                                    // Icon (optional)
+        27                                                        // Position
     );
 }
 add_action('admin_menu', 'add_competitors_admin_menu');
@@ -474,12 +493,11 @@ add_action('admin_menu', 'add_competitors_admin_menu');
 function add_competitors_submenu_for_classes_dates() {
     add_submenu_page(
         'competitors-settings',
-        'Classes and Dates',
-        'Classes & Dates',
+        esc_html__('Classes and Dates', 'competitors'),  // Page title
+        esc_html__('Classes & Dates', 'competitors'),    // Menu title
         'edit_competitors',
         'competitors-classes-dates',
-        'render_classes_dates_page', // Callback function for the new tab
-        20
+        'render_classes_dates_page'                      // Callback function for the new tab
     );
 }
 add_action('admin_menu', 'add_competitors_submenu_for_classes_dates');
@@ -490,11 +508,11 @@ add_action('admin_menu', 'add_competitors_submenu_for_classes_dates');
 function add_competitors_submenu_for_personal_data() {
     add_submenu_page(
         'competitors-settings',
-        'Competitors Personal Data',
-        'Personal Data',
+        esc_html__('Competitors Personal Data', 'competitors'),  // Page title
+        esc_html__('Personal Data', 'competitors'),             // Menu title
         'edit_competitors',
         'competitors-detailed-data',
-        'competitors_admin_page' // Callback function
+        'competitors_admin_page'                                // Callback function
     );
 }
 add_action('admin_menu', 'add_competitors_submenu_for_personal_data');
@@ -505,11 +523,11 @@ add_action('admin_menu', 'add_competitors_submenu_for_personal_data');
 function add_competitors_submenu_for_judges_scoring() {
     add_submenu_page(
         'competitors-settings',
-        'Judges Scoring Submenu',
-        'Judges Scoring',
+        esc_html__('Judges Scoring Submenu', 'competitors'),  // Page title
+        esc_html__('Judges Scoring', 'competitors'),          // Menu title
         'edit_competitors',
         'competitors-scoring',
-        'judges_scoring_page' // Callback function
+        'judges_scoring_page'                                 // Callback function
     );
 }
 add_action('admin_menu', 'add_competitors_submenu_for_judges_scoring');
@@ -520,80 +538,117 @@ add_action('admin_menu', 'add_competitors_submenu_for_judges_scoring');
  * You can just remove this if you don't.
  */
 function render_admin_page_header() {
-    $current_page = isset($_GET['page']) ? $_GET['page'] : '';
+    $current_page = isset($_GET['page']) ? sanitize_text_field($_GET['page']) : '';
 
     $tabs = [
-        'competitors-settings' => 'Rolls Settings',
-        'competitors-classes-dates' => 'Classes & Dates',
-        'competitors-detailed-data' => 'Personal Data',
-        'competitors-scoring' => 'Judges Scoring',
+        'competitors-settings' => esc_html__('Rolls Settings', 'competitors'),
+        'competitors-classes-dates' => esc_html__('Classes & Dates', 'competitors'),
+        'competitors-detailed-data' => esc_html__('Personal Data', 'competitors'),
+        'competitors-scoring' => esc_html__('Judges Scoring', 'competitors'),
     ];
 
     echo '<h2 class="nav-tab-wrapper">';
     foreach ($tabs as $page_slug => $title) {
         $class = ($current_page === $page_slug) ? 'nav-tab-active' : '';
-        $url = admin_url('admin.php?page=' . $page_slug);
+        $url = esc_url(admin_url('admin.php?page=' . $page_slug));
         echo "<a href='{$url}' class='nav-tab {$class}'>{$title}</a>";
     }
     echo '</h2>';
 }
 
 /**
- * Renders the form for the plugin's roll settings page.
+ * Renders the texxt for the plugin's roll settings page.
  */
 function competitors_settings_section_callback() {
     $external_url = 'https://www.qajaqusa.org/content.aspx?page_id=22&club_id=349669&module_id=345648';
+    
+    // Create the URL and link text separately for better translation support
+    $default_page_link = sprintf(
+        '<a href="%s" target="_blank">%s</a>',
+        esc_url(site_url('/competitors-display-page')),
+        esc_html__('created here', 'competitors')
+    );
 
     echo '<div class="wrap">';
-    // Button to toggle the collapsible content
     echo '<button type="button" id="toggle-instructions" class="button button-secondary">';
-    echo __('Show/Hide Instructions', 'competitors');
+    echo esc_html__('Show/Hide Instructions', 'competitors');
     echo '</button>';
     
-    // Collapsible content
     echo '<div id="instructions-content" class="instructions-content">';
     echo '<div class="two-cols">';
+    
+    // Left column
     echo '<div>';
-    echo '<h2>' . __('Here you can set Custom Values for roll names. One roll name or maneuver on each row. Add rows with +.', 'competitors') . '</h2>';
-    echo '<p>' . __('These values correspond to what rolls competitors check with check boxes on the front end, as well as the admin area. See other tabs.', 'competitors') . '</p>';
-    echo '<p>' . __('If you choose a "Numeric" input, you should leave the points blank! It will be filled in by the judges for speedrolling and such.', 'competitors') . '</p>';
-    echo '<p>' . __('There are three different possible scoreboards by default, corresponding to what class the competitor will register to. A competitor can participate in one class only. You can add classes, rolls etc. but keep in mind you can NOT change the sequence later. Also, if you delete a class, all competitors will be unavailable (but the data is retrievable). If more freedom is needed, let me know, but keep in mind: Your favourite apps have thousands of developers and cost billions! Not joking.', 'competitors') . '</p>';
+    echo '<h2>' . esc_html__('Here is where you set Custom Values for roll names. One roll name or maneuver on each row. Add rows with +.', 'competitors') . '</h2>';
+    echo '<p>' . esc_html__('These values correspond to what rolls (or maneuvers) competitors check with check boxes on the front end, as well as the admin area. See other tabs.', 'competitors') . '</p>';
+    echo '<p>' . esc_html__('If you choose a "Numeric" input, you should leave the points blank! It will be filled in by the judges for speedrolling and such.', 'competitors') . '</p>';
+    echo '<p>' . esc_html__('There are three different possible scoreboards by default, corresponding to what class the competitor will register to. A competitor can participate in one class only. You can add classes, rolls etc. but keep in mind you can NOT change the sequence later. Also, if you delete a class, all competitors will be unavailable (but the data is retrievable). If more freedom is needed, let me know, but keep in mind: Your favourite apps have thousands of developers and cost billions! Not joking.', 'competitors') . '</p>';
     echo '</div>';
+    
+    // Right column
     echo '<div>';
-    echo '<h2>' . __('How to use the registration and results page(s)', 'competitors') . '</h2>';
-    echo '<p>' . __('You can display either the registration form for competitors or the results on any WP Post or Page with the following shortcodes:', 'competitors') . '</p>';
+    echo '<h2>' . esc_html__('How to use the registration and results page(s)', 'competitors') . '</h2>';
+    echo '<p>' . esc_html__('You can display either the registration form for competitors or the results on any WP Post or Page with the following shortcodes:', 'competitors') . '</p>';
     echo '<pre>[competitors_form_public] or [competitors_scoring_public]</pre>';
-    echo '<p>' . __('There is a default page <a href="' . site_url('/competitors-display-page') . '" target="_blank"> created here </a> for your convenience, which you can use, edit, or delete.', 'competitors') . '</p>';
-    echo '<p>' . __('Over at Qajaq USA there is an <a href="' . esc_url($external_url) . '" target="_blank" rel="noopener noreferrer">excellent page</a> but with dodgy links where you can learn the roll names in Inuit. If the link is a no-go, go to "QAANNAT KATTUFFIAT" > "GREENLAND CHAMPIONSHIP" and have a look at that page.', 'competitors') . '</p>';
+    
+    // Method 1: Using sprintf for complete sentence translation
+    echo '<p>' . sprintf(
+        /* translators: %s: URL link */
+        esc_html__('There is a default page %s for your convenience, which you can use, edit, or delete.', 'competitors'),
+        $default_page_link
+    ) . '</p>';
+
+    // Method 2: Using wp_kses with the external URL
+    $external_link = sprintf(
+        '<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>',
+        esc_url($external_url),
+        esc_html__('excellent page', 'competitors')
+    );
+    
+    echo '<p>' . sprintf(
+        /* translators: %s: URL link */
+        esc_html__('Over at Qajaq USA there is an %s but with dodgy links where you can learn the roll names in Inuit. If the link is a no-go, go to "QAANNAT KATTUFFIAT" > "GREENLAND CHAMPIONSHIP" and have a look at that page.', 'competitors'),
+        $external_link
+    ) . '</p>';
+    
     echo '</div>';
-    echo '</div>';
-    echo '</div>';
-    echo '</div>';
+    echo '</div>'; // .two-cols
+    echo '</div>'; // #instructions-content
+    echo '</div>'; // .wrap
 }
+
 
 function render_competitors_main_settings_page() {
     if (!current_user_can('manage_options')) {
-        echo 'Access denied to settings dude, sorry.';
+        echo esc_html__('Access denied to settings, sorry.', 'competitors');
         return;
     }
+
+    // Render admin page header with navigation tabs
     render_admin_page_header();
 
+    // Display a success message if settings were submitted
     if (get_transient('competitors_settings_submitted')) {
-        echo '<div id="message" class="updated notice is-dismissible"><p>' . esc_html(get_transient('competitors_settings_submitted')) . '</p>';
-        echo '<button type="button" class="notice-dismiss"><span class="screen-reader-text">Dismiss this notice.</span></button></div>';
+        echo '<div id="message" class="updated notice is-dismissible">';
+        echo '<p>' . esc_html(get_transient('competitors_settings_submitted')) . '</p>';
+        echo '<button type="button" class="notice-dismiss">';
+        echo '<span class="screen-reader-text">' . esc_html__('Dismiss this notice.', 'competitors') . '</span>';
+        echo '</button></div>';
         delete_transient('competitors_settings_submitted');
     }
 
+    // Render the settings page content
     echo '<div class="wrap" id="settings-page">';
-    echo '<h1>' . __('Rolls Settings', 'competitors') . '</h1>';
+    echo '<h1>' . esc_html__('Rolls Settings', 'competitors') . '</h1>';
 
     // Display the instructions section
     competitors_settings_section_callback();
 
+    // Render the settings form
     echo '<form method="post" action="options.php">';
-    settings_fields('competitors_rollnames_settings_group');
-    do_settings_sections('competitors_rollnames_settings');
-    submit_button();
+    settings_fields('competitors_rollnames_settings_group'); // Output nonce and options group for security
+    do_settings_sections('competitors_rollnames_settings');  // Display the sections and fields
+    submit_button(); // Default submit button for saving options
     echo '</form>';
     echo '</div>';
 }
@@ -603,32 +658,52 @@ function render_competitors_main_settings_page() {
 
 
 
+
 /**
- * Renders the Classes and Dates tab content
+ * Renders the Classes and Dates tab content.
  */
 function render_classes_dates_page() {
     if (!current_user_can('manage_options')) {
-        echo 'Access denied to settings dude, sorry.';
+        echo esc_html__('Access denied to settings, sorry.', 'competitors');
         return;
     }
+
+    // Render the admin page header with tabs
     render_admin_page_header();
 
+    // Begin page content
     echo '<div class="wrap">';
-    echo '<h1>' . __('Classes & Dates', 'competitors') . '</h1>';
-    
+    echo '<h1>' . esc_html__('Classes & Dates', 'competitors') . '</h1>';
+
+    // Render settings form
     echo '<form method="post" action="options.php">';
-    settings_fields('competitors_classes_dates_settings_group');
-    do_settings_sections('competitors_dates_settings');
-    do_settings_sections('competitors_classes_settings');
-    submit_button();
-    echo '</form></div>';
+    settings_fields('competitors_classes_dates_settings_group'); // Security nonce for this settings group
+    do_settings_sections('competitors_dates_settings'); // Output date-specific settings
+    do_settings_sections('competitors_classes_settings'); // Output class-specific settings
+    submit_button(); // Render default submit button
+    echo '</form>';
+    echo '</div>';
 }
 
 
-function initialize_competitors_settings() {
-    register_setting('competitors_rollnames_settings_group', 'competitors_options', 'competitors_options_sanitize');
-    register_setting('competitors_classes_dates_settings_group', 'competitors_options', 'competitors_options_sanitize');
 
+/**
+ * Registers and initializes all plugin settings.
+ */
+function initialize_competitors_settings() {
+    // Register settings for classes, dates, and rollnames
+    register_setting(
+        'competitors_rollnames_settings_group',
+        'competitors_options',
+        'competitors_options_sanitize' // Sanitization callback
+    );
+    register_setting(
+        'competitors_classes_dates_settings_group',
+        'competitors_options',
+        'competitors_options_sanitize' // Sanitization callback
+    );
+
+    // Initialize individual settings sections
     initialize_competitors_classes_settings();
     initialize_competitors_dates_settings();
     initialize_competitors_rollnames_settings();
@@ -636,52 +711,60 @@ function initialize_competitors_settings() {
 add_action('admin_init', 'initialize_competitors_settings');
 
 
+/**
+ * Initializes the settings section for managing competition classes.
+ */
 function initialize_competitors_classes_settings() {
     add_settings_section(
-        'competitors_classes_section',
-        __('Manage Competition Classes', 'competitors'),
-        'competitors_classes_section_callback',
-        'competitors_classes_settings'
+        'competitors_classes_section', // Section ID
+        esc_html__('Manage Competition Classes', 'competitors'), // Title
+        'competitors_classes_section_callback', // Callback to display description
+        'competitors_classes_settings' // Page slug
     );
 
     add_settings_field(
-        'competitors_classes_field',
-        __('Competition Classes', 'competitors'),
-        'render_competitors_classes_field',
-        'competitors_classes_settings',
-        'competitors_classes_section'
+        'competitors_classes_field', // Field ID
+        esc_html__('Competition Classes', 'competitors'), // Label
+        'render_competitors_classes_field', // Callback to render the field
+        'competitors_classes_settings', // Page slug
+        'competitors_classes_section' // Section ID
     );
 }
+
+
 
 
 function initialize_competitors_dates_settings() {
     add_settings_section(
         'competitors_dates_section',
-        __('Event Date and Name', 'competitors'),
+        // Translatable string for section title
+        esc_html__('Event Date and Name', 'competitors'),
         'competitors_dates_section_callback',
         'competitors_dates_settings'
     );
 
     add_settings_field(
         'competitors_dates_field',
-        __('Competition Dates', 'competitors'),
+        // Translatable string for field label
+        esc_html__('Competition Dates', 'competitors'),
         'render_competitors_dates_field',
         'competitors_dates_settings',
         'competitors_dates_section'
     );
 }
 
-
 function initialize_competitors_rollnames_settings() {
     add_settings_section(
         'competitors_rollnames_section',
-        __('Roll Names and Points for all competition classes', 'competitors'),
+        // Translatable string for section title
+        esc_html__('Roll Names and Points for all competition classes', 'competitors'),
         'competitors_rollnames_section_callback',
         'competitors_rollnames_settings'
     );
 
     $options = get_option('competitors_options', []);
     $participation_classes = isset($options['available_competition_classes']) ? $options['available_competition_classes'] : [];
+    
     foreach ($participation_classes as $class) {
         if (!is_array($class) || !isset($class['name'])) {
             continue;
@@ -690,7 +773,12 @@ function initialize_competitors_rollnames_settings() {
 
         add_settings_field(
             "competitors_text_field_{$class_name}",
-            __('Roll Names for - ', 'competitors') . " {$class_name}",
+            // Using sprintf for dynamic string translation
+            sprintf(
+                // Translatable string with placeholder
+                esc_html__('Roll Names for - %s', 'competitors'),
+                esc_html($class_name)
+            ),
             function() use ($class_name) {
                 render_competitors_roll_field($class_name);
             },
@@ -702,17 +790,25 @@ function initialize_competitors_rollnames_settings() {
 
 
 function competitors_classes_section_callback() {
-    echo '<p>' . __('The class here is for admin backend purposes, so only a-z please! The class comment is an explanation which appears in the registration form. You can use any characters here.', 'competitors') . '</p>';
+    echo wp_kses(
+        '<p>' . esc_html__('The class here is for admin backend purposes, so only a-z please! The class comment is an explanation which appears in the registration form. You can use any characters here.', 'competitors') . '</p>',
+        ['p' => []]
+    );
 }
 
 function competitors_dates_section_callback() {
-    echo '<p>' . __('Click in the date field and a calendar where you choose date should appear.', 'competitors') . '</p>';
+    echo wp_kses(
+        '<p>' . esc_html__('Click in the date field and a calendar where you choose date should appear.', 'competitors') . '</p>',
+        ['p' => []]
+    );
 }
 
 function competitors_rollnames_section_callback() {
-    echo '<p>' . __('The numeric checkbox is for speedrolls or meters paddled under water, so there is no more/less button but an input field.', 'competitors') . '</p>';
+    echo wp_kses(
+        '<p>' . esc_html__('The numeric checkbox is for speedrolls or meters paddled under water, so there is no more/less button but an input field.', 'competitors') . '</p>',
+        ['p' => []]
+    );
 }
-
 
 function render_competitors_classes_field() {
     $options = get_option('competitors_options', []);
@@ -724,9 +820,9 @@ function render_competitors_classes_field() {
     ob_start();
     ?>
     <div id="add-class-form">
-        <label for="new_class_name"><?php _e('Class Data Name:', 'competitors'); ?></label>
+        <label for="new_class_name"><?php esc_html_e('Class Data Name:', 'competitors'); ?></label>
         <input type="text" id="new_class_name" name="new_class_name" value="" />
-        <label for="new_class_comment"><?php _e('Class Comment:', 'competitors'); ?></label>
+        <label for="new_class_comment"><?php esc_html_e('Class Comment:', 'competitors'); ?></label>
         <input type="text" id="new_class_comment" name="new_class_comment" value="" />
         <button type="button" id="add-class-button" class="button button-primary plus-button"></button>
     </div>
@@ -736,7 +832,7 @@ function render_competitors_classes_field() {
                 <li class="class-item <?php echo $index % 2 == 0 ? 'alternate' : ''; ?>" data-name="<?php echo esc_attr($class['name']); ?>" data-comment="<?php echo esc_attr($class['comment']); ?>">
                     <?php echo esc_html($class['name'] . ' - ' . $class['comment']); ?>
                     <input type="hidden" name="competitors_options[available_competition_classes][]" value="<?php echo esc_attr(json_encode($class)); ?>" />
-                    <button type="button" class="button-secondary remove-class-button"><?php _e('Remove', 'competitors'); ?></button>
+                    <button type="button" class="button-secondary remove-class-button"><?php esc_html_e('Remove', 'competitors'); ?></button>
                 </li>
             <?php endif; ?>
         <?php endforeach; ?>
@@ -754,9 +850,9 @@ function render_competitors_dates_field() {
     ob_start();
     ?>
     <div id="add-event-form">
-        <label for="new_competition_date"><?php _e('New Competition Date:', 'competitors'); ?></label>
+        <label for="new_competition_date"><?php esc_html_e('New Competition Date:', 'competitors'); ?></label>
         <input type="text" id="new_competition_date" class="date-picker" name="new_competition_date" value="" />
-        <label for="new_event_name"><?php _e('Event Name:', 'competitors'); ?></label>
+        <label for="new_event_name"><?php esc_html_e('Event Name:', 'competitors'); ?></label>
         <input type="text" id="new_event_name" name="new_event_name" value="" />
         <button type="button" id="add-event-button" class="button custom-button button-primary plus-button"></button>
     </div>
@@ -765,27 +861,26 @@ function render_competitors_dates_field() {
             <li class="event-item <?php echo $index % 2 == 0 ? 'alternate' : ''; ?>" data-date="<?php echo esc_attr($event['date']); ?>" data-name="<?php echo esc_attr($event['name']); ?>">
                 <?php echo esc_html($event['date'] . ' - ' . $event['name']); ?>
                 <input type="hidden" name="competitors_options[available_competition_dates][]" value="<?php echo esc_attr(json_encode($event)); ?>" />
-                <button type="button" class="button custom-button button-secondary remove-event-button"><?php _e('Remove', 'competitors'); ?></button>
+                <button type="button" class="button custom-button button-secondary remove-event-button"><?php esc_html_e('Remove', 'competitors'); ?></button>
             </li>
         <?php endforeach; ?>
     </ul>
     <?php
     echo ob_get_clean();
-}
+ }
 
-
-function render_competitors_roll_field($class = 'open') {
+ function render_competitors_roll_field($class = 'open') {
     $options = get_option('competitors_options', []);
     $roll_names = isset($options["custom_values_{$class}"]) ? $options["custom_values_{$class}"] : [];
     $points_values = isset($options["numeric_values_{$class}"]) ? $options["numeric_values_{$class}"] : [];
     $is_numeric_fields = isset($options["is_numeric_field_{$class}"]) ? $options["is_numeric_field_{$class}"] : [];
     $no_right_left = isset($options["no_right_left_{$class}"]) ? $options["no_right_left_{$class}"] : [];
-
+ 
     $roll_names = is_array($roll_names) ? $roll_names : [];
     $points_values = is_array($points_values) ? $points_values : array_fill(0, count($roll_names), '');
     $is_numeric_fields = is_array($is_numeric_fields) ? $is_numeric_fields : array_fill(0, count($roll_names), false);
     $no_right_left = is_array($no_right_left) ? $no_right_left : array_fill(0, count($roll_names), false);
-
+ 
     ob_start();
     ?>
     <div id="competitors_roll_names_wrapper_<?php echo esc_attr($class); ?>">
@@ -795,7 +890,7 @@ function render_competitors_roll_field($class = 'open') {
             $is_numeric_fields = [false];
             $no_right_left = [false];
         }
-
+ 
         foreach ($roll_names as $index => $roll_name) {
             $roll_name = trim($roll_name);
             $point_value = isset($points_values[$index]) ? esc_attr($points_values[$index]) : '0';
@@ -805,23 +900,22 @@ function render_competitors_roll_field($class = 'open') {
             <p class="roll-item <?php echo $index % 2 == 0 ? 'alternate' : ''; ?>" data-index="<?php echo esc_attr($index); ?>">
                 <label for="maneuver_<?php echo esc_attr($class . '_' . $index); ?>"><?php echo esc_html($index + 1); ?>. </label>
                 <input type="text" id="maneuver_<?php echo esc_attr($class . '_' . $index); ?>" name="competitors_options[custom_values_<?php echo esc_attr($class); ?>][]" size="60" value="<?php echo esc_attr($roll_name); ?>" />
-                <label for="points_<?php echo esc_attr($class . '_' . $index); ?>"> Points: </label>
+                <label for="points_<?php echo esc_attr($class . '_' . $index); ?>"><?php esc_html_e('Points:', 'competitors'); ?></label>
                 <input type="text" class="numeric-input" id="points_<?php echo esc_attr($class . '_' . $index); ?>" name="competitors_options[numeric_values_<?php echo esc_attr($class); ?>][]" size="2" maxlength="2" pattern="\d*" value="<?php echo esc_attr($point_value); ?>" />
-                <label for="numeric_<?php echo esc_attr($class . '_' . $index); ?>"> Numeric:</label>
+                <label for="numeric_<?php echo esc_attr($class . '_' . $index); ?>"><?php esc_html_e('Numeric:', 'competitors'); ?></label>
                 <input type="checkbox" id="numeric_<?php echo esc_attr($class . '_' . $index); ?>" name="competitors_options[is_numeric_field_<?php echo esc_attr($class); ?>][<?php echo esc_attr($index); ?>]" value="1" <?php echo $numeric_checked; ?>>
-                <label for="no_right_left_<?php echo esc_attr($class . '_' . $index); ?>"> No Right/Left:</label>
+                <label for="no_right_left_<?php echo esc_attr($class . '_' . $index); ?>"><?php esc_html_e('No Right/Left:', 'competitors'); ?></label>
                 <input type="checkbox" id="no_right_left_<?php echo esc_attr($class . '_' . $index); ?>" name="competitors_options[no_right_left_<?php echo esc_attr($class); ?>][<?php echo esc_attr($index); ?>]" value="1" <?php echo $no_right_left_checked; ?>>
                 <?php if ($index === 0) { ?>
                     <button type="button" id="add_more_roll_names_<?php echo esc_attr($class); ?>" class="button custom-button button-primary plus-button"></button>
                 <?php } ?>
-                <button type="button" class="button custom-button button-secondary remove-row">Remove</button>
+                <button type="button" class="button custom-button button-secondary remove-row"><?php esc_html_e('Remove', 'competitors'); ?></button>
             </p>
         <?php } ?>
     </div>
     <?php
     echo ob_get_clean();
-}
-
+ }
 
 
 /**

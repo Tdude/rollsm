@@ -45,8 +45,8 @@ function render_competitors_date_field_public() {
 function render_competitors_classes_field_public() {
     $options = get_option('competitors_options', []);
     $competitor_classes = isset($options['available_competition_classes']) ? $options['available_competition_classes'] : [
-        ['name' => 'open', 'comment' => 'Open (International participants, 30 minutes max)'],
-        ['name' => 'championship', 'comment' => 'Mästerskapsklass (30 minuter max)'],
+        ['name' => 'open', 'comment' => 'Open (International participants, 20 minutes max)'],
+        ['name' => 'championship', 'comment' => 'Mästerskapsklass (20 minuter max)'],
         ['name' => 'amateur', 'comment' => 'Motionsklass (10 minuter max)']
     ];
     
@@ -477,7 +477,7 @@ function competitors_scoring_list_page() {
     }
 
     // Generate the options for the dates dropdown
-    $list_of_dates = '<option value="">' . __('Alla Datum', 'competitors') . '</option>';
+    $list_of_dates = '<option value="">' . __('All Dates', 'competitors') . '</option>';
     foreach ($dates as $date) {
         if (isset($date['date']) && isset($date['name'])) {
             $date_value = esc_attr($date['date']);
@@ -493,7 +493,7 @@ function competitors_scoring_list_page() {
     }
 
     // Generate the options for the competitor classes dropdown
-    $list_of_classes = '<option value="">' . __('Alla klasser', 'competitors') . '</option>';
+    $list_of_classes = '<option value="">' . __('All classes', 'competitors') . '</option>';
     foreach ($classes as $class) {
         if (isset($class['name']) && isset($class['comment'])) {
             $class_value = esc_attr($class['name']);
@@ -503,7 +503,7 @@ function competitors_scoring_list_page() {
     }
 
     // Generate the options for the gender dropdown
-    $list_of_genders = '<option value="">' . __('Kön', 'competitors') . '</option>';
+    $list_of_genders = '<option value="">' . __('Gender', 'competitors') . '</option>';
     $list_of_genders .= '<option value="woman">Kvinna</option>';
     $list_of_genders .= '<option value="man">Man</option>';
 
@@ -600,7 +600,7 @@ function load_competitors_list() {
     $html = build_competitors_list_html($competitors_data);
 
     // Cache the result 12 h
-    set_transient($cache_key, $html, 12 * HOUR_IN_SECONDS);
+    set_transient($cache_key, $html, 24 * HOUR_IN_SECONDS);
 
     wp_send_json_success(['content' => $html]);
 }
