@@ -1,0 +1,199 @@
+#. Description of the plugin
+#. Author of the plugin
+#: /www/wp-content/plugins/competitors/competitor-settings.php
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: Tdude <tibbecodes@gmail.com>\n"
+"Language-Team: \n"
+"Language: da\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.5\n"
+
+# #-#-#-#-#  catalog.pot  #-#-#-#-#
+# Copyright (C) 2024 Tdude (Tibor Berki)
+# This file is distributed under the GPL3.
+#. Plugin Name of the plugin
+#: /www/wp-content/plugins/competitors/competitor-settings.php
+#: competitors-settings.php:161
+msgid "Competitors"
+msgstr ""
+
+#. Plugin URI of the plugin
+#. Author URI of the plugin
+#: /www/wp-content/plugins/competitors/competitor-settings.php
+msgid "https://rollsm.se/"
+msgstr ""
+
+#: admin-page.php:140
+msgid "Sent Emails"
+msgstr ""
+
+#: admin-page.php:141
+msgid "Sent Email"
+msgstr ""
+
+#: admin-page.php:391
+msgid "Left (More/Less)"
+msgstr ""
+
+#: admin-page.php:392
+msgid "Right (More/Less)"
+msgstr ""
+
+#: admin-page.php:393
+msgid "Score"
+msgstr ""
+
+#: admin-page.php:626
+msgid ""
+"Clicking any competitor name row while the Timer is running <b><i>always "
+"resets the Timer</i></b>. Timing for a particular competitor can be Paused "
+"if you want, or saved when you click \"Save scores\". This is live score "
+"timing. <b><i>There is no going back to adjust!</i></b> If you resave a "
+"competitor's score, the timing for that competitor will be reset. Once again:"
+"<em> If you change competitor view (click another competitor's name), timing "
+"will reset</em>. Do not mess around. You have now been warned. "
+msgstr ""
+
+#: competitors-settings.php:162
+msgid "Competitor"
+msgstr ""
+
+#: competitors-settings.php:175
+msgid "This is the Competitors Plugin for roll competition scoring"
+msgstr ""
+
+#: competitors-settings.php:192
+msgid "Custom Order"
+msgstr ""
+
+#: competitors-settings.php:201
+msgid "Competitor Details"
+msgstr ""
+
+#: competitors-settings.php:214
+msgid "Order"
+msgstr ""
+
+#: competitors-settings.php:559
+msgid "Show/Hide Instructions"
+msgstr ""
+
+#: competitors-settings.php:566
+msgid ""
+"Here you can set Custom Values for roll names. One roll name or maneuver on "
+"each row. Add rows with +."
+msgstr ""
+
+#: competitors-settings.php:567
+msgid ""
+"These values correspond to what rolls competitors check with check boxes on "
+"the front end, as well as the admin area. See other tabs."
+msgstr ""
+
+#: competitors-settings.php:568
+msgid ""
+"If you choose a \"Numeric\" input, you should leave the points blank! It "
+"will be filled in by the judges for speedrolling and such."
+msgstr ""
+
+#: competitors-settings.php:569
+msgid ""
+"There are three different possible scoreboards by default, corresponding to "
+"what class the competitor will register to. A competitor can participate in "
+"one class only. You can add classes, rolls etc. but keep in mind you can NOT "
+"change the sequence later. Also, if you delete a class, all competitors will "
+"be unavailable (but the data is retrievable). If more freedom is needed, let "
+"me know, but keep in mind: Your favourite apps have thousands of developers "
+"and cost billions! Not joking."
+msgstr ""
+
+#: competitors-settings.php:572
+msgid "How to use the registration and results page(s)"
+msgstr ""
+
+#: competitors-settings.php:573
+msgid ""
+"You can display either the registration form for competitors or the results "
+"on any WP Post or Page with the following shortcodes:"
+msgstr ""
+
+#: competitors-settings.php:575
+msgid "There is a default page <a href=\""
+msgstr ""
+
+#: competitors-settings.php:576
+msgid "Over at Qajaq USA there is an <a href=\""
+msgstr ""
+
+#: competitors-settings.php:597
+msgid "Rolls Settings"
+msgstr ""
+
+#: competitors-settings.php:626
+msgid "Classes & Dates"
+msgstr ""
+
+#: competitors-settings.php:651
+msgid "Manage Competition Classes"
+msgstr ""
+
+#: competitors-settings.php:658
+msgid "Competition Classes"
+msgstr ""
+
+#: competitors-settings.php:669
+msgid "Event Date and Name"
+msgstr ""
+
+#: competitors-settings.php:676
+msgid "Competition Dates"
+msgstr ""
+
+#: competitors-settings.php:687
+msgid "Roll Names and Points for all competition classes"
+msgstr ""
+
+#: competitors-settings.php:702
+msgid "Roll Names for - "
+msgstr ""
+
+#: competitors-settings.php:714
+msgid ""
+"The class here is for admin backend purposes, so only a-z please! The class "
+"comment is an explanation which appears in the registration form. You can "
+"use any characters here."
+msgstr ""
+
+#: competitors-settings.php:718
+msgid ""
+"Click in the date field and a calendar where you choose date should appear."
+msgstr ""
+
+#: competitors-settings.php:722
+msgid ""
+"The numeric checkbox is for speedrolls or meters paddled under water, so "
+"there is no more/less button but an input field."
+msgstr ""
+
+#: competitors-settings.php:1062
+msgid "Judge"
+msgstr ""
+
+#: public-page.php:480
+msgid "All Dates"
+msgstr ""
+
+#: public-page.php:496
+msgid "All classes"
+msgstr ""
+
+#: public-page.php:506
+msgid "Gender"
+msgstr ""
