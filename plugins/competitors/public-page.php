@@ -114,7 +114,7 @@ function competitors_form_html() {
             </div>
         </fieldset>
 
-        <p class="ptb-1">According to <a target="_blank" href="https://kanot.com/grenar/havskajak/tavling/gronlandsroll">The Rules</a>, you get 30 min to perform your rolls in the Championship and Open classes. However, to save time and make for a better comp, please let us know if there are rolls you will not try to perform. You can change your mind on the water, but we need a hint for time planning!</p>
+        <p class="ptb-1">According to <a target="_blank" href="https://kanot.com/grenar/havskajak/tavling/gronlandsroll">The Rules</a>, you get 20 minutes to perform your rolls in the Championship and Open classes. However, to save time and make for a better comp, please let us know if there are rolls you will not try to perform. You can change your mind on the water, but we need a hint for time planning!</p>
 
         <div id="performing-rolls-container">
             <?php echo render_performing_rolls_fieldset('open'); // Default to 'open' class initially ?>
@@ -621,12 +621,18 @@ function build_competitors_list_html($competitors_data) {
 
         // Create club display string only if club exists
         $club_display = !empty($competitor['club']) ? ' - ' . esc_html($competitor['club']) : '';
+        
+        // Check if competitor has a snapshot (historical data)
+        $has_snapshot = !empty(get_post_meta($competitor['ID'], 'roll_definitions_snapshot', true));
+        $history_icon = $has_snapshot ? '<i class="dashicons dashicons-database-view history-icon" title="' . esc_attr__('Historical data preserved', 'competitors') . '"></i> ' : '';
     
         $html .= sprintf(
-            '<li class="competitors-list-item" data-competitor-id="%d" data-participation-class="%s" data-gender="%s"><b>%s</b>%s - %d points</li>',
+            '<li class="competitors-list-item%s" data-competitor-id="%d" data-participation-class="%s" data-gender="%s">%s<b>%s</b>%s - %d points</li>',
+            $has_snapshot ? ' has-snapshot' : '',
             esc_attr($competitor['ID']),
             esc_attr($competitor['participation_class']), 
             esc_attr($competitor['gender']),
+            $history_icon,
             esc_html($competitor['title']),
             $club_display,
             intval($competitor['total'])
@@ -677,15 +683,49 @@ add_action('wp_ajax_nopriv_load_competitor_details', 'load_competitor_details');
 
 
 function competitors_scoring_view_page($competitor_id = 0, $selected_date = null, $participation_class = null) {
-    // Valid participation class?
-    if (empty($participation_class)) {
-        $participation_class = get_post_meta($competitor_id, 'participation_class', true);
-        if (empty($participation_class)) {
-            $participation_class = 'open';
-        }
+    // Get competition date for this competitor if not provided
+    if (empty($selected_date)) {
+        $selected_date = get_post_meta($competitor_id, 'competition_date', true);
     }
-    // Pass the participation_class to get_roll_names_and_max_scores
-    $rolls = get_roll_names_and_max_scores($participation_class);
+    
+    // Always get the competitor's actual stored class first
+    $stored_participation_class = get_post_meta($competitor_id, 'participation_class', true);
+    if (empty($stored_participation_class)) {
+        $stored_participation_class = 'open';
+    }
+    
+    // If no class is provided in the parameters, use the competitor's actual class
+    if (empty($participation_class)) {
+        $participation_class = $stored_participation_class;
+    }
+    
+    // Check if this competitor has historical data available
+    $has_historical_data = get_post_meta($competitor_id, 'has_historical_data', true);
+    $is_historical = false;
+    
+    // Try to get competition-based roll definitions first using the competitor's actual class
+    if ($has_historical_data && !empty($selected_date)) {
+        // First try with the provided class parameter (if any)
+        $rolls = get_competition_roll_definitions($participation_class, $selected_date);
+        
+        // If that doesn't work and the provided class differs from stored class, try with the stored class
+        if (empty($rolls) && $participation_class !== $stored_participation_class) {
+            $rolls = get_competition_roll_definitions($stored_participation_class, $selected_date);
+            // If we found rolls using the stored class, update the class parameter
+            if (!empty($rolls)) {
+                $participation_class = $stored_participation_class;
+            }
+        }
+        
+        $is_historical = !empty($rolls);
+    }
+    
+    // Fall back to dynamic loading if historical data doesn't exist
+    if (empty($rolls)) {
+        // Pass both the participation_class and competition_date to get_roll_names_and_max_scores
+        $rolls = get_roll_names_and_max_scores($participation_class, $selected_date);
+    }
+    
     // Determine the last numeric roll
     $last_numeric_index = -1;
     foreach (array_reverse($rolls, true) as $index => $roll) {
@@ -715,7 +755,12 @@ function competitors_scoring_view_page($competitor_id = 0, $selected_date = null
     $scores_text = $no_scores_yet ? __(" - Newly registered", 'competitors') : "";
 
     // Output the competitor's title and status
-    echo '<h3><a href="#" id="close-details" class="competitors-back-link"><i class="dashicons dashicons-arrow-right-alt2 arrow-back"></i>' . esc_html(get_the_title($competitor_id)) . esc_html($scores_text) . '</a></h3>';
+    $historical_indicator = '';
+    if ($is_historical) {
+        $historical_indicator = '<span class="historical-data-indicator"><i class="dashicons dashicons-database-view" title="' . esc_attr__('Historical data preserved', 'competitors') . '"></i> ' . esc_html__('Historical Data', 'competitors') . '</span>';
+    }
+    
+    echo '<h3><a href="#" id="close-details" class="competitors-back-link"><i class="dashicons dashicons-arrow-right-alt2 arrow-back"></i>' . esc_html(get_the_title($competitor_id)) . esc_html($scores_text) . '</a>' . $historical_indicator . '</h3>';
 
     // Output the table header
     echo '<table class="competitors-table">';

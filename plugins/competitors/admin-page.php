@@ -396,8 +396,23 @@ function render_performing_rolls_admin($participation_class = 'open') {
     ob_start();
     ?>
         <?php
-        $selected_rolls_indexes = (array) get_post_meta(get_the_ID(), 'selected_rolls', true);
-        $rolls = get_roll_names_and_max_scores($participation_class);
+        $competitor_id = get_the_ID();
+        $selected_rolls_indexes = (array) get_post_meta($competitor_id, 'selected_rolls', true);
+        
+        // Get competition date for this competitor
+        $competition_date = get_post_meta($competitor_id, 'competition_date', true);
+        $has_historical_data = get_post_meta($competitor_id, 'has_historical_data', true);
+        
+        // Try to get competition-based roll definitions first
+        $rolls = null;
+        if ($has_historical_data && !empty($competition_date) && !empty($participation_class)) {
+            $rolls = get_competition_roll_definitions($participation_class, $competition_date);
+        }
+        
+        // Fall back to dynamic loading if no historical data exists
+        if (empty($rolls)) {
+            $rolls = get_roll_names_and_max_scores($participation_class, $competition_date);
+        }
         echo '<tr class="selected-rolls hidden">';
         echo '<td colspan="10">';
         echo '<table>';
@@ -896,6 +911,96 @@ function handle_competitors_score_update_serialized() {
         $serialized_scores = maybe_serialize($scores_array);
         update_post_meta($competitor_id, 'competitor_scores', $serialized_scores);
         update_post_meta($competitor_id, 'total_score', $total_score);
+
+        // Get competition date for this competitor
+        $competition_date = get_post_meta($competitor_id, 'competition_date', true);
+        
+        // Store roll definitions by competition date (for all classes)
+        if (!empty($competition_date)) {
+            // This will store roll definitions for all classes for this competition date
+            store_competition_roll_definitions($competition_date);
+            
+            // Flag this competitor as having historical data available
+            update_post_meta($competitor_id, 'has_historical_data', true);
+            
+            // Clear competitor-specific caches to ensure fresh data is shown
+            $participation_class = get_post_meta($competitor_id, 'participation_class', true);
+            
+            // Clear competitor details cache
+            $details_cache_key = 'competitor_details_' . $competitor_id . '_' . md5($participation_class);
+            delete_transient($details_cache_key);
+            
+            // Also clear empty class cache key (when no class is selected)
+            $empty_class_cache_key = 'competitor_details_' . $competitor_id . '_' . md5('');
+            delete_transient($empty_class_cache_key);
+            
+            // Clear all competitor list caches with this competition date
+            // This is important to ensure the list view also shows updated data
+            global $wpdb;
+            
+            // Clear date-only cache - this is the problematic edge case
+            $date_only_cache_key = 'competitors_list_' . md5($competition_date);
+            delete_transient($date_only_cache_key);
+            
+            // Clear all list caches involving this date (with any combination of filters)
+            $like_competition_date = '%' . $wpdb->esc_like('competitors_list_' . md5($competition_date)) . '%';
+            $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s AND option_name LIKE %s", 
+                '_transient_' . $like_competition_date, 
+                '%'
+            ));
+            
+            // Also clear all-dates list cache (no filters)
+            $like_all_dates = '%' . $wpdb->esc_like('competitors_list_' . md5('')) . '%';
+            $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s AND option_name LIKE %s", 
+                '_transient_' . $like_all_dates, 
+                '%'
+            ));
+            
+            // For specific filter combinations, we need to clear exact cache keys
+            $options = get_option('competitors_options', []);
+            $available_classes = isset($options['available_competition_classes']) ? $options['available_competition_classes'] : [];
+            $genders = ['woman', 'man']; // All possible gender values
+            
+            // Strategy: Systematically clear all possible filter combinations for this date
+            
+            // 1. Clear all empty combinations
+            // Date only (no class, no gender)
+            delete_transient('competitors_list_' . md5($competition_date . '' . ''));
+            
+            // 2. Clear all date+gender combinations (no class)
+            foreach ($genders as $gender) {
+                delete_transient('competitors_list_' . md5($competition_date . '' . $gender));
+            }
+            
+            // 3. Clear all date+class combinations (no gender)
+            foreach ($available_classes as $class_data) {
+                if (isset($class_data['name'])) {
+                    $class = $class_data['name'];
+                    delete_transient('competitors_list_' . md5($competition_date . $class . ''));
+                    
+                    // 4. Clear all date+class+gender combinations
+                    foreach ($genders as $gender) {
+                        delete_transient('competitors_list_' . md5($competition_date . $class . $gender));
+                    }
+                    
+                    // 5. Clear class only (no date, no gender)
+                    delete_transient('competitors_list_' . md5('' . $class . ''));
+                    
+                    // 6. Clear class+gender (no date)
+                    foreach ($genders as $gender) {
+                        delete_transient('competitors_list_' . md5('' . $class . $gender));
+                    }
+                }
+            }
+            
+            // 5. Just to be extra thorough, force invalidate ALL transients that contain this date's hash
+            // This acts as a safety net for any cache combinations we might have missed
+            $date_hash = md5($competition_date);
+            $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s AND option_value LIKE %s", 
+                '_transient_%', 
+                '%' . $wpdb->esc_like($date_hash) . '%'
+            ));
+        }
 
         // Save timing data if available
         if (isset($_POST['start_time'][$competitor_id])) {

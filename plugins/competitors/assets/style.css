@@ -103,6 +103,46 @@ ul.competitors-table {
   counter-reset: item-counter; /* makes an ul to an ol for fun */
 }
 
+/* Styling for the historical data icon */
+.competitors-list-item .history-icon {
+  color: var(--wp--preset--color--info-darker);
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+.competitors-list-item.has-snapshot {
+  position: relative;
+}
+
+.competitors-list-item.has-snapshot::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 3px;
+  background-color: var(--wp--preset--color--info);
+}
+
+/* Styling for detailed view historical data indicator */
+.historical-data-indicator {
+  display: inline-block;
+  margin-left: 15px;
+  padding: 4px 10px;
+  background-color: var(--wp--preset--color--info);
+  color: var(--wp--preset--color--white);
+  border-radius: 4px;
+  font-size: 0.9em;
+  vertical-align: middle;
+}
+
+.historical-data-indicator .dashicons {
+  vertical-align: middle;
+  margin-right: 4px;
+  font-size: 1.1em;
+  height: auto;
+}
+
 li.competitors-list-item {
   padding: 0.5em;
   border-bottom: 1px solid #ddd;

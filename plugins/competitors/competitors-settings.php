@@ -39,6 +39,8 @@ add_action('admin_init', 'competitors_remove_admin_color_scheme_for_non_admins')
 // Include admin and public page functionalities
 include_once plugin_dir_path(__FILE__) . 'admin-page.php';
 include_once plugin_dir_path(__FILE__) . 'public-page.php';
+// Include migration script
+include_once plugin_dir_path(__FILE__) . 'migration.php';
 
 
 /**
@@ -304,7 +306,6 @@ add_action('save_post_competitors', 'competitors_save_custom_data', 10, 2);
  * Also adds a default page on activation to help the not so savvy to "roll" :)
  */
 function flush_rewrite_rules_on_activation() {
-    register_competitors_post_type();
     flush_rewrite_rules();
     create_default_competitor_if_none_exists();
 
@@ -707,6 +708,7 @@ function initialize_competitors_settings() {
     initialize_competitors_classes_settings();
     initialize_competitors_dates_settings();
     initialize_competitors_rollnames_settings();
+    initialize_roll_date_mapping_settings();
 }
 add_action('admin_init', 'initialize_competitors_settings');
 
@@ -788,6 +790,29 @@ function initialize_competitors_rollnames_settings() {
     }
 }
 
+/**
+ * Initializes the settings section for roll-date mapping.
+ * This allows configuration of which rolls are available for each competition date and participation class.
+ */
+function initialize_roll_date_mapping_settings() {
+    add_settings_section(
+        'competitors_roll_date_mapping_section',
+        // Translatable string for section title
+        esc_html__('Roll to Date Mapping', 'competitors'),
+        'competitors_roll_date_mapping_section_callback',
+        'competitors_roll_date_mapping_settings'
+    );
+
+    add_settings_field(
+        'competitors_roll_date_mapping_field',
+        // Translatable string for field label
+        esc_html__('Configure Roll Availability by Date', 'competitors'),
+        'render_competitors_roll_date_mapping_field',
+        'competitors_roll_date_mapping_settings',
+        'competitors_roll_date_mapping_section'
+    );
+}
+
 
 function competitors_classes_section_callback() {
     echo wp_kses(
@@ -801,6 +826,92 @@ function competitors_dates_section_callback() {
         '<p>' . esc_html__('Click in the date field and a calendar where you choose date should appear.', 'competitors') . '</p>',
         ['p' => []]
     );
+}
+
+function competitors_roll_date_mapping_section_callback() {
+    echo wp_kses(
+        '<p>' . esc_html__('Configure which rolls are available for each competition date and participation class.', 'competitors') . '</p>',
+        ['p' => []]
+    );
+}
+
+function render_competitors_roll_date_mapping_field() {
+    $options = get_option('competitors_options', []);
+    $events = isset($options['available_competition_dates']) ? $options['available_competition_dates'] : [];
+    $date_roll_mapping = isset($options['date_roll_mapping']) ? $options['date_roll_mapping'] : [];
+    $classes = isset($options['competition_classes']) ? $options['competition_classes'] : ['open'];
+    
+    if (empty($events)) {
+        echo '<p>' . esc_html__('You need to add competition dates before you can configure roll mappings.', 'competitors') . '</p>';
+        return;
+    }
+    
+    echo '<div class="roll-date-mapping-container">';
+    
+    foreach ($events as $event) {
+        $date = isset($event['date']) ? $event['date'] : '';
+        $name = isset($event['name']) ? $event['name'] : '';
+        
+        if (empty($date)) continue;
+        
+        echo '<div class="date-mapping-section">';
+        echo '<h4>' . esc_html($date . ' - ' . $name) . '</h4>';
+        
+        foreach ($classes as $class) {
+            // Get all rolls for this class
+            $roll_data = get_roll_names_and_max_scores($class);
+            if (empty($roll_data) || (isset($roll_data[0]['name']) && $roll_data[0]['name'] == '1. No roll names defined')) {
+                continue;
+            }
+            
+            echo '<div class="class-mapping">';
+            echo '<h5>' . esc_html(ucfirst($class)) . '</h5>';
+            
+            // Simple table layout for checkboxes
+            echo '<table class="widefat">';
+            echo '<tr>';
+            $counter = 0;
+            
+            foreach ($roll_data as $index => $roll) {
+                $roll_name = preg_replace('/^\d+\.\s/', '', $roll['name']);
+                $roll_index = $index;
+                $checked = '';
+                
+                // Check if this roll is mapped to this date and class
+                if (isset($date_roll_mapping[$date][$class]) && 
+                    in_array($roll_index, $date_roll_mapping[$date][$class])) {
+                    $checked = 'checked="checked"';
+                }
+                
+                if ($counter % 3 == 0 && $counter > 0) {
+                    echo '</tr><tr>';
+                }
+                
+                echo '<td>';
+                echo '<label>';
+                echo '<input type="checkbox" name="competitors_options[date_roll_mapping][' . esc_attr($date) . '][' . esc_attr($class) . '][]" value="' . esc_attr($roll_index) . '" ' . $checked . '>';
+                echo esc_html($roll_name);
+                echo '</label>';
+                echo '</td>';
+                
+                $counter++;
+            }
+            
+            // Fill remaining cells in the last row
+            while ($counter % 3 != 0) {
+                echo '<td></td>';
+                $counter++;
+            }
+            
+            echo '</tr>';
+            echo '</table>';
+            echo '</div>'; // .class-mapping
+        }
+        
+        echo '</div>'; // .date-mapping-section
+    }
+    
+    echo '</div>'; // .roll-date-mapping-container
 }
 
 function competitors_rollnames_section_callback() {
@@ -1076,7 +1187,14 @@ function competitors_options_sanitize($input) {
  * @param string $class The participation class.
  * @return array An array of roll names with their max scores and numeric status for the specified class.
  */
-function get_roll_names_and_max_scores($class = '') {
+/**
+ * Gets roll names and max scores filtered by participation class and optionally by competition date.
+ * 
+ * @param string $class The participation class
+ * @param string $competition_date Optional competition date to filter rolls
+ * @return array Filtered array of rolls
+ */
+function get_roll_names_and_max_scores($class = '', $competition_date = null) {
     if (empty($class)) {
         $class = 'open';
     }
@@ -1085,12 +1203,26 @@ function get_roll_names_and_max_scores($class = '') {
     $roll_max_scores = isset($options["numeric_values_{$class}"]) ? $options["numeric_values_{$class}"] : [];
     $is_numeric_fields = isset($options["is_numeric_field_{$class}"]) ? $options["is_numeric_field_{$class}"] : [];
     $no_right_left = isset($options["no_right_left_{$class}"]) ? $options["no_right_left_{$class}"] : [];
+    
+    // Get date-specific roll configuration if available
+    $date_roll_mapping = isset($options['date_roll_mapping']) ? $options['date_roll_mapping'] : [];
+    
+    // Mapping of roll indexes to include for this competition date
+    $included_indexes = null;
+    if (!empty($competition_date) && isset($date_roll_mapping[$competition_date][$class])) {
+        $included_indexes = $date_roll_mapping[$competition_date][$class];
+    }
 
     // Combining roll data
     $combined = [];
     foreach ($roll_names as $index => $name) {
         $name = trim($name);
         if (!empty($name)) {
+            // Skip rolls that are not included for this competition date
+            if ($included_indexes !== null && !in_array($index, $included_indexes)) {
+                continue;
+            }
+            
             $max_score = isset($roll_max_scores[$index]) && $roll_max_scores[$index] !== '' ? $roll_max_scores[$index] : 'N/A';
             $is_numeric = isset($is_numeric_fields[$index]) && $is_numeric_fields[$index] ? 'Yes' : 'No';
             $no_right_left_value = isset($no_right_left[$index]) && $no_right_left[$index] ? 'Yes' : 'No';
@@ -1106,6 +1238,78 @@ function get_roll_names_and_max_scores($class = '') {
 
     // Return combined array or default value
     return !empty($combined) ? $combined : [['name' => '1. No roll names defined', 'max_score' => 'N/A', 'is_numeric' => 'N/A', 'no_right_left' => 'N/A']];
+}
+
+/**
+ * Captures a snapshot of roll definitions for a specific class and date
+ *
+ * @param string $class The participation class
+ * @param string $date The competition date
+ * @return array The captured roll definitions
+ */
+function get_roll_definitions_snapshot($class, $date) {
+    return get_roll_names_and_max_scores($class, $date);
+}
+
+/**
+ * Stores roll definitions for all classes for a specific competition date
+ * This ensures all competitors in the same competition date use the same definitions
+ *
+ * @param string $competition_date The competition date to store definitions for
+ * @return bool Whether the operation was successful
+ */
+function store_competition_roll_definitions($competition_date) {
+    if (empty($competition_date)) {
+        return false;
+    }
+    
+    // Get all available classes
+    $options = get_option('competitors_options', []);
+    $classes = isset($options['available_competition_classes']) ? $options['available_competition_classes'] : [];
+    
+    if (empty($classes)) {
+        return false;
+    }
+    
+    $roll_definitions_by_class = [];
+    
+    // Store roll definitions for each class
+    foreach ($classes as $class_data) {
+        if (isset($class_data['name'])) {
+            $class = $class_data['name'];
+            $roll_definitions_by_class[$class] = get_roll_definitions_snapshot($class, $competition_date);
+        }
+    }
+    
+    // Store in wp_options using the competition date as key
+    $option_name = 'competitors_roll_definitions_' . sanitize_title($competition_date);
+    update_option($option_name, $roll_definitions_by_class, false); // No autoload
+    
+    return true;
+}
+
+/**
+ * Retrieves stored roll definitions for a specific class and competition date
+ *
+ * @param string $class The participation class
+ * @param string $competition_date The competition date
+ * @return array|bool The roll definitions array or false if not found
+ */
+function get_competition_roll_definitions($class, $competition_date) {
+    if (empty($class) || empty($competition_date)) {
+        return false;
+    }
+    
+    // Get stored definitions for this competition date
+    $option_name = 'competitors_roll_definitions_' . sanitize_title($competition_date);
+    $roll_definitions_by_class = get_option($option_name, []);
+    
+    // Return definitions for the requested class if they exist
+    if (isset($roll_definitions_by_class[$class])) {
+        return $roll_definitions_by_class[$class];
+    }
+    
+    return false;
 }
 
 

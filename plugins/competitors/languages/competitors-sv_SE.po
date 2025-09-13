@@ -163,7 +163,7 @@ msgstr "Klasser och datum"
 
 #: competitors-settings.php:651
 msgid "Manage Competition Classes"
-msgstr "Hanteratävlingsklasser"
+msgstr "Hantera tävlingsklasser"
 
 #: competitors-settings.php:658
 msgid "Competition Classes"
