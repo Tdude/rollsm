@@ -1,9 +1,8 @@
 # RollSM
-UPDATE 2024-05.05: Due to popular input, there now is a date setup in the admin which allows competitors to not only register for one event, but many. A user can filter the score lists by date.
-
 This is the Wordpress Greenland Rolling Competition plugin for participant registration and judges' scoring. 
 This plugin arose due to a need for a robust system handed over each year to a new organizer. The hurdles to get it going should be as small as possible.
 
+UPDATE: Due to popular input, there now is a date setup in the admin which allows competitors to register for several events if you make a club's battle or something. A user can filter the score lists by date.
 
 ## Installation
 
