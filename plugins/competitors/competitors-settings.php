@@ -9,11 +9,162 @@
  */
 
 define('COMPETITORS_PLUGIN_VERSION', '0.99');
+define('COMPETITORS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
 
 // REMOVE OR COMMENT OUT AFTER DONE DEV!!!
 // error_reporting(E_ALL);
 // ini_set('display_errors', 1);
+
+
+/**
+ * Autoloader for Competitors_* classes.
+ * Maps Competitors_Foo_Bar to includes/Foo/Bar.php (underscore = directory separator).
+ * Also checks includes/Repository/ for repository classes.
+ * Handles: includes/, includes/Repository/, includes/Admin/, includes/Ajax/
+ */
+spl_autoload_register(function ($class) {
+    $prefix = 'Competitors_';
+    if (strpos($class, $prefix) !== 0) {
+        return;
+    }
+
+    $relative = substr($class, strlen($prefix));
+
+    // First: try underscore-to-path mapping (Admin_ScoringPage → Admin/ScoringPage.php)
+    $path = str_replace('_', '/', $relative);
+    $file = COMPETITORS_PLUGIN_DIR . 'includes/' . $path . '.php';
+    if (file_exists($file)) {
+        require_once $file;
+        return;
+    }
+
+    // Second: try direct name in includes/ root (Database.php, CompetitionLock.php)
+    $file = COMPETITORS_PLUGIN_DIR . 'includes/' . $relative . '.php';
+    if (file_exists($file)) {
+        require_once $file;
+        return;
+    }
+
+    // Third: try Repository/ subdirectory (CompetitionRepository.php, ScoreRepository.php)
+    $file = COMPETITORS_PLUGIN_DIR . 'includes/Repository/' . $relative . '.php';
+    if (file_exists($file)) {
+        require_once $file;
+        return;
+    }
+});
+
+
+/**
+ * On activation: create custom tables + seed defaults (Phase 1 of rewrite).
+ * This runs alongside the existing CPT code — both coexist during migration.
+ */
+register_activation_hook(__FILE__, function () {
+    Competitors_Activator::activate();
+});
+
+/**
+ * On admin_init: check if DB needs upgrading (e.g. after plugin update).
+ */
+add_action('admin_init', function () {
+    if (Competitors_Database::needs_upgrade()) {
+        Competitors_Database::create_tables();
+    }
+});
+
+// Initialize migration admin notice + AJAX handlers
+Competitors_MigrationAdmin::init();
+
+// When migration is complete, use new Admin classes backed by custom tables.
+// The old callbacks remain registered but get overridden at higher priority.
+if ( Competitors_Migration::is_complete() ) {
+    // Override menu callbacks for custom-table-backed pages
+    add_action('admin_menu', function () {
+        // Override Personal Data page callback
+        remove_submenu_page('competitors-settings', 'competitors-detailed-data');
+        add_submenu_page(
+            'competitors-settings',
+            esc_html__('Competitors Personal Data', 'competitors'),
+            esc_html__('Personal Data', 'competitors'),
+            'edit_competitors',
+            'competitors-detailed-data',
+            array('Competitors_Admin_PersonalDataPage', 'render')
+        );
+
+        // Override Judges Scoring page callback
+        remove_submenu_page('competitors-settings', 'competitors-scoring');
+        add_submenu_page(
+            'competitors-settings',
+            esc_html__('Judges Scoring Submenu', 'competitors'),
+            esc_html__('Judges Scoring', 'competitors'),
+            'edit_competitors',
+            'competitors-scoring',
+            array('Competitors_Admin_ScoringPage', 'render')
+        );
+
+        // Override email pages
+        remove_submenu_page('edit.php?post_type=competitors', 'send-competitor-emails');
+        add_submenu_page(
+            'edit.php?post_type=competitors',
+            esc_html__('Send Emails to Competitors', 'competitors'),
+            esc_html__('Send Emails', 'competitors'),
+            'manage_options',
+            'send-competitor-emails',
+            array('Competitors_Admin_EmailPage', 'render_form')
+        );
+
+        remove_submenu_page('edit.php?post_type=competitors', 'email-history');
+        add_submenu_page(
+            'edit.php?post_type=competitors',
+            esc_html__('Email History', 'competitors'),
+            esc_html__('Email History', 'competitors'),
+            'manage_options',
+            'email-history',
+            array('Competitors_Admin_EmailPage', 'render_history')
+        );
+    }, 20); // Priority 20 = after the original registrations at priority 10/11
+
+    // Register new AJAX handlers
+    Competitors_Ajax_AdminAjaxHandler::init();
+    Competitors_Ajax_PublicAjaxHandler::init();
+    Competitors_Ajax_OfflineSyncHandler::init();
+
+    // Override shortcodes to use custom-table-backed versions
+    add_action('init', function () {
+        remove_shortcode('competitors_form_public');
+        add_shortcode('competitors_form_public', array('Competitors_Public_RegistrationForm', 'render'));
+
+        remove_shortcode('competitors_scoring_public');
+        add_shortcode('competitors_scoring_public', array('Competitors_Public_Scoreboard', 'render'));
+    }, 20);
+
+    // Enqueue offline-sync.js on scoring admin pages
+    add_action('admin_enqueue_scripts', function ($hook) {
+        $scoring_pages = array(
+            'competitors-settings_page_competitors-scoring',
+        );
+        if (!in_array($hook, $scoring_pages, true)) {
+            return;
+        }
+        $competition = Competitors_CompetitionRepository::find_current();
+        if (!$competition) {
+            return;
+        }
+        wp_enqueue_script(
+            'competitors-offline-sync',
+            plugins_url('assets/js/offline-sync.js', __FILE__),
+            array(),
+            COMPETITORS_PLUGIN_VERSION,
+            true
+        );
+        wp_localize_script('competitors-offline-sync', 'competitorsOfflineSync', array(
+            'ajaxurl'       => admin_url('admin-ajax.php'),
+            'nonce'         => wp_create_nonce('competitors_nonce_action'),
+            'competitionId' => (int) $competition['id'],
+            'isLocked'      => Competitors_CompetitionLock::is_locked((int) $competition['id']),
+        ));
+    });
+}
 
 
 /**
@@ -39,8 +190,10 @@ add_action('admin_init', 'competitors_remove_admin_color_scheme_for_non_admins')
 // Include admin and public page functionalities
 include_once plugin_dir_path(__FILE__) . 'admin-page.php';
 include_once plugin_dir_path(__FILE__) . 'public-page.php';
-// Include migration script
-include_once plugin_dir_path(__FILE__) . 'migration.php';
+// Include migration script (created in Phase 2)
+if (file_exists(plugin_dir_path(__FILE__) . 'migration.php')) {
+    include_once plugin_dir_path(__FILE__) . 'migration.php';
+}
 
 
 /**
