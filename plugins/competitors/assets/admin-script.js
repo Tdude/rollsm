@@ -757,34 +757,23 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
           }
 
+          // Use FormData directly — it preserves nested array keys
+          // like competitor_scores[2][37][left_group]
           const formData = new FormData(scoringForm);
-          formData.append("action", "competitors_score_update");
-          formData.append(
-            "competitors_score_update_nonce",
-            competitorsAdminAjax.nonce
-          );
 
-          // Log hidden field values
-          const stopTimeField = document.getElementById(
-            `stop-time-${currentCompetitorId}`
-          );
-          const elapsedTimeField = document.getElementById(
-            `elapsed-time-${currentCompetitorId}`
-          );
-
-          const dataObject = {};
-          formData.forEach((value, key) => {
-            dataObject[key] = value;
-          });
+          // The form already has a hidden "action" field (competitors_score_update_v2)
+          // and a nonce field. Only add nonce if missing.
+          if (!formData.has("competitors_score_update_nonce")) {
+            formData.append(
+              "competitors_score_update_nonce",
+              competitorsAdminAjax.nonce
+            );
+          }
 
           fetch(competitorsAdminAjax.ajaxurl, {
             method: "POST",
             credentials: "same-origin",
-            headers: {
-              "Content-Type":
-                "application/x-www-form-urlencoded; charset=UTF-8",
-            },
-            body: new URLSearchParams(dataObject),
+            body: formData,
           })
             .then((response) => {
               if (!response.ok) {
