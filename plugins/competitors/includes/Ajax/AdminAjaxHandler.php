@@ -90,16 +90,17 @@ class Competitors_Ajax_AdminAjaxHandler {
                 ) );
             }
 
-            // Save timing data if present
-            if ( isset( $_POST['start_time'][ $competitor_id ] ) ||
-                 isset( $_POST['stop_time'][ $competitor_id ] ) ||
-                 isset( $_POST['elapsed_time'][ $competitor_id ] ) ) {
+            // Save timing data only if actual values were submitted
+            $t_start   = sanitize_text_field( $_POST['start_time'][ $competitor_id ] ?? '' );
+            $t_stop    = sanitize_text_field( $_POST['stop_time'][ $competitor_id ] ?? '' );
+            $t_elapsed = (int) ( $_POST['elapsed_time'][ $competitor_id ] ?? 0 );
 
+            if ( $t_start !== '' || $t_stop !== '' || $t_elapsed > 0 ) {
                 Competitors_ScoreRepository::save_timer( array(
                     'competitor_id' => $competitor_id,
-                    'start_time'    => sanitize_text_field( $_POST['start_time'][ $competitor_id ] ?? '' ),
-                    'stop_time'     => sanitize_text_field( $_POST['stop_time'][ $competitor_id ] ?? '' ),
-                    'elapsed_time'  => (int) ( $_POST['elapsed_time'][ $competitor_id ] ?? 0 ),
+                    'start_time'    => $t_start,
+                    'stop_time'     => $t_stop,
+                    'elapsed_time'  => $t_elapsed,
                     'total_score'   => Competitors_ScoreRepository::get_total_score( $competitor_id ),
                 ) );
             }

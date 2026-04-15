@@ -191,26 +191,37 @@ class Competitors_ScoreRepository {
     }
 
     /**
-     * Save timer data for a competitor.
+     * Save timer data for a competitor (upsert — one row per competitor).
      *
      * @param array $data
-     * @return int|false Inserted ID or false.
+     * @return int|false Inserted/updated ID or false.
      */
     public static function save_timer( array $data ) {
         global $wpdb;
+        $table         = self::timers_table();
+        $competitor_id = (int) $data['competitor_id'];
 
-        $result = $wpdb->insert(
-            self::timers_table(),
-            array(
-                'competitor_id' => (int) $data['competitor_id'],
-                'start_time'    => $data['start_time'] ?? null,
-                'stop_time'     => $data['stop_time'] ?? null,
-                'elapsed_time'  => (int) ( $data['elapsed_time'] ?? 0 ),
-                'total_score'   => (float) ( $data['total_score'] ?? 0 ),
-            ),
-            array( '%d', '%s', '%s', '%d', '%f' )
+        $row = array(
+            'competitor_id' => $competitor_id,
+            'start_time'    => $data['start_time'] ?: null,
+            'stop_time'     => $data['stop_time'] ?: null,
+            'elapsed_time'  => (int) ( $data['elapsed_time'] ?? 0 ),
+            'total_score'   => (float) ( $data['total_score'] ?? 0 ),
         );
+        $format = array( '%d', '%s', '%s', '%d', '%f' );
 
+        // Check if a timer row already exists for this competitor
+        $existing_id = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM {$table} WHERE competitor_id = %d ORDER BY id DESC LIMIT 1",
+            $competitor_id
+        ) );
+
+        if ( $existing_id ) {
+            $wpdb->update( $table, $row, array( 'id' => $existing_id ), $format, array( '%d' ) );
+            return $existing_id;
+        }
+
+        $result = $wpdb->insert( $table, $row, $format );
         return $result ? $wpdb->insert_id : false;
     }
 
