@@ -84,6 +84,9 @@ if ( Competitors_Migration::is_complete() ) {
     // Sync CPT saves to custom tables during transition
     Competitors_CptSync::init();
 
+    // Sync settings changes (classes, dates, rolls) to custom tables
+    Competitors_SettingsSync::init();
+
     // Register new AJAX handlers
     Competitors_Ajax_AdminAjaxHandler::init();
     Competitors_Ajax_PublicAjaxHandler::init();
