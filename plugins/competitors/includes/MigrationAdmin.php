@@ -21,6 +21,7 @@ class Competitors_MigrationAdmin {
         add_action( 'admin_notices', array( __CLASS__, 'show_migration_notice' ) );
         add_action( 'wp_ajax_competitors_run_migration', array( __CLASS__, 'handle_ajax_migration' ) );
         add_action( 'wp_ajax_competitors_revert_migration', array( __CLASS__, 'handle_ajax_revert' ) );
+        add_action( 'wp_ajax_competitors_cleanup_cpt', array( __CLASS__, 'handle_ajax_cleanup_cpt' ) );
     }
 
     /**
@@ -132,6 +133,7 @@ class Competitors_MigrationAdmin {
 
         $nonce = wp_create_nonce( 'competitors_migration_nonce' );
         ?>
+        <?php $cpt_count = self::count_old_cpt_data(); ?>
         <div class="notice notice-info is-dismissible" id="comp-migration-done-notice">
             <p>
                 <?php esc_html_e( 'Data migration to custom tables is complete.', 'competitors' ); ?>
@@ -140,6 +142,13 @@ class Competitors_MigrationAdmin {
                         style="margin-left: 10px;">
                     <?php esc_html_e( 'Re-run Migration', 'competitors' ); ?>
                 </button>
+                <?php if ( $cpt_count > 0 ) : ?>
+                    <button type="button" class="button" id="comp-cleanup-cpt"
+                            data-nonce="<?php echo esc_attr( $nonce ); ?>"
+                            style="margin-left: 10px;">
+                        <?php echo esc_html( sprintf( __( 'Clean Up Old CPT Data (%d posts)', 'competitors' ), $cpt_count ) ); ?>
+                    </button>
+                <?php endif; ?>
                 <span id="comp-revert-status" style="margin-left: 10px;"></span>
             </p>
         </div>
@@ -172,6 +181,38 @@ class Competitors_MigrationAdmin {
                 };
                 xhr.send('action=competitors_revert_migration&nonce=' + btn.dataset.nonce);
             });
+
+            // CPT cleanup button
+            var cleanupBtn = document.getElementById('comp-cleanup-cpt');
+            if (cleanupBtn) {
+                cleanupBtn.addEventListener('click', function() {
+                    if (!confirm('<?php echo esc_js( __( 'This will permanently delete old competitor CPT posts and sent_emails posts. The data already exists in custom tables. This cannot be undone. Continue?', 'competitors' ) ); ?>')) return;
+                    cleanupBtn.disabled = true;
+                    var status = document.getElementById('comp-revert-status');
+                    status.textContent = '<?php echo esc_js( __( 'Cleaning up...', 'competitors' ) ); ?>';
+
+                    var xhr2 = new XMLHttpRequest();
+                    xhr2.open('POST', ajaxurl);
+                    xhr2.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                    xhr2.onload = function() {
+                        try {
+                            var res = JSON.parse(xhr2.responseText);
+                            if (res.success) {
+                                status.textContent = res.data.message;
+                                status.style.color = 'green';
+                                cleanupBtn.style.display = 'none';
+                            } else {
+                                status.textContent = res.data.message || 'Failed';
+                                cleanupBtn.disabled = false;
+                            }
+                        } catch(e) {
+                            status.textContent = 'Error';
+                            cleanupBtn.disabled = false;
+                        }
+                    };
+                    xhr2.send('action=competitors_cleanup_cpt&nonce=' + cleanupBtn.dataset.nonce);
+                });
+            }
         })();
         </script>
         <?php
@@ -220,5 +261,96 @@ class Competitors_MigrationAdmin {
         Competitors_Migration::revert();
 
         wp_send_json_success( array( 'message' => 'Migration reverted. You can re-run it now.' ) );
+    }
+
+    /**
+     * AJAX: Delete old CPT data after migration is verified.
+     */
+    public static function handle_ajax_cleanup_cpt() {
+        check_ajax_referer( 'competitors_migration_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied.' ) );
+        }
+
+        if ( ! Competitors_Migration::is_complete() ) {
+            wp_send_json_error( array( 'message' => 'Migration must be completed first.' ) );
+        }
+
+        // Verify migration data exists
+        global $wpdb;
+        $new_count = (int) $wpdb->get_var(
+            "SELECT COUNT(*) FROM " . Competitors_Database::table( 'competitors' )
+        );
+
+        $old_count = self::count_old_cpt_data();
+
+        if ( $new_count === 0 && $old_count > 0 ) {
+            wp_send_json_error( array( 'message' => 'Custom tables are empty but CPT data exists. Run migration first.' ) );
+        }
+
+        // Delete old competitors CPT posts
+        $competitor_posts = get_posts( array(
+            'post_type'      => 'competitors',
+            'post_status'    => 'any',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+        ) );
+
+        $deleted_competitors = 0;
+        foreach ( $competitor_posts as $post_id ) {
+            if ( wp_delete_post( $post_id, true ) ) {
+                $deleted_competitors++;
+            }
+        }
+
+        // Delete old sent_emails CPT posts
+        $email_posts = get_posts( array(
+            'post_type'      => 'sent_emails',
+            'post_status'    => 'any',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+        ) );
+
+        $deleted_emails = 0;
+        foreach ( $email_posts as $post_id ) {
+            if ( wp_delete_post( $post_id, true ) ) {
+                $deleted_emails++;
+            }
+        }
+
+        // Clean up old options
+        delete_option( 'available_competition_classes' );
+        delete_option( 'competitors_custom_values' );
+        delete_option( 'competitors_numeric_values' );
+        delete_option( 'competitors_is_numeric_field' );
+
+        // Clean up roll definition snapshots
+        $wpdb->query(
+            "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'competitors_roll_definitions_%'"
+        );
+
+        wp_send_json_success( array(
+            'message' => sprintf(
+                __( 'Cleaned up %d competitor posts and %d email posts.', 'competitors' ),
+                $deleted_competitors,
+                $deleted_emails
+            ),
+        ) );
+    }
+
+    /**
+     * Count old CPT data that could be cleaned up.
+     *
+     * @return int
+     */
+    private static function count_old_cpt_data() {
+        $args = array(
+            'post_type'      => array( 'competitors', 'sent_emails' ),
+            'post_status'    => 'any',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+        );
+        return count( get_posts( $args ) );
     }
 }

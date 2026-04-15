@@ -64,6 +64,13 @@ register_activation_hook(__FILE__, function () {
 });
 
 /**
+ * On deactivation: clean up transients and temp data.
+ */
+register_deactivation_hook(__FILE__, function () {
+    Competitors_Deactivator::deactivate();
+});
+
+/**
  * On admin_init: check if DB needs upgrading (e.g. after plugin update).
  */
 add_action('admin_init', function () {
