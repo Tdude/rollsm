@@ -358,7 +358,38 @@ function competitors_details_meta_box_callback($post) {
     </p>
     <p>
         <label for="competitors_participation_class"><?php echo esc_html__('Participation Class:', 'competitors'); ?></label>
-        <input type="text" id="competitors_participation_class" name="competitors_participation_class" value="<?php echo esc_attr($participation_class); ?>" size="25">
+        <select id="competitors_participation_class" name="competitors_participation_class">
+            <option value=""><?php esc_html_e('-- Select Class --', 'competitors'); ?></option>
+            <?php
+            // Get classes from custom table if available, otherwise from wp_options
+            if (class_exists('Competitors_Migration') && Competitors_Migration::is_complete()) {
+                $available_classes = Competitors_ClassRepository::find_all();
+                foreach ($available_classes as $cls) {
+                    $label = !empty($cls['comment']) ? $cls['comment'] : $cls['name'];
+                    printf(
+                        '<option value="%s" %s>%s</option>',
+                        esc_attr($cls['name']),
+                        selected($participation_class, $cls['name'], false),
+                        esc_html($label)
+                    );
+                }
+            } else {
+                $options = get_option('competitors_options', []);
+                $classes_list = isset($options['available_competition_classes']) ? $options['available_competition_classes'] : [];
+                foreach ($classes_list as $cls) {
+                    if (is_array($cls) && isset($cls['name'])) {
+                        $label = !empty($cls['comment']) ? $cls['comment'] : $cls['name'];
+                        printf(
+                            '<option value="%s" %s>%s</option>',
+                            esc_attr($cls['name']),
+                            selected($participation_class, $cls['name'], false),
+                            esc_html($label)
+                        );
+                    }
+                }
+            }
+            ?>
+        </select>
     </p>
     <p>
         <label for="competitors_email"><?php echo esc_html__('Email:', 'competitors'); ?></label>
@@ -879,14 +910,13 @@ function initialize_competitors_rollnames_settings() {
             continue;
         }
         $class_name = sanitize_text_field($class['name']);
+        $class_label = !empty($class['comment']) ? sanitize_text_field($class['comment']) : $class_name;
 
         add_settings_field(
             "competitors_text_field_{$class_name}",
-            // Using sprintf for dynamic string translation
             sprintf(
-                // Translatable string with placeholder
-                esc_html__('Roll Names for - %s', 'competitors'),
-                esc_html($class_name)
+                esc_html__('Roll Names for %s', 'competitors'),
+                esc_html($class_label)
             ),
             function() use ($class_name) {
                 render_competitors_roll_field($class_name);
