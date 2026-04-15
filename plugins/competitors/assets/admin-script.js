@@ -967,19 +967,22 @@ jQuery(document).ready(function ($) {
   }
 
   // Function to create a new roll field
-  function createNewRollField(classType, index) {
+  // classType = original class name (for form name attributes)
+  // classSlug = sanitized slug (for HTML IDs) — falls back to classType if not provided
+  function createNewRollField(classType, index, classSlug) {
+    var slug = classSlug || classType;
     return `
       <p class="roll-item ${
         index % 2 === 0 ? "alternate" : ""
       }" data-index="${index}">
-        <label for="maneuver_${classType}_${index}">${index + 1}. Maneuver </label>
-        <input type="text" id="maneuver_${classType}_${index}" name="competitors_options[custom_values_${classType}][]" size="60" value="" />
-        <label for="points_${classType}_${index}"> Points: </label>
-        <input type="text" class="numeric-input" id="points_${classType}_${index}" name="competitors_options[numeric_values_${classType}][]" size="2" maxlength="2" pattern="\\d*" value="0" />
-        <label for="numeric_${classType}_${index}"> Numeric:</label>
-        <input type="checkbox" id="numeric_${classType}_${index}" name="competitors_options[is_numeric_field_${classType}][${index}]" value="1">
-        <label for="no_right_left_${classType}_${index}"> No Right/Left:</label>
-        <input type="checkbox" id="no_right_left_${classType}_${index}" name="competitors_options[no_right_left_${classType}][${index}]" value="1">
+        <label for="maneuver_${slug}_${index}">${index + 1}. Maneuver </label>
+        <input type="text" id="maneuver_${slug}_${index}" name="competitors_options[custom_values_${classType}][]" size="60" value="" />
+        <label for="points_${slug}_${index}"> Points: </label>
+        <input type="text" class="numeric-input" id="points_${slug}_${index}" name="competitors_options[numeric_values_${classType}][]" size="2" maxlength="2" pattern="\\d*" value="0" />
+        <label for="numeric_${slug}_${index}"> Numeric:</label>
+        <input type="checkbox" id="numeric_${slug}_${index}" name="competitors_options[is_numeric_field_${classType}][${index}]" value="1">
+        <label for="no_right_left_${slug}_${index}"> No Right/Left:</label>
+        <input type="checkbox" id="no_right_left_${slug}_${index}" name="competitors_options[no_right_left_${classType}][${index}]" value="1">
         <button type="button" class="button custom-button button-secondary remove-row">Remove</button>
       </p>
     `;
@@ -987,10 +990,19 @@ jQuery(document).ready(function ($) {
 
   // Event listener for adding roll names
   $(document).on("click", ".plus-button", function () {
-    var classType = $(this).attr("id").replace("add_more_roll_names_", "");
-    var $wrapper = $("#competitors_roll_names_wrapper_" + classType);
+    // Use data-class for the original class name (with spaces etc.)
+    // and the sanitized slug from the ID for DOM targeting
+    var classSlug = $(this).attr("id").replace("add_more_roll_names_", "");
+    var classType = $(this).data("class") || classSlug;
+    var $wrapper = $("#competitors_roll_names_wrapper_" + classSlug);
+
+    if (!$wrapper.length) {
+      console.error("Wrapper not found for class slug:", classSlug);
+      return;
+    }
+
     var index = $wrapper.find("p").length;
-    var newField = createNewRollField(classType, index);
+    var newField = createNewRollField(classType, index, classSlug);
 
     $wrapper.append(newField);
   });

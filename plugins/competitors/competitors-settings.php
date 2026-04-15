@@ -1146,22 +1146,25 @@ function render_competitors_dates_field() {
     $points_values = isset($options["numeric_values_{$class}"]) ? $options["numeric_values_{$class}"] : [];
     $is_numeric_fields = isset($options["is_numeric_field_{$class}"]) ? $options["is_numeric_field_{$class}"] : [];
     $no_right_left = isset($options["no_right_left_{$class}"]) ? $options["no_right_left_{$class}"] : [];
- 
+
     $roll_names = is_array($roll_names) ? $roll_names : [];
     $points_values = is_array($points_values) ? $points_values : array_fill(0, count($roll_names), '');
     $is_numeric_fields = is_array($is_numeric_fields) ? $is_numeric_fields : array_fill(0, count($roll_names), false);
     $no_right_left = is_array($no_right_left) ? $no_right_left : array_fill(0, count($roll_names), false);
- 
+
+    // Sanitize class name for use in HTML IDs (no spaces, lowercase)
+    $class_slug = sanitize_title($class);
+
     ob_start();
     ?>
-    <div id="competitors_roll_names_wrapper_<?php echo esc_attr($class); ?>">
+    <div id="competitors_roll_names_wrapper_<?php echo esc_attr($class_slug); ?>" data-class="<?php echo esc_attr($class); ?>">
         <?php if (empty($roll_names)) {
             $roll_names = [''];
             $points_values = [''];
             $is_numeric_fields = [false];
             $no_right_left = [false];
         }
- 
+
         foreach ($roll_names as $index => $roll_name) {
             $roll_name = trim($roll_name);
             $point_value = isset($points_values[$index]) ? esc_attr($points_values[$index]) : '0';
@@ -1169,16 +1172,16 @@ function render_competitors_dates_field() {
             $no_right_left_checked = isset($no_right_left[$index]) && $no_right_left[$index] === '1' ? 'checked' : '';
             ?>
             <p class="roll-item <?php echo $index % 2 == 0 ? 'alternate' : ''; ?>" data-index="<?php echo esc_attr($index); ?>">
-                <label for="maneuver_<?php echo esc_attr($class . '_' . $index); ?>"><?php echo esc_html($index + 1); ?>. </label>
-                <input type="text" id="maneuver_<?php echo esc_attr($class . '_' . $index); ?>" name="competitors_options[custom_values_<?php echo esc_attr($class); ?>][]" size="60" value="<?php echo esc_attr($roll_name); ?>" />
-                <label for="points_<?php echo esc_attr($class . '_' . $index); ?>"><?php esc_html_e('Points:', 'competitors'); ?></label>
-                <input type="text" class="numeric-input" id="points_<?php echo esc_attr($class . '_' . $index); ?>" name="competitors_options[numeric_values_<?php echo esc_attr($class); ?>][]" size="2" maxlength="2" pattern="\d*" value="<?php echo esc_attr($point_value); ?>" />
-                <label for="numeric_<?php echo esc_attr($class . '_' . $index); ?>"><?php esc_html_e('Numeric:', 'competitors'); ?></label>
-                <input type="checkbox" id="numeric_<?php echo esc_attr($class . '_' . $index); ?>" name="competitors_options[is_numeric_field_<?php echo esc_attr($class); ?>][<?php echo esc_attr($index); ?>]" value="1" <?php echo $numeric_checked; ?>>
-                <label for="no_right_left_<?php echo esc_attr($class . '_' . $index); ?>"><?php esc_html_e('No Right/Left:', 'competitors'); ?></label>
-                <input type="checkbox" id="no_right_left_<?php echo esc_attr($class . '_' . $index); ?>" name="competitors_options[no_right_left_<?php echo esc_attr($class); ?>][<?php echo esc_attr($index); ?>]" value="1" <?php echo $no_right_left_checked; ?>>
+                <label for="maneuver_<?php echo esc_attr($class_slug . '_' . $index); ?>"><?php echo esc_html($index + 1); ?>. </label>
+                <input type="text" id="maneuver_<?php echo esc_attr($class_slug . '_' . $index); ?>" name="competitors_options[custom_values_<?php echo esc_attr($class); ?>][]" size="60" value="<?php echo esc_attr($roll_name); ?>" />
+                <label for="points_<?php echo esc_attr($class_slug . '_' . $index); ?>"><?php esc_html_e('Points:', 'competitors'); ?></label>
+                <input type="text" class="numeric-input" id="points_<?php echo esc_attr($class_slug . '_' . $index); ?>" name="competitors_options[numeric_values_<?php echo esc_attr($class); ?>][]" size="2" maxlength="2" pattern="\d*" value="<?php echo esc_attr($point_value); ?>" />
+                <label for="numeric_<?php echo esc_attr($class_slug . '_' . $index); ?>"><?php esc_html_e('Numeric:', 'competitors'); ?></label>
+                <input type="checkbox" id="numeric_<?php echo esc_attr($class_slug . '_' . $index); ?>" name="competitors_options[is_numeric_field_<?php echo esc_attr($class); ?>][<?php echo esc_attr($index); ?>]" value="1" <?php echo $numeric_checked; ?>>
+                <label for="no_right_left_<?php echo esc_attr($class_slug . '_' . $index); ?>"><?php esc_html_e('No Right/Left:', 'competitors'); ?></label>
+                <input type="checkbox" id="no_right_left_<?php echo esc_attr($class_slug . '_' . $index); ?>" name="competitors_options[no_right_left_<?php echo esc_attr($class); ?>][<?php echo esc_attr($index); ?>]" value="1" <?php echo $no_right_left_checked; ?>>
                 <?php if ($index === 0) { ?>
-                    <button type="button" id="add_more_roll_names_<?php echo esc_attr($class); ?>" class="button custom-button button-primary plus-button"></button>
+                    <button type="button" id="add_more_roll_names_<?php echo esc_attr($class_slug); ?>" class="button custom-button button-primary plus-button" data-class="<?php echo esc_attr($class); ?>"></button>
                 <?php } ?>
                 <button type="button" class="button custom-button button-secondary remove-row"><?php esc_html_e('Remove', 'competitors'); ?></button>
             </p>
