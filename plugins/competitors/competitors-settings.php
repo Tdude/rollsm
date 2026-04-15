@@ -773,7 +773,7 @@ function render_competitors_main_settings_page() {
 
     // Render the settings page content
     echo '<div class="wrap" id="settings-page">';
-    echo '<h1>' . esc_html__('Rolls Settings', 'competitors') . '</h1>';
+    echo '<h1>' . esc_html__('Rolls & Points', 'competitors') . '</h1>';
 
     // Display the instructions section
     competitors_settings_section_callback();

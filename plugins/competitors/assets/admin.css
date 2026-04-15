@@ -41,6 +41,64 @@
 
   /* Overlay color for the spinner */
   --semi-white: rgba(255, 255, 255, 0.5);
+
+  /* Global transition speed */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+}
+
+/* ─── Global Smooth Transitions ────────────────────────── */
+
+/* Smooth fade/slide for all table rows, notices, buttons */
+.competitors-table tr,
+.competitors-table td,
+.competitors-table th,
+.wp-list-table tr,
+.notice,
+.button,
+.nav-tab {
+  transition: all var(--transition-fast);
+}
+
+/* Page content fade-in on load */
+.wrap,
+#judges-scoring-container,
+#settings-page {
+  animation: comp-fade-in var(--transition-normal) ease-out;
+}
+@keyframes comp-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Smooth row hover for competitor lists */
+.competitors-table tbody tr:hover {
+  background-color: rgba(0, 115, 170, 0.04);
+}
+
+/* Active nav tab highlight */
+.nav-tab:hover {
+  background: #f1f1f1;
+}
+.nav-tab-active,
+.nav-tab-active:hover {
+  border-bottom-color: #f1f1f1;
+  background: #f1f1f1;
+}
+
+/* Smooth button hover */
+.button:hover,
+.button:focus {
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+/* Smooth notice appearance */
+.notice {
+  animation: comp-slide-down var(--transition-normal) ease-out;
+}
+@keyframes comp-slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .fixed-timer {

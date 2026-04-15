@@ -23,6 +23,8 @@ class Competitors_Admin_PersonalDataPage {
 
         render_admin_page_header();
 
+        echo '<h1>' . esc_html__( 'Competitor List', 'competitors' ) . '</h1>';
+
         $competition = Competitors_CompetitionRepository::find_current();
         if ( ! $competition ) {
             echo '<div class="notice notice-warning"><p>' . esc_html__( 'No active competition found.', 'competitors' ) . '</p></div>';
@@ -38,7 +40,7 @@ class Competitors_Admin_PersonalDataPage {
 
         $page_slug = 'test-results-list-page';
         echo '<p class="hide-for-print">'
-            . esc_html__( 'Click on headers to sort. This enables quick grouping and planning.', 'competitors' )
+            . esc_html__( 'Click on headers to sort.', 'competitors' )
             . ' <a href="' . esc_url( site_url( '/' . $page_slug . '/' ) ) . '">'
             . esc_html__( 'Public page', 'competitors' ) . '</a> '
             . esc_html__( 'for this data.', 'competitors' )
