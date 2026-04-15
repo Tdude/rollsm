@@ -5,8 +5,11 @@ document.addEventListener("DOMContentLoaded", () => {
     let resetButton = document.getElementById("reset_button");
     let filterDateSelect = document.getElementById("filter_date");
     let filterClassSelect = document.getElementById("filter_class");
+    let filterGenderSelect = document.getElementById("filter_gender");
     const nonce = competitorsAdminAjax.nonce;
     const spinner = document.getElementById("spinner");
+    // Use v2 action if available (migration complete), otherwise old action
+    const filterAction = (typeof competitorsOfflineSync !== "undefined") ? "filter_competitors_v2" : "filter_competitors";
 
     // Function to initialize all events on DOMContentLoaded
     reattachAllEvents();
@@ -94,8 +97,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function filterCompetitors() {
-      const filterDate = filterDateSelect.value;
-      const filterClass = filterClassSelect.value;
+      const filterDate = filterDateSelect ? filterDateSelect.value : "";
+      const filterClass = filterClassSelect ? filterClassSelect.value : "";
+      const filterGender = filterGenderSelect ? filterGenderSelect.value : "";
 
       if (filterDate) {
         localStorage.setItem("filter_date", filterDate);
@@ -109,6 +113,12 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.removeItem("filter_class");
       }
 
+      if (filterGender) {
+        localStorage.setItem("filter_gender", filterGender);
+      } else {
+        localStorage.removeItem("filter_gender");
+      }
+
       showSpinner();
 
       fetch(competitorsAdminAjax.ajaxurl, {
@@ -117,9 +127,10 @@ document.addEventListener("DOMContentLoaded", () => {
           "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         },
         body: new URLSearchParams({
-          action: "filter_competitors",
+          action: filterAction,
           filter_date: filterDate,
           filter_class: filterClass,
+          filter_gender: filterGender,
           nonce: nonce,
         }),
       })
@@ -153,11 +164,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function resetFilters() {
-      filterDateSelect.value = "";
-      filterClassSelect.value = "";
+      if (filterDateSelect) filterDateSelect.value = "";
+      if (filterClassSelect) filterClassSelect.value = "";
+      if (filterGenderSelect) filterGenderSelect.value = "";
 
       localStorage.removeItem("filter_date");
       localStorage.removeItem("filter_class");
+      localStorage.removeItem("filter_gender");
 
       scoringContainer.innerHTML = "<p>Loading...</p>";
       showSpinner();
@@ -168,9 +181,10 @@ document.addEventListener("DOMContentLoaded", () => {
           "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         },
         body: new URLSearchParams({
-          action: "filter_competitors",
+          action: filterAction,
           filter_date: "",
           filter_class: "",
+          filter_gender: "",
           nonce: nonce,
         }),
       })
@@ -209,43 +223,58 @@ document.addEventListener("DOMContentLoaded", () => {
       if (scoringContainer) {
         const savedFilterDate = localStorage.getItem("filter_date");
         const savedFilterClass = localStorage.getItem("filter_class");
+        const savedFilterGender = localStorage.getItem("filter_gender");
 
-        if (savedFilterDate) {
+        if (savedFilterDate && filterDateSelect) {
           filterDateSelect.value = savedFilterDate;
         }
-        if (savedFilterClass) {
+        if (savedFilterClass && filterClassSelect) {
           filterClassSelect.value = savedFilterClass;
         }
-        if (savedFilterDate || savedFilterClass) {
+        if (savedFilterGender && filterGenderSelect) {
+          filterGenderSelect.value = savedFilterGender;
+        }
+        if (savedFilterDate || savedFilterClass || savedFilterGender) {
           filterCompetitors();
         }
       }
     }
 
     function reattachAllEvents() {
-      if (
-        !filterDateSelect ||
-        !filterClassSelect ||
-        !filterButton ||
-        !resetButton ||
-        !scoringContainer
-      ) {
-        console.error(
-          "One or more elements are missing. Cannot reattach events."
-        );
+      if (!scoringContainer) {
+        console.error("Scoring container not found. Cannot reattach events.");
         return;
       }
 
-      filterDateSelect.removeEventListener("change", filterCompetitors);
-      filterClassSelect.removeEventListener("change", filterCompetitors);
-      filterButton.removeEventListener("click", filterCompetitors);
-      resetButton.removeEventListener("click", resetFilters);
-      scoringContainer.removeEventListener("click", handleCompetitorToggle);
+      // Re-grab filter elements (they may have been replaced by AJAX)
+      filterButton = document.getElementById("filter_button");
+      resetButton = document.getElementById("reset_button");
+      filterDateSelect = document.getElementById("filter_date");
+      filterClassSelect = document.getElementById("filter_class");
+      filterGenderSelect = document.getElementById("filter_gender");
 
-      filterDateSelect.addEventListener("change", filterCompetitors);
-      filterClassSelect.addEventListener("change", filterCompetitors);
-      filterButton.addEventListener("click", filterCompetitors);
-      resetButton.addEventListener("click", resetFilters);
+      if (filterDateSelect) {
+        filterDateSelect.removeEventListener("change", filterCompetitors);
+        filterDateSelect.addEventListener("change", filterCompetitors);
+      }
+      if (filterClassSelect) {
+        filterClassSelect.removeEventListener("change", filterCompetitors);
+        filterClassSelect.addEventListener("change", filterCompetitors);
+      }
+      if (filterGenderSelect) {
+        filterGenderSelect.removeEventListener("change", filterCompetitors);
+        filterGenderSelect.addEventListener("change", filterCompetitors);
+      }
+      if (filterButton) {
+        filterButton.removeEventListener("click", filterCompetitors);
+        filterButton.addEventListener("click", filterCompetitors);
+      }
+      if (resetButton) {
+        resetButton.removeEventListener("click", resetFilters);
+        resetButton.addEventListener("click", resetFilters);
+      }
+
+      scoringContainer.removeEventListener("click", handleCompetitorToggle);
       scoringContainer.addEventListener("click", handleCompetitorToggle);
 
       attachScoringEvents();
