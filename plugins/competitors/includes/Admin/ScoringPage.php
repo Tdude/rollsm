@@ -279,10 +279,14 @@ class Competitors_Admin_ScoringPage {
         $speaker    = esc_html( $comp['speaker_info'] );
         $sponsors   = esc_html( $comp['sponsors'] );
 
-        $timer   = Competitors_ScoreRepository::get_timer( $comp_id );
-        $start   = $timer && $timer['start_time'] ? esc_html( wp_date( 'H:i:s', strtotime( $timer['start_time'] ) ) ) : esc_html__( 'N/A', 'competitors' );
-        $stop    = $timer && $timer['stop_time'] ? esc_html( wp_date( 'H:i:s', strtotime( $timer['stop_time'] ) ) ) : esc_html__( 'N/A', 'competitors' );
-        $elapsed = $timer ? esc_html( $timer['elapsed_time'] ) : esc_html__( 'N/A', 'competitors' );
+        $timer      = Competitors_ScoreRepository::get_timer( $comp_id );
+        $start_raw  = $timer ? $timer['start_time'] : '';
+        $stop_raw   = $timer ? $timer['stop_time'] : '';
+        $elapsed_s  = $timer ? (int) $timer['elapsed_time'] : 0;
+
+        $start   = ( $start_raw && strtotime( $start_raw ) > 0 ) ? esc_html( wp_date( 'H:i:s', strtotime( $start_raw ) ) ) : esc_html__( 'N/A', 'competitors' );
+        $stop    = ( $stop_raw && strtotime( $stop_raw ) > 0 ) ? esc_html( wp_date( 'H:i:s', strtotime( $stop_raw ) ) ) : esc_html__( 'N/A', 'competitors' );
+        $elapsed = $elapsed_s > 0 ? esc_html( sprintf( '%02d:%02d:%02d', floor( $elapsed_s / 3600 ), floor( ( $elapsed_s % 3600 ) / 60 ), $elapsed_s % 60 ) ) : esc_html__( 'N/A', 'competitors' );
 
         $l = array(
             'info'    => esc_html__( 'Info', 'competitors' ),

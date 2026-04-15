@@ -642,7 +642,7 @@ document.addEventListener("DOMContentLoaded", () => {
           startBtn.textContent = "Pause";
           if (elapsedTime === 0) {
             document.getElementById(`start-time-${currentCompetitorId}`).value =
-              getLocalizedTime(timezone);
+              toMySQLDatetime(new Date());
           }
           interval = setInterval(() => {
             elapsedTime += 100;
@@ -671,16 +671,29 @@ document.addEventListener("DOMContentLoaded", () => {
           return localizedTime;
         }
 
+        // Format a Date as MySQL-compatible datetime: YYYY-MM-DD HH:MM:SS
+        function toMySQLDatetime(date) {
+          const pad = (n) => String(n).padStart(2, "0");
+          return (
+            date.getFullYear() + "-" +
+            pad(date.getMonth() + 1) + "-" +
+            pad(date.getDate()) + " " +
+            pad(date.getHours()) + ":" +
+            pad(date.getMinutes()) + ":" +
+            pad(date.getSeconds())
+          );
+        }
+
         // Handle score saving
         function prepareFormData(competitorId) {
           if (competitorId) {
-            const stopTime = getLocalizedTime(timezone);
-            const elapsedTimeValue = timerDisplay.textContent;
+            const stopTime = toMySQLDatetime(new Date());
+            const elapsedSeconds = Math.floor(elapsedTime / 1000);
 
             document.getElementById(`stop-time-${competitorId}`).value =
               stopTime;
             document.getElementById(`elapsed-time-${competitorId}`).value =
-              elapsedTimeValue;
+              elapsedSeconds;
           }
         }
 
