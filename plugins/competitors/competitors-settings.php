@@ -761,6 +761,10 @@ function render_competitors_main_settings_page() {
     // Render admin page header with navigation tabs
     render_admin_page_header();
 
+    // Render the settings page content
+    echo '<div class="wrap" id="settings-page">';
+    echo '<h1>' . esc_html__('Rolls & Points', 'competitors') . '</h1>';
+
     // Display a success message if settings were submitted
     if (get_transient('competitors_settings_submitted')) {
         echo '<div id="message" class="updated notice is-dismissible">';
@@ -770,10 +774,6 @@ function render_competitors_main_settings_page() {
         echo '</button></div>';
         delete_transient('competitors_settings_submitted');
     }
-
-    // Render the settings page content
-    echo '<div class="wrap" id="settings-page">';
-    echo '<h1>' . esc_html__('Rolls & Points', 'competitors') . '</h1>';
 
     // Display the instructions section
     competitors_settings_section_callback();

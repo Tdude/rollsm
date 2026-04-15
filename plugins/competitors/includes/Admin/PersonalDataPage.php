@@ -23,11 +23,13 @@ class Competitors_Admin_PersonalDataPage {
 
         render_admin_page_header();
 
+        echo '<div class="wrap">';
         echo '<h1>' . esc_html__( 'Competitor List', 'competitors' ) . '</h1>';
 
         $competition = Competitors_CompetitionRepository::find_current();
         if ( ! $competition ) {
             echo '<div class="notice notice-warning"><p>' . esc_html__( 'No active competition found.', 'competitors' ) . '</p></div>';
+            echo '</div>';
             return;
         }
 
@@ -35,6 +37,7 @@ class Competitors_Admin_PersonalDataPage {
 
         if ( empty( $competitors ) ) {
             echo '<div class="notice notice-warning"><p>' . esc_html__( 'No competitors registered yet.', 'competitors' ) . '</p></div>';
+            echo '</div>';
             return;
         }
 
@@ -87,6 +90,7 @@ class Competitors_Admin_PersonalDataPage {
         }
 
         echo '</tbody></table>';
+        echo '</div>'; // .wrap
     }
 
     private static function cell( $content ) {

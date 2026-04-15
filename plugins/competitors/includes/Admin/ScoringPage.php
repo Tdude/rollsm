@@ -28,16 +28,19 @@ class Competitors_Admin_ScoringPage {
 
         render_admin_page_header();
 
+        echo '<div class="wrap">';
+
         $competition = Competitors_CompetitionRepository::find_current();
         if ( ! $competition ) {
             echo '<h1>' . esc_html__( 'Judges Scoring', 'competitors' ) . '</h1>';
             echo '<div class="notice notice-warning"><p>' . esc_html__( 'No active competition found. Please create one in Classes & Dates.', 'competitors' ) . '</p></div>';
+            echo '</div>';
             return;
         }
 
         $lock_status = Competitors_CompetitionLock::get_status( (int) $competition['id'] );
 
-        echo '<h1 class="distance-large">' . esc_html__( 'Judges Scoring', 'competitors' );
+        echo '<h1>' . esc_html__( 'Judges Scoring', 'competitors' );
         if ( $lock_status['is_locked'] && ! $lock_status['has_temp_unlock'] ) {
             echo ' <span style="color:red;">(' . esc_html__( 'LOCKED', 'competitors' ) . ')</span>';
         }
@@ -64,6 +67,7 @@ class Competitors_Admin_ScoringPage {
         echo '<div id="judges-scoring-container">';
         self::render_competitors_table( $competition, $filter_class, $filter_gender );
         echo '</div>';
+        echo '</div>'; // .wrap
     }
 
     /**
@@ -72,7 +76,7 @@ class Competitors_Admin_ScoringPage {
     private static function render_filter_form( $competition, $filter_class, $filter_gender ) {
         $classes = Competitors_ClassRepository::find_all();
         ?>
-        <div id="filter_form" class="distance-large">
+        <div id="filter_form">
             <p><strong><?php esc_html_e( 'Choose class and gender, then click Filter.', 'competitors' ); ?></strong></p>
 
             <input type="hidden" id="filter_date" value="<?php echo esc_attr( $competition['event_date'] ); ?>">
