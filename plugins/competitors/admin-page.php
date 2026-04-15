@@ -345,6 +345,8 @@ function adjust_sent_emails_parent_file($parent_file) {
 add_filter('parent_file', 'adjust_sent_emails_parent_file');
 
 function add_email_menu_items() {
+    $use_new = class_exists('Competitors_Migration') && Competitors_Migration::is_complete();
+
     // Add "Send Emails" submenu
     add_submenu_page(
         'edit.php?post_type=competitors',
@@ -352,7 +354,7 @@ function add_email_menu_items() {
         'Send Emails',
         'manage_options',
         'send-competitor-emails',
-        'display_email_form'
+        $use_new ? array('Competitors_Admin_EmailPage', 'render_form') : 'display_email_form'
     );
 
     // Add "Email History" submenu
@@ -362,7 +364,7 @@ function add_email_menu_items() {
         'Email History',
         'manage_options',
         'email-history',
-        'display_email_history'
+        $use_new ? array('Competitors_Admin_EmailPage', 'render_history') : 'display_email_history'
     );
 
     // Move "Sent Emails" post type under Competitors

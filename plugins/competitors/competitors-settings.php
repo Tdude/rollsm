@@ -81,51 +81,8 @@ Competitors_MigrationAdmin::init();
 // When migration is complete, use new Admin classes backed by custom tables.
 // The old callbacks remain registered but get overridden at higher priority.
 if ( Competitors_Migration::is_complete() ) {
-    // Override menu callbacks for custom-table-backed pages
-    add_action('admin_menu', function () {
-        // Override Personal Data page callback
-        remove_submenu_page('competitors-settings', 'competitors-detailed-data');
-        add_submenu_page(
-            'competitors-settings',
-            esc_html__('Competitors Personal Data', 'competitors'),
-            esc_html__('Personal Data', 'competitors'),
-            'edit_competitors',
-            'competitors-detailed-data',
-            array('Competitors_Admin_PersonalDataPage', 'render')
-        );
-
-        // Override Judges Scoring page callback
-        remove_submenu_page('competitors-settings', 'competitors-scoring');
-        add_submenu_page(
-            'competitors-settings',
-            esc_html__('Judges Scoring Submenu', 'competitors'),
-            esc_html__('Judges Scoring', 'competitors'),
-            'edit_competitors',
-            'competitors-scoring',
-            array('Competitors_Admin_ScoringPage', 'render')
-        );
-
-        // Override email pages
-        remove_submenu_page('edit.php?post_type=competitors', 'send-competitor-emails');
-        add_submenu_page(
-            'edit.php?post_type=competitors',
-            esc_html__('Send Emails to Competitors', 'competitors'),
-            esc_html__('Send Emails', 'competitors'),
-            'manage_options',
-            'send-competitor-emails',
-            array('Competitors_Admin_EmailPage', 'render_form')
-        );
-
-        remove_submenu_page('edit.php?post_type=competitors', 'email-history');
-        add_submenu_page(
-            'edit.php?post_type=competitors',
-            esc_html__('Email History', 'competitors'),
-            esc_html__('Email History', 'competitors'),
-            'manage_options',
-            'email-history',
-            array('Competitors_Admin_EmailPage', 'render_history')
-        );
-    }, 20); // Priority 20 = after the original registrations at priority 10/11
+    // Sync CPT saves to custom tables during transition
+    Competitors_CptSync::init();
 
     // Register new AJAX handlers
     Competitors_Ajax_AdminAjaxHandler::init();
@@ -644,32 +601,24 @@ function add_competitors_submenu_for_classes_dates() {
 add_action('admin_menu', 'add_competitors_submenu_for_classes_dates');
 
 /**
- * Adds a submenu page under the plugin’s settings for personal data management.
+ * Adds a submenu page under the plugin's settings for personal data management.
+ * When migration is complete, delegates to the new custom-table-backed class.
  */
 function add_competitors_submenu_for_personal_data() {
-    add_submenu_page(
-        'competitors-settings',
-        esc_html__('Competitors Personal Data', 'competitors'),  // Page title
-        esc_html__('Personal Data', 'competitors'),             // Menu title
-        'edit_competitors',
-        'competitors-detailed-data',
-        'competitors_admin_page'                                // Callback function
-    );
+    $use_new = class_exists( 'Competitors_Migration' ) && Competitors_Migration::is_complete();
+    $cb = $use_new ? array( 'Competitors_Admin_PersonalDataPage', 'render' ) : 'competitors_admin_page';
+    add_submenu_page( 'competitors-settings', __( 'Competitors Personal Data', 'competitors' ), __( 'Personal Data', 'competitors' ), 'edit_competitors', 'competitors-detailed-data', $cb );
 }
 add_action('admin_menu', 'add_competitors_submenu_for_personal_data');
 
 /**
  * Adds a submenu page for judges to enter scoring information.
+ * When migration is complete, delegates to the new custom-table-backed class.
  */
 function add_competitors_submenu_for_judges_scoring() {
-    add_submenu_page(
-        'competitors-settings',
-        esc_html__('Judges Scoring Submenu', 'competitors'),  // Page title
-        esc_html__('Judges Scoring', 'competitors'),          // Menu title
-        'edit_competitors',
-        'competitors-scoring',
-        'judges_scoring_page'                                 // Callback function
-    );
+    $use_new = class_exists( 'Competitors_Migration' ) && Competitors_Migration::is_complete();
+    $cb = $use_new ? array( 'Competitors_Admin_ScoringPage', 'render' ) : 'judges_scoring_page';
+    add_submenu_page( 'competitors-settings', __( 'Judges Scoring Submenu', 'competitors' ), __( 'Judges Scoring', 'competitors' ), 'edit_competitors', 'competitors-scoring', $cb );
 }
 add_action('admin_menu', 'add_competitors_submenu_for_judges_scoring');
 
