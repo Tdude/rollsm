@@ -350,62 +350,57 @@ function competitors_details_meta_box_callback($post) {
     $speaker_info = get_post_meta($post->ID, 'speaker_info', true);
     $gender = get_post_meta($post->ID, 'gender', true);
 
-    // Display the input fields
+    // Display the input fields using WP form-table for consistent column alignment
     ?>
-    <p>
-        <label for="competitors_club"><?php echo esc_html__('Club:', 'competitors'); ?></label>
-        <input type="text" id="competitors_club" name="competitors_club" value="<?php echo esc_attr($club); ?>" size="25">
-    </p>
-    <p>
-        <label for="competitors_participation_class"><?php echo esc_html__('Participation Class:', 'competitors'); ?></label>
-        <select id="competitors_participation_class" name="competitors_participation_class">
-            <option value=""><?php esc_html_e('-- Select Class --', 'competitors'); ?></option>
-            <?php
-            // Get classes from custom table if available, otherwise from wp_options
-            if (class_exists('Competitors_Migration') && Competitors_Migration::is_complete()) {
-                $available_classes = Competitors_ClassRepository::find_all();
-                foreach ($available_classes as $cls) {
-                    $label = !empty($cls['comment']) ? $cls['comment'] : $cls['name'];
-                    printf(
-                        '<option value="%s" %s>%s</option>',
-                        esc_attr($cls['name']),
-                        selected($participation_class, $cls['name'], false),
-                        esc_html($label)
-                    );
-                }
-            } else {
-                $options = get_option('competitors_options', []);
-                $classes_list = isset($options['available_competition_classes']) ? $options['available_competition_classes'] : [];
-                foreach ($classes_list as $cls) {
-                    if (is_array($cls) && isset($cls['name'])) {
-                        $label = !empty($cls['comment']) ? $cls['comment'] : $cls['name'];
-                        printf(
-                            '<option value="%s" %s>%s</option>',
-                            esc_attr($cls['name']),
-                            selected($participation_class, $cls['name'], false),
-                            esc_html($label)
-                        );
+    <table class="form-table" role="presentation">
+        <tr>
+            <th scope="row"><label for="competitors_club"><?php esc_html_e('Club:', 'competitors'); ?></label></th>
+            <td><input type="text" id="competitors_club" name="competitors_club" value="<?php echo esc_attr($club); ?>" class="regular-text"></td>
+        </tr>
+        <tr>
+            <th scope="row"><label for="competitors_participation_class"><?php esc_html_e('Participation Class:', 'competitors'); ?></label></th>
+            <td>
+                <select id="competitors_participation_class" name="competitors_participation_class">
+                    <option value=""><?php esc_html_e('-- Select Class --', 'competitors'); ?></option>
+                    <?php
+                    if (class_exists('Competitors_Migration') && Competitors_Migration::is_complete()) {
+                        $available_classes = Competitors_ClassRepository::find_all();
+                        foreach ($available_classes as $cls) {
+                            $lbl = !empty($cls['comment']) ? $cls['comment'] : $cls['name'];
+                            printf('<option value="%s" %s>%s</option>', esc_attr($cls['name']), selected($participation_class, $cls['name'], false), esc_html($lbl));
+                        }
+                    } else {
+                        $opts = get_option('competitors_options', []);
+                        $classes_list = isset($opts['available_competition_classes']) ? $opts['available_competition_classes'] : [];
+                        foreach ($classes_list as $cls) {
+                            if (is_array($cls) && isset($cls['name'])) {
+                                $lbl = !empty($cls['comment']) ? $cls['comment'] : $cls['name'];
+                                printf('<option value="%s" %s>%s</option>', esc_attr($cls['name']), selected($participation_class, $cls['name'], false), esc_html($lbl));
+                            }
+                        }
                     }
-                }
-            }
-            ?>
-        </select>
-    </p>
-    <p>
-        <label for="competitors_email"><?php echo esc_html__('Email:', 'competitors'); ?></label>
-        <input type="email" id="competitors_email" name="competitors_email" value="<?php echo esc_attr($email); ?>" size="25">
-    </p>
-    <p>
-        <label for="competitors_speaker_info"><?php echo esc_html__('Speaker Info:', 'competitors'); ?></label>
-        <input type="text" id="competitors_speaker_info" name="competitors_speaker_info" value="<?php echo esc_attr($speaker_info); ?>" size="25">
-    </p>
-    <p>
-        <label><?php echo esc_html__('Gender:', 'competitors'); ?></label><br>
-        <input type="radio" id="competitors_gender_woman" name="competitors_gender" value="woman" <?php checked($gender, 'woman'); ?>>
-        <label for="competitors_gender_woman"><?php echo esc_html__('Woman', 'competitors'); ?></label>
-        <input type="radio" id="competitors_gender_man" name="competitors_gender" value="man" <?php checked($gender, 'man'); ?>>
-        <label for="competitors_gender_man"><?php echo esc_html__('Man', 'competitors'); ?></label>
-    </p>
+                    ?>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <th scope="row"><label for="competitors_email"><?php esc_html_e('Email:', 'competitors'); ?></label></th>
+            <td><input type="email" id="competitors_email" name="competitors_email" value="<?php echo esc_attr($email); ?>" class="regular-text"></td>
+        </tr>
+        <tr>
+            <th scope="row"><label for="competitors_speaker_info"><?php esc_html_e('Speaker Info:', 'competitors'); ?></label></th>
+            <td><input type="text" id="competitors_speaker_info" name="competitors_speaker_info" value="<?php echo esc_attr($speaker_info); ?>" class="regular-text"></td>
+        </tr>
+        <tr>
+            <th scope="row"><?php esc_html_e('Gender:', 'competitors'); ?></th>
+            <td>
+                <fieldset>
+                    <label><input type="radio" name="competitors_gender" value="woman" <?php checked($gender, 'woman'); ?>> <?php esc_html_e('Woman', 'competitors'); ?></label>
+                    <label style="margin-left:12px;"><input type="radio" name="competitors_gender" value="man" <?php checked($gender, 'man'); ?>> <?php esc_html_e('Man', 'competitors'); ?></label>
+                </fieldset>
+            </td>
+        </tr>
+    </table>
     <?php
 }
 
