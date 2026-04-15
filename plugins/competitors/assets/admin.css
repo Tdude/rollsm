@@ -8,9 +8,9 @@
   --gray: rgba(205, 204, 203, 1);
   --dark-gray: rgba(100, 100, 119, 1);
   --light-gray: rgba(245, 245, 244, 1);
-  --success-light: rgba(240, 255, 240, 0.6);
-  --warning-light: rgba(255, 250, 220, 0.6);
-  --danger-light: rgba(255, 240, 240, 0.6);
+  --success-light: rgba(210, 245, 210, 1);
+  --warning-light: rgba(255, 243, 190, 1);
+  --danger-light: rgba(255, 218, 218, 1);
 
   /* Warning, Danger, Success button colors */
   --info: rgba(4, 164, 204, 0.8);
