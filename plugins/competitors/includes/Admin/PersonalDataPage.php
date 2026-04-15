@@ -17,7 +17,7 @@ class Competitors_Admin_PersonalDataPage {
      */
     public static function render() {
         if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'edit_competitors' ) ) {
-            echo '<h2>\\(o_o)/</h2><p>' . esc_html__( 'Access denied to scoring, dude. You do not seem to be The Judge.', 'competitors' ) . '</p>';
+            echo '<div class="notice notice-error"><p>' . esc_html__( 'Access denied.', 'competitors' ) . '</p></div>';
             return;
         }
 
@@ -25,14 +25,14 @@ class Competitors_Admin_PersonalDataPage {
 
         $competition = Competitors_CompetitionRepository::find_current();
         if ( ! $competition ) {
-            echo '<p>' . esc_html__( 'No active competition found.', 'competitors' ) . '</p>';
+            echo '<div class="notice notice-warning"><p>' . esc_html__( 'No active competition found.', 'competitors' ) . '</p></div>';
             return;
         }
 
         $competitors = Competitors_CompetitorRepository::find_by_competition( (int) $competition['id'] );
 
         if ( empty( $competitors ) ) {
-            echo '<h2>\\(o_o)/</h2><p>' . esc_html__( 'No competitors found!', 'competitors' ) . '</p>';
+            echo '<div class="notice notice-warning"><p>' . esc_html__( 'No competitors registered yet.', 'competitors' ) . '</p></div>';
             return;
         }
 
@@ -46,12 +46,12 @@ class Competitors_Admin_PersonalDataPage {
 
         echo '<table class="competitors-table" id="sortable-table">';
         echo '<thead><tr class="competitors-header">';
-        echo '<th>' . esc_html__( 'CompDate', 'competitors' ) . '</th>'
+        echo '<th>' . esc_html__( 'Event Date', 'competitors' ) . '</th>'
            . '<th>' . esc_html__( 'Name', 'competitors' ) . '</th>'
            . '<th>' . esc_html__( 'Club', 'competitors' ) . '</th>'
            . '<th>' . esc_html__( 'Class', 'competitors' ) . '</th>'
-           . '<th>' . esc_html__( 'Info', 'competitors' ) . '</th>'
-           . '<th>' . esc_html__( 'Sponsors', 'competitors' ) . '</th>'
+           . '<th class="hide-on-narrow">' . esc_html__( 'Info', 'competitors' ) . '</th>'
+           . '<th class="hide-on-narrow">' . esc_html__( 'Sponsors', 'competitors' ) . '</th>'
            . '<th class="hide-for-print">' . esc_html__( 'Email', 'competitors' ) . '</th>'
            . '<th>' . esc_html__( 'Phone', 'competitors' ) . '</th>'
            . '<th class="hide-for-print">' . esc_html__( 'Dinner', 'competitors' ) . '</th>'
@@ -72,8 +72,8 @@ class Competitors_Admin_PersonalDataPage {
             self::cell( $comp['name'] );
             self::cell( $comp['club'] );
             self::cell( $class_name );
-            self::cell( $comp['speaker_info'] );
-            self::cell( $comp['sponsors'] );
+            self::cell_narrow( $comp['speaker_info'] );
+            self::cell_narrow( $comp['sponsors'] );
             self::cell_hide( $comp['email'] );
             self::cell( $comp['phone'] );
             self::cell_hide( $comp['dinner'] );
@@ -89,6 +89,10 @@ class Competitors_Admin_PersonalDataPage {
 
     private static function cell( $content ) {
         echo '<td>' . esc_html( $content ) . '</td>';
+    }
+
+    private static function cell_narrow( $content ) {
+        echo '<td class="hide-on-narrow">' . esc_html( $content ) . '</td>';
     }
 
     private static function cell_hide( $content ) {

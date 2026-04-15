@@ -668,3 +668,57 @@ th.competitors-table {
   color: #999;
   font-style: italic;
 }
+
+/* ─── UX Improvements ──────────────────────────────────── */
+
+/* Sticky class/gender banner when filter is active */
+#active-class-banner {
+  position: sticky;
+  top: 32px; /* below WP admin bar */
+  z-index: 98;
+  background: #0073aa;
+  color: #fff;
+  padding: 8px 16px;
+  font-size: 1.25em;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0;
+}
+
+/* Scoring summary bar (replaces grand-total table row) */
+.scoring-summary {
+  background: var(--success-light);
+  border: 1px solid var(--gray);
+  padding: 12px 16px;
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.95em;
+}
+
+/* Sticky column headers within expanded competitor */
+.competitor-columns th {
+  position: sticky;
+  top: 120px; /* below admin bar + class banner + timer */
+  background: #f1f1f1;
+  z-index: 95;
+}
+
+/* Sortable table headers affordance */
+.competitors-table thead th {
+  cursor: pointer;
+  user-select: none;
+}
+.competitors-table thead th:hover {
+  background-color: #0073aa;
+  color: #fff;
+}
+
+/* Hide low-priority columns on narrow screens (tablets) */
+@media (max-width: 1024px) {
+  .hide-on-narrow {
+    display: none;
+  }
+}

@@ -675,9 +675,9 @@ function render_admin_page_header() {
     $current_page = isset($_GET['page']) ? sanitize_text_field($_GET['page']) : '';
 
     $tabs = [
-        'competitors-settings' => esc_html__('Rolls Settings', 'competitors'),
+        'competitors-settings' => esc_html__('Rolls & Points', 'competitors'),
         'competitors-classes-dates' => esc_html__('Classes & Dates', 'competitors'),
-        'competitors-detailed-data' => esc_html__('Personal Data', 'competitors'),
+        'competitors-detailed-data' => esc_html__('Competitor List', 'competitors'),
         'competitors-scoring' => esc_html__('Judges Scoring', 'competitors'),
     ];
 

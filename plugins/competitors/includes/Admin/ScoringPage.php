@@ -2,9 +2,11 @@
 /**
  * Judge scoring interface backed by custom tables.
  *
- * Replaces: judges_scoring_page(), display_competitors_table(),
- * render_competitor_header_row(), render_competitor_info_row(),
- * render_competitor_score_row(), display_filter_form(), etc.
+ * UX optimized for tablet scoring at outdoor venues:
+ * - Sticky timer bar (always visible while scrolling)
+ * - Sticky class banner when filtering
+ * - Point values shown on radio buttons (not "More"/"Less")
+ * - Save button always visible (no hideonsmallscreens)
  *
  * @package Competitors
  */
@@ -20,7 +22,7 @@ class Competitors_Admin_ScoringPage {
      */
     public static function render() {
         if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'edit_competitors' ) ) {
-            echo '<p>' . esc_html__( 'Access denied to scoring, dude. You do not seem to be The Judge.', 'competitors' ) . '</p>';
+            echo '<div class="notice notice-error"><p>' . esc_html__( 'Access denied. You do not have the Judge role.', 'competitors' ) . '</p></div>';
             return;
         }
 
@@ -28,16 +30,16 @@ class Competitors_Admin_ScoringPage {
 
         $competition = Competitors_CompetitionRepository::find_current();
         if ( ! $competition ) {
-            echo '<h1>' . esc_html__( 'Judges Scoring Page', 'competitors' ) . '</h1>';
-            echo '<p>' . esc_html__( 'No active competition found. Please create a competition in Classes & Dates.', 'competitors' ) . '</p>';
+            echo '<h1>' . esc_html__( 'Judges Scoring', 'competitors' ) . '</h1>';
+            echo '<div class="notice notice-warning"><p>' . esc_html__( 'No active competition found. Please create one in Classes & Dates.', 'competitors' ) . '</p></div>';
             return;
         }
 
         $lock_status = Competitors_CompetitionLock::get_status( (int) $competition['id'] );
 
-        echo '<h1 class="distance-large">' . esc_html__( 'Judges Scoring Page', 'competitors' );
+        echo '<h1 class="distance-large">' . esc_html__( 'Judges Scoring', 'competitors' );
         if ( $lock_status['is_locked'] && ! $lock_status['has_temp_unlock'] ) {
-            echo ' <span style="color:red;">(' . esc_html__( 'LOCKED — Read Only', 'competitors' ) . ')</span>';
+            echo ' <span style="color:red;">(' . esc_html__( 'LOCKED', 'competitors' ) . ')</span>';
         }
         echo '</h1>';
 
@@ -46,23 +48,36 @@ class Competitors_Admin_ScoringPage {
 
         self::render_filter_form( $competition, $filter_class, $filter_gender );
 
+        // Sticky class banner when a filter is active
+        if ( $filter_class || $filter_gender ) {
+            $parts = array();
+            if ( $filter_class ) {
+                $cls_obj = Competitors_ClassRepository::find_by_name( $filter_class );
+                $parts[] = $cls_obj && $cls_obj['comment'] ? $cls_obj['comment'] : $filter_class;
+            }
+            if ( $filter_gender ) {
+                $parts[] = ucfirst( $filter_gender );
+            }
+            echo '<div id="active-class-banner">' . esc_html( implode( ' / ', $parts ) ) . '</div>';
+        }
+
         echo '<div id="judges-scoring-container">';
         self::render_competitors_table( $competition, $filter_class, $filter_gender );
         echo '</div>';
     }
 
     /**
-     * Render the filter form (date is implicit = current competition).
+     * Render the filter form.
      */
     private static function render_filter_form( $competition, $filter_class, $filter_gender ) {
         $classes = Competitors_ClassRepository::find_all();
         ?>
         <div id="filter_form" class="distance-large">
-            <p><?php esc_html_e( 'These filters are persistent until you change or reset.', 'competitors' ); ?></p>
+            <p><strong><?php esc_html_e( 'Choose class and gender, then click Filter.', 'competitors' ); ?></strong></p>
 
             <input type="hidden" id="filter_date" value="<?php echo esc_attr( $competition['event_date'] ); ?>">
 
-            <label for="filter_class"><?php esc_html_e( 'Select Class:', 'competitors' ); ?> </label>
+            <label for="filter_class"><?php esc_html_e( 'Class:', 'competitors' ); ?> </label>
             <select id="filter_class" name="filter_class">
                 <option value=""><?php esc_html_e( 'All Classes', 'competitors' ); ?></option>
                 <?php foreach ( $classes as $class ) : ?>
@@ -72,9 +87,9 @@ class Competitors_Admin_ScoringPage {
                 <?php endforeach; ?>
             </select>
 
-            <label for="filter_gender"><?php esc_html_e( 'Select Gender:', 'competitors' ); ?> </label>
+            <label for="filter_gender"><?php esc_html_e( 'Gender:', 'competitors' ); ?> </label>
             <select id="filter_gender" name="filter_gender">
-                <option value=""><?php esc_html_e( 'All Genders', 'competitors' ); ?></option>
+                <option value=""><?php esc_html_e( 'All', 'competitors' ); ?></option>
                 <option value="woman" <?php selected( $filter_gender, 'woman' ); ?>><?php esc_html_e( 'Woman', 'competitors' ); ?></option>
                 <option value="man" <?php selected( $filter_gender, 'man' ); ?>><?php esc_html_e( 'Man', 'competitors' ); ?></option>
             </select>
@@ -93,7 +108,6 @@ class Competitors_Admin_ScoringPage {
         $competition_id = (int) $competition['id'];
         $is_readonly    = Competitors_CompetitionLock::is_locked( $competition_id );
 
-        // Get class ID from name if filtered
         $class_id = null;
         if ( $filter_class ) {
             $class_obj = Competitors_ClassRepository::find_by_name( $filter_class );
@@ -102,7 +116,6 @@ class Competitors_Admin_ScoringPage {
 
         $competitors = Competitors_CompetitorRepository::find_by_competition( $competition_id, $class_id );
 
-        // Filter by gender in PHP (simple field filter)
         if ( $filter_gender ) {
             $competitors = array_filter( $competitors, function ( $c ) use ( $filter_gender ) {
                 return $c['gender'] === $filter_gender;
@@ -110,11 +123,11 @@ class Competitors_Admin_ScoringPage {
         }
 
         if ( empty( $competitors ) ) {
-            echo '<h2>\\(o_o)/</h2><p>' . esc_html__( 'Looks like there are no competitors to score here right now. Please add some competitors, choose another date or check back later.', 'competitors' ) . '</p>';
+            echo '<div class="notice notice-warning"><p>' . esc_html__( 'No competitors found for this filter. Try a different class or check that competitors are registered.', 'competitors' ) . '</p></div>';
             return;
         }
 
-        // Gather total scores and sort by score DESC
+        // Gather total scores and sort DESC
         $competitors_data = array();
         foreach ( $competitors as $comp ) {
             $total = Competitors_ScoreRepository::get_total_score( (int) $comp['id'] );
@@ -124,50 +137,44 @@ class Competitors_Admin_ScoringPage {
             return $b['total_score'] <=> $a['total_score'];
         } );
 
-        // Form setup
-        $action_url  = esc_url( admin_url( 'admin-ajax.php' ) );
-        $nonce_field = wp_nonce_field( 'competitors_nonce_action', 'competitors_score_update_nonce', true, false );
+        $action_url    = esc_url( admin_url( 'admin-ajax.php' ) );
+        $nonce_field   = wp_nonce_field( 'competitors_nonce_action', 'competitors_score_update_nonce', true, false );
         $readonly_attr = $is_readonly ? ' disabled' : '';
 
-        $timer_label  = esc_html__( 'Timer', 'competitors' );
-        $start_label  = esc_html__( 'Start', 'competitors' );
-        $start_title  = esc_attr__( 'Start timer before scoring competitors!', 'competitors' );
-        $save_label   = esc_html__( 'Save scores', 'competitors' );
-        $save_title   = esc_attr__( 'Saves scores and time, resets Timer', 'competitors' );
-        $reset_label  = esc_html__( 'Reset', 'competitors' );
-        $reset_title  = esc_attr__( 'This button and changing competitor resets Timer', 'competitors' );
-        $admin_email  = esc_html( get_option( 'admin_email' ) );
-        $contact      = esc_html__( 'Please contact the Admin for feedback:', 'competitors' );
+        $timer_label = esc_html__( 'Timer', 'competitors' );
+        $start_label = esc_html__( 'Start', 'competitors' );
+        $start_title = esc_attr__( 'Start timer before scoring', 'competitors' );
+        $save_label  = esc_html__( 'Save scores', 'competitors' );
+        $save_title  = esc_attr__( 'Saves scores and time, resets timer', 'competitors' );
+        $reset_label = esc_html__( 'Reset', 'competitors' );
+        $reset_title = esc_attr__( 'Resets the timer', 'competitors' );
 
         echo <<<HTML
         <form action="{$action_url}" method="post" id="scoring-form">
             {$nonce_field}
             <input type="hidden" name="action" value="competitors_score_update_v2">
             <input type="hidden" name="competition_id" value="{$competition_id}">
-            <div id="timer">
-                <span class="hideonsmallscreens"><b>{$timer_label}</b></span>
+            <div id="timer" class="fixed-timer">
+                <b>{$timer_label}</b>
                 <button type="button" class="button button-success" id="start-timer" title="{$start_title}">{$start_label}</button>
-                <input type="submit" value="{$save_label}" class="button button-primary save-scores hideonsmallscreens" title="{$save_title}"{$readonly_attr}>
+                <input type="submit" value="{$save_label}" class="button button-primary save-scores" title="{$save_title}"{$readonly_attr}>
                 <span id="timer-display">00:00:00</span>
                 <button type="button" class="button button-danger" id="reset-timer" title="{$reset_title}">{$reset_label}</button>
             </div>
-            <p>{$contact} {$admin_email}.</p>
             <table class="competitors-table" id="judges-scoring"><tbody>
         HTML;
 
-        $grand_total         = 0;
-        $total_rolls_done    = 0;
-        $valid_scores_count  = 0;
+        $grand_total        = 0;
+        $total_rolls_done   = 0;
+        $valid_scores_count = 0;
 
         foreach ( $competitors_data as $rank => $comp ) {
             $comp_id    = (int) $comp['id'];
             $comp_class = (int) $comp['class_id'];
             $total      = (float) $comp['total_score'];
 
-            // Get competition rolls for this class
             $comp_rolls = Competitors_RollRepository::find_competition_rolls( $competition_id, $comp_class );
 
-            // If no competition roll snapshots exist, fall back to master rolls
             if ( empty( $comp_rolls ) ) {
                 $master_rolls = Competitors_RollRepository::find_by_class( $comp_class );
                 $comp_rolls   = array_map( function ( $r ) {
@@ -182,25 +189,21 @@ class Competitors_Admin_ScoringPage {
                 }, $master_rolls );
             }
 
-            $scores        = Competitors_ScoreRepository::find_by_competitor( $comp_id );
-            $selected_ids  = Competitors_CompetitorRepository::get_selected_rolls( $comp_id );
+            $scores       = Competitors_ScoreRepository::find_by_competitor( $comp_id );
+            $selected_ids = Competitors_CompetitorRepository::get_selected_rolls( $comp_id );
 
-            // Build score lookup by competition_roll_id
             $score_map = array();
             foreach ( $scores as $s ) {
                 $score_map[ (int) $s['competition_roll_id'] ] = $s;
             }
 
-            // Header row
             echo self::render_header_row( $comp_id, $total, $rank + 1, $comp['name'] );
             echo self::render_info_row( $comp_id, $comp );
 
-            // Hidden timer inputs
             echo '<input type="hidden" name="start_time[' . $comp_id . ']" id="start-time-' . $comp_id . '" value="">';
             echo '<input type="hidden" name="stop_time[' . $comp_id . ']" id="stop-time-' . $comp_id . '" value="">';
             echo '<input type="hidden" name="elapsed_time[' . $comp_id . ']" id="elapsed-time-' . $comp_id . '" value="">';
 
-            // Score rows
             foreach ( $comp_rolls as $idx => $roll ) {
                 $roll_id     = (int) $roll['id'];
                 $roll_scores = isset( $score_map[ $roll_id ] ) ? $score_map[ $roll_id ] : array();
@@ -214,7 +217,6 @@ class Competitors_Admin_ScoringPage {
                 }
             }
 
-            // Totals row
             echo '<tr class="competitor-totals hidden" data-competitor-id="' . $comp_id . '">';
             echo '<td colspan="6"><b>' . esc_html__( 'Total', 'competitors' ) . '</b></td>';
             echo '<td><span class="total-points">' . (int) $total . '</span> ' . esc_html__( 'points', 'competitors' ) . '</td></tr>';
@@ -225,15 +227,18 @@ class Competitors_Admin_ScoringPage {
             }
         }
 
-        // Grand totals
+        echo '</tbody></table>';
+
+        // Summary bar outside the table
         $avg_score = $valid_scores_count > 0 ? $grand_total / $valid_scores_count : 0;
         $avg_rolls = $valid_scores_count > 0 ? $total_rolls_done / $valid_scores_count : 0;
 
-        echo '<tr class="competitors-totals grand-total">';
-        echo '<td colspan="2"><b>' . esc_html__( 'Rolls to perform', 'competitors' ) . '</b> (Avg: <b>' . number_format( $avg_rolls, 1 ) . '</b> ' . esc_html__( 'per competitor', 'competitors' ) . ')</td>';
-        echo '<td colspan="2"><b>' . esc_html__( 'Average score:', 'competitors' ) . '</b> <b>' . number_format( $avg_score, 1 ) . '</b></td>';
-        echo '<td colspan="2"><b>' . esc_html__( 'Grand Total Score:', 'competitors' ) . '</b> <b><span id="grand-total-value">' . (int) $grand_total . '</span></b></td>';
-        echo '</tr></tbody></table>';
+        echo '<div class="scoring-summary">';
+        echo '<span><b>' . esc_html__( 'Avg rolls:', 'competitors' ) . '</b> ' . number_format( $avg_rolls, 1 ) . '</span>';
+        echo '<span><b>' . esc_html__( 'Avg score:', 'competitors' ) . '</b> ' . number_format( $avg_score, 1 ) . '</span>';
+        echo '<span><b>' . esc_html__( 'Grand Total:', 'competitors' ) . '</b> <span id="grand-total-value">' . (int) $grand_total . '</span></span>';
+        echo '</div>';
+
         echo '<div id="spinner" class="fade-inout hidden"></div>';
         echo '<div id="message-overlay" class="fade-inout hidden"></div>';
         echo '</form>';
@@ -244,17 +249,15 @@ class Competitors_Admin_ScoringPage {
      */
     private static function render_header_row( $comp_id, $total_score, $rank, $name ) {
         $name_esc  = esc_html( $name );
-        $hover     = esc_html__( 'click to see info and scoresheet', 'competitors' );
         $total_int = (int) $total_score;
 
         return <<<HTML
-        <tr class="competitor-header" data-competitor-id="{$comp_id}" title="Clicking here always resets Timer. Careful!">
+        <tr class="competitor-header" data-competitor-id="{$comp_id}">
             <th colspan="5">
                 <span class="toggle-details-icon dashicons dashicons-arrow-down-alt2"></span>
                 <b class="competitor-name larger-text">{$rank}. {$name_esc}</b>
-                <span class="show-on-hover">({$hover})</span>
             </th>
-            <th width="7%"><span class="total-points">{$total_int}</span>p</th>
+            <th style="text-align:right;font-size:1.3em;white-space:nowrap;"><span class="total-points">{$total_int}</span>p</th>
         </tr>
         HTML;
     }
@@ -267,15 +270,14 @@ class Competitors_Admin_ScoringPage {
         $class_name = '';
         if ( $comp['class_id'] ) {
             $cls = Competitors_ClassRepository::find_by_id( (int) $comp['class_id'] );
-            $class_name = $cls ? esc_html( $cls['name'] ) : '';
+            $class_name = $cls ? esc_html( $cls['comment'] ?: $cls['name'] ) : '';
         }
         $speaker    = esc_html( $comp['speaker_info'] );
         $sponsors   = esc_html( $comp['sponsors'] );
 
-        // Timer data
-        $timer = Competitors_ScoreRepository::get_timer( $comp_id );
-        $start = $timer && $timer['start_time'] ? esc_html( wp_date( 'H:i:s', strtotime( $timer['start_time'] ) ) ) : esc_html__( 'N/A', 'competitors' );
-        $stop  = $timer && $timer['stop_time'] ? esc_html( wp_date( 'H:i:s', strtotime( $timer['stop_time'] ) ) ) : esc_html__( 'N/A', 'competitors' );
+        $timer   = Competitors_ScoreRepository::get_timer( $comp_id );
+        $start   = $timer && $timer['start_time'] ? esc_html( wp_date( 'H:i:s', strtotime( $timer['start_time'] ) ) ) : esc_html__( 'N/A', 'competitors' );
+        $stop    = $timer && $timer['stop_time'] ? esc_html( wp_date( 'H:i:s', strtotime( $timer['stop_time'] ) ) ) : esc_html__( 'N/A', 'competitors' );
         $elapsed = $timer ? esc_html( $timer['elapsed_time'] ) : esc_html__( 'N/A', 'competitors' );
 
         $l = array(
@@ -284,8 +286,8 @@ class Competitors_Admin_ScoringPage {
             'club'    => esc_html__( 'Club', 'competitors' ),
             'class'   => esc_html__( 'Class', 'competitors' ),
             'startstop' => esc_html__( 'Start - Stop', 'competitors' ),
-            'elapsed' => esc_html__( 'Elapsed Time', 'competitors' ),
-            'roll'    => esc_html__( 'Makinniagassat/Roll to perform', 'competitors' ),
+            'elapsed' => esc_html__( 'Elapsed', 'competitors' ),
+            'roll'    => esc_html__( 'Roll to perform', 'competitors' ),
             'left'    => esc_html__( 'Left', 'competitors' ),
             'right'   => esc_html__( 'Right', 'competitors' ),
             'sum'     => esc_html__( 'Sum', 'competitors' ),
@@ -298,11 +300,11 @@ class Competitors_Admin_ScoringPage {
                 <table><tbody>
                     <tr>
                         <th class="hide-for-print">{$l['info']}</th>
-                        <th width="7%" class="hide-for-print">{$l['spons']}</th>
-                        <th width="7%">{$l['club']}</th>
-                        <th width="7%">{$l['class']}</th>
-                        <th width="7%">{$l['startstop']}</th>
-                        <th width="7%">{$l['elapsed']}</th>
+                        <th class="hide-for-print">{$l['spons']}</th>
+                        <th>{$l['club']}</th>
+                        <th>{$l['class']}</th>
+                        <th>{$l['startstop']}</th>
+                        <th>{$l['elapsed']}</th>
                     </tr>
                     <tr>
                         <td class="overflow-ellipsis hide-for-print">{$speaker}</td>
@@ -317,26 +319,25 @@ class Competitors_Admin_ScoringPage {
         </tr>
         <tr class="competitor-columns hidden" data-competitor-id="{$comp_id}">
             <th>{$l['roll']}</th>
-            <th width="10%" colspan="2">{$l['left']}</th>
-            <th width="10%" colspan="2">{$l['right']}</th>
-            <th width="7%">{$l['sum']}</th>
-            <th width="7%">{$l['reset']}</th>
+            <th colspan="2">{$l['left']}</th>
+            <th colspan="2">{$l['right']}</th>
+            <th>{$l['sum']}</th>
+            <th>{$l['reset']}</th>
         </tr>
         HTML;
     }
 
     /**
-     * Render a single score row for a roll.
+     * Render a single score row.
      */
     private static function render_score_row( $comp_id, $roll_id, $idx, $roll, $scores, $is_selected, $is_readonly ) {
-        $roll_name    = esc_html( $roll['snapshot_name'] );
-        $max_score    = (int) $roll['snapshot_max_score'];
-        $less_score   = $max_score - 1;
-        $is_numeric   = (bool) $roll['snapshot_is_numeric'];
-        $no_rl        = (bool) $roll['snapshot_no_right_left'];
-        $sel_class    = $is_selected ? 'selected-roll' : '';
+        $roll_name  = esc_html( $roll['snapshot_name'] );
+        $max_score  = (int) $roll['snapshot_max_score'];
+        $less_score = $max_score - 1;
+        $is_numeric = (bool) $roll['snapshot_is_numeric'];
+        $no_rl      = (bool) $roll['snapshot_no_right_left'];
+        $sel_class  = $is_selected ? 'selected-roll' : '';
 
-        // Input names use competitor_scores[comp_id][roll_id] for the new AJAX handler
         $prefix = "competitor_scores[{$comp_id}][{$roll_id}]";
 
         $label = $is_numeric ? $max_score : $max_score . 'p';
@@ -373,8 +374,8 @@ class Competitors_Admin_ScoringPage {
             $name = "{$prefix}[score]";
             $sc   = isset( $scores['left_group'] ) && (int) $scores['left_group'] === $max ? 'checked' : '';
             $dc   = isset( $scores['left_group'] ) && (int) $scores['left_group'] === $less ? 'checked' : '';
-            return "<td class=\"success-light\"><label><input type=\"radio\" class=\"score-input\" name=\"{$name}\" value=\"{$max}\" {$sc}> More</label></td>"
-                 . "<td class=\"danger-light\"><label><input type=\"radio\" class=\"deduct-input\" name=\"{$name}\" value=\"{$less}\" {$dc}> Less</label></td>";
+            return "<td class=\"success-light\"><label><input type=\"radio\" class=\"score-input\" name=\"{$name}\" value=\"{$max}\" {$sc}> {$max}p</label></td>"
+                 . "<td class=\"danger-light\"><label><input type=\"radio\" class=\"deduct-input\" name=\"{$name}\" value=\"{$less}\" {$dc}> {$less}p</label></td>";
         }
 
         $ln = "{$prefix}[left_group]";
@@ -384,10 +385,10 @@ class Competitors_Admin_ScoringPage {
         $rs = isset( $scores['right_group'] ) && (int) $scores['right_group'] === $max ? 'checked' : '';
         $rd = isset( $scores['right_group'] ) && (int) $scores['right_group'] === $less ? 'checked' : '';
 
-        return "<td width=\"10%\" class=\"success-light\"><label><input type=\"radio\" class=\"score-input\" name=\"{$ln}\" value=\"{$max}\" {$ls}> More</label></td>"
-             . "<td width=\"10%\" class=\"danger-light\"><label><input type=\"radio\" class=\"deduct-input\" name=\"{$ln}\" value=\"{$less}\" {$ld}> Less</label></td>"
-             . "<td width=\"10%\" class=\"success-light\"><label><input type=\"radio\" class=\"score-input\" name=\"{$rn}\" value=\"{$max}\" {$rs}> More</label></td>"
-             . "<td width=\"10%\" class=\"danger-light\"><label><input type=\"radio\" class=\"deduct-input\" name=\"{$rn}\" value=\"{$less}\" {$rd}> Less</label></td>";
+        return "<td class=\"success-light\"><label><input type=\"radio\" class=\"score-input\" name=\"{$ln}\" value=\"{$max}\" {$ls}> {$max}p</label></td>"
+             . "<td class=\"danger-light\"><label><input type=\"radio\" class=\"deduct-input\" name=\"{$ln}\" value=\"{$less}\" {$ld}> {$less}p</label></td>"
+             . "<td class=\"success-light\"><label><input type=\"radio\" class=\"score-input\" name=\"{$rn}\" value=\"{$max}\" {$rs}> {$max}p</label></td>"
+             . "<td class=\"danger-light\"><label><input type=\"radio\" class=\"deduct-input\" name=\"{$rn}\" value=\"{$less}\" {$rd}> {$less}p</label></td>";
     }
 
     private static function calc_total( $is_numeric, $scores, $max, $less, $no_rl ) {
