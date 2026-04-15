@@ -716,6 +716,12 @@ th.competitors-table {
   color: #fff;
 }
 
+/* WP list table header padding (matches td default) */
+.wp-list-table thead th,
+.wp-list-table tfoot th {
+  padding: 8px 10px;
+}
+
 /* Hide low-priority columns on narrow screens (tablets) */
 @media (max-width: 1024px) {
   .hide-on-narrow {
