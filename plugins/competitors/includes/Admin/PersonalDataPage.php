@@ -72,7 +72,7 @@ class Competitors_Admin_PersonalDataPage {
         foreach ( $competitors as $comp ) {
             $class_name = isset( $class_map[ (int) $comp['class_id'] ] ) ? $class_map[ (int) $comp['class_id'] ] : '';
 
-            echo '<tr class="open-details">';
+            echo '<tr>';
             self::cell( $competition['event_date'] );
             self::cell( $comp['name'] );
             self::cell( $comp['club'] );
@@ -84,9 +84,6 @@ class Competitors_Admin_PersonalDataPage {
             self::cell_hide( $comp['dinner'] );
             self::cell_hide( $comp['consent'] );
             echo '</tr>';
-
-            // Render selected rolls detail row
-            echo self::render_rolls_detail( $comp, $competition, $class_name );
         }
 
         echo '</tbody></table>';
@@ -103,51 +100,5 @@ class Competitors_Admin_PersonalDataPage {
 
     private static function cell_hide( $content ) {
         echo '<td class="hide-for-print">' . esc_html( $content ) . '</td>';
-    }
-
-    /**
-     * Render the expandable rolls detail row for a competitor.
-     */
-    private static function render_rolls_detail( $comp, $competition, $class_name ) {
-        $comp_id        = (int) $comp['id'];
-        $class_id       = (int) $comp['class_id'];
-        $competition_id = (int) $competition['id'];
-
-        $comp_rolls = Competitors_RollRepository::find_competition_rolls( $competition_id, $class_id );
-        if ( empty( $comp_rolls ) ) {
-            $master = Competitors_RollRepository::find_by_class( $class_id );
-            $comp_rolls = array_map( function ( $r ) {
-                return array(
-                    'id'                     => $r['id'],
-                    'snapshot_name'          => $r['name'],
-                    'snapshot_max_score'     => $r['max_score'],
-                    'snapshot_is_numeric'    => $r['is_numeric'],
-                    'snapshot_no_right_left' => $r['no_right_left'],
-                );
-            }, $master );
-        }
-
-        $selected_ids = Competitors_CompetitorRepository::get_selected_rolls( $comp_id );
-
-        $html = '<tr class="selected-rolls hidden"><td colspan="10"><table>';
-        $html .= '<tr><th colspan="6">' . esc_html__( 'Roll to perform', 'competitors' ) . '</th>';
-        $html .= '<th colspan="2">' . esc_html__( 'Left (More/Less)', 'competitors' ) . '</th>';
-        $html .= '<th colspan="2">' . esc_html__( 'Right (More/Less)', 'competitors' ) . '</th>';
-        $html .= '<th>' . esc_html__( 'Score', 'competitors' ) . '</th></tr>';
-
-        foreach ( $comp_rolls as $roll ) {
-            $is_selected = in_array( (int) $roll['id'], $selected_ids );
-            $css = $is_selected ? 'selected-roll' : 'non-selected-roll';
-            $max = (int) $roll['snapshot_max_score'];
-            $pts = ( $max === 0 ) ? 'N/A ' : esc_html( $max ) . 'p';
-
-            $html .= '<tr class="' . $css . '">';
-            $html .= '<td colspan="6">' . esc_html( $roll['snapshot_name'] ) . ' (' . $pts . ')</td>';
-            $html .= '<td width="8%"></td><td width="8%"></td><td width="8%"></td><td width="8%"></td><td width="8%"></td>';
-            $html .= '</tr>';
-        }
-
-        $html .= '</table></td></tr>';
-        return $html;
     }
 }
