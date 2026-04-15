@@ -129,12 +129,15 @@ class Competitors_Admin_ScoringPage {
         $nonce_field = wp_nonce_field( 'competitors_nonce_action', 'competitors_score_update_nonce', true, false );
         $readonly_attr = $is_readonly ? ' disabled' : '';
 
-        $timer_label = esc_html__( 'Timer', 'competitors' );
-        $start_title = esc_attr__( 'Start timer before scoring competitors!', 'competitors' );
-        $save_title  = esc_attr__( 'Saves scores and time, resets Timer', 'competitors' );
-        $reset_title = esc_attr__( 'This button and changing competitor resets Timer', 'competitors' );
-        $admin_email = esc_html( get_option( 'admin_email' ) );
-        $contact     = esc_html__( 'Please contact the Admin for feedback:', 'competitors' );
+        $timer_label  = esc_html__( 'Timer', 'competitors' );
+        $start_label  = esc_html__( 'Start', 'competitors' );
+        $start_title  = esc_attr__( 'Start timer before scoring competitors!', 'competitors' );
+        $save_label   = esc_html__( 'Save scores', 'competitors' );
+        $save_title   = esc_attr__( 'Saves scores and time, resets Timer', 'competitors' );
+        $reset_label  = esc_html__( 'Reset', 'competitors' );
+        $reset_title  = esc_attr__( 'This button and changing competitor resets Timer', 'competitors' );
+        $admin_email  = esc_html( get_option( 'admin_email' ) );
+        $contact      = esc_html__( 'Please contact the Admin for feedback:', 'competitors' );
 
         echo <<<HTML
         <form action="{$action_url}" method="post" id="scoring-form">
@@ -143,10 +146,10 @@ class Competitors_Admin_ScoringPage {
             <input type="hidden" name="competition_id" value="{$competition_id}">
             <div id="timer">
                 <span class="hideonsmallscreens"><b>{$timer_label}</b></span>
-                <button type="button" class="button button-success" id="start-timer" title="{$start_title}">{$start_title}</button>
-                <input type="submit" value="{$save_title}" class="button button-primary save-scores hideonsmallscreens" title="{$save_title}"{$readonly_attr}>
+                <button type="button" class="button button-success" id="start-timer" title="{$start_title}">{$start_label}</button>
+                <input type="submit" value="{$save_label}" class="button button-primary save-scores hideonsmallscreens" title="{$save_title}"{$readonly_attr}>
                 <span id="timer-display">00:00:00</span>
-                <button type="button" class="button button-danger" id="reset-timer" title="{$reset_title}">{$reset_title}</button>
+                <button type="button" class="button button-danger" id="reset-timer" title="{$reset_title}">{$reset_label}</button>
             </div>
             <p>{$contact} {$admin_email}.</p>
             <table class="competitors-table" id="judges-scoring"><tbody>
