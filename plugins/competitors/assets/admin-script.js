@@ -944,28 +944,55 @@ jQuery(document).ready(function ($) {
     }
   });
 
+  // Derive a URL-safe slug from a string (JS equivalent of WP sanitize_title)
+  function slugify(text) {
+    return text
+      .toString()
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, "") // remove non-word chars (except spaces and hyphens)
+      .replace(/[\s_]+/g, "-") // spaces/underscores to hyphens
+      .replace(/-+/g, "-") // collapse multiple hyphens
+      .replace(/^-|-$/g, ""); // trim leading/trailing hyphens
+  }
+
+  // Live slug preview when typing class name
+  $("#new_class_comment").on("input", function () {
+    var slug = slugify($(this).val());
+    $("#class-slug-preview").text(slug ? "ID: " + slug : "");
+  });
+
   // Add Class button functionality for Settings page
+  // User enters the visible "Class Name" (stored as comment).
+  // The internal data name (stored as name) is auto-derived as a slug.
   $("#add-class-button").click(function (e) {
     e.preventDefault();
-    var newClassName = $("#new_class_name").val();
-    var newClassComment = $("#new_class_comment").val();
-    if (newClassName && newClassComment) {
-      var classObj = { name: newClassName, comment: newClassComment };
-      var classString = JSON.stringify(classObj);
-      $("#existing_classes").append(
-        `<li class="class-item" data-name="${escapeHtml(
-          newClassName
-        )}" data-comment="${escapeHtml(newClassComment)}">
-                <input type="hidden" name="competitors_options[available_competition_classes][]" value="${encodeURIComponent(
-                  classString
-                )}">
-                ${escapeHtml(newClassName)} - ${escapeHtml(newClassComment)}
-                <button type="button" class="button-secondary remove-class-button">Remove</button>
-            </li>`
-      );
-      $("#new_class_name").val("");
-      $("#new_class_comment").val("");
+    var newClassComment = $.trim($("#new_class_comment").val());
+    if (!newClassComment) {
+      return;
     }
+    var newClassName = slugify(newClassComment);
+    if (!newClassName) {
+      return;
+    }
+    var classObj = { name: newClassName, comment: newClassComment };
+    var classString = JSON.stringify(classObj);
+    $("#existing_classes").append(
+      `<li class="class-item" data-name="${escapeHtml(
+        newClassName
+      )}" data-comment="${escapeHtml(newClassComment)}">
+              <input type="hidden" name="competitors_options[available_competition_classes][]" value="${encodeURIComponent(
+                classString
+              )}">
+              <strong>${escapeHtml(newClassComment)}</strong>
+              <code style="margin-left:6px; color:#666; font-size:0.85em;">${escapeHtml(
+                newClassName
+              )}</code>
+              <button type="button" class="button-secondary remove-class-button">Remove</button>
+          </li>`
+    );
+    $("#new_class_comment").val("");
+    $("#class-slug-preview").text("");
   });
 
   // Remove Class button functionality

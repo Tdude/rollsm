@@ -908,7 +908,7 @@ function initialize_roll_date_mapping_settings() {
 
 function competitors_classes_section_callback() {
     echo wp_kses(
-        '<p>' . esc_html__('The class here is for admin backend purposes, so only a-z please! The class comment is an explanation which appears in the registration form. You can use any characters here.', 'competitors') . '</p>',
+        '<p>' . esc_html__('Add competition classes below. The "Class Name" is what competitors see in the registration form. A short internal identifier is generated automatically from the name.', 'competitors') . '</p>',
         ['p' => []]
     );
 }
@@ -1023,17 +1023,17 @@ function render_competitors_classes_field() {
     ob_start();
     ?>
     <div id="add-class-form">
-        <label for="new_class_name"><?php esc_html_e('Class Data Name:', 'competitors'); ?></label>
-        <input type="text" id="new_class_name" name="new_class_name" value="" />
-        <label for="new_class_comment"><?php esc_html_e('Class Comment:', 'competitors'); ?></label>
-        <input type="text" id="new_class_comment" name="new_class_comment" value="" />
+        <label for="new_class_comment"><?php esc_html_e('Class Name:', 'competitors'); ?></label>
+        <input type="text" id="new_class_comment" name="new_class_comment" value="" placeholder="<?php esc_attr_e('e.g. Open (International)', 'competitors'); ?>" size="40" />
+        <span id="class-slug-preview" style="color:#666; margin-left:8px;"></span>
         <button type="button" id="add-class-button" class="button button-primary plus-button"></button>
     </div>
     <ul id="existing_classes">
         <?php foreach ($classes as $index => $class) : ?>
             <?php if (is_array($class) && isset($class['name']) && isset($class['comment'])) : ?>
                 <li class="class-item <?php echo $index % 2 == 0 ? 'alternate' : ''; ?>" data-name="<?php echo esc_attr($class['name']); ?>" data-comment="<?php echo esc_attr($class['comment']); ?>">
-                    <?php echo esc_html($class['name'] . ' - ' . $class['comment']); ?>
+                    <strong><?php echo esc_html($class['comment'] ?: $class['name']); ?></strong>
+                    <code style="margin-left:6px; color:#666; font-size:0.85em;"><?php echo esc_html($class['name']); ?></code>
                     <input type="hidden" name="competitors_options[available_competition_classes][]" value="<?php echo esc_attr(json_encode($class)); ?>" />
                     <button type="button" class="button-secondary remove-class-button"><?php esc_html_e('Remove', 'competitors'); ?></button>
                 </li>
