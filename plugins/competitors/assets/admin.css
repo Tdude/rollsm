@@ -350,6 +350,12 @@ b.larger-txt {
   cursor: pointer;
 }
 
+/* Already-scored competitor header — subtle visual distinction */
+tr.competitor-header.scored th {
+  color: #555;
+  background-color: #f4f4f4;
+}
+
 /* Hover Effect */
 .competitors-table tr:hover,
 tr.competitor-header:hover,

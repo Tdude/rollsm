@@ -201,7 +201,8 @@ class Competitors_Admin_ScoringPage {
                 $score_map[ (int) $s['competition_roll_id'] ] = $s;
             }
 
-            echo self::render_header_row( $comp_id, $total, $rank + 1, $comp['name'] );
+            $has_scores = ! empty( $scores );
+            echo self::render_header_row( $comp_id, $total, $rank + 1, $comp['name'], $has_scores );
             echo self::render_info_row( $comp_id, $comp );
 
             echo '<input type="hidden" name="start_time[' . $comp_id . ']" id="start-time-' . $comp_id . '" value="">';
@@ -251,12 +252,13 @@ class Competitors_Admin_ScoringPage {
     /**
      * Render a competitor header row.
      */
-    private static function render_header_row( $comp_id, $total_score, $rank, $name ) {
+    private static function render_header_row( $comp_id, $total_score, $rank, $name, $has_scores = false ) {
         $name_esc  = esc_html( $name );
         $total_int = (int) $total_score;
+        $scored_class = $has_scores ? ' scored' : '';
 
         return <<<HTML
-        <tr class="competitor-header" data-competitor-id="{$comp_id}">
+        <tr class="competitor-header{$scored_class}" data-competitor-id="{$comp_id}">
             <th colspan="6">
                 <span class="toggle-details-icon dashicons dashicons-arrow-down-alt2"></span>
                 <b class="competitor-name larger-text">{$rank}. {$name_esc}</b>
