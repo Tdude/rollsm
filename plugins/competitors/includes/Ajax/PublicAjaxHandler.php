@@ -43,7 +43,17 @@ class Competitors_Ajax_PublicAjaxHandler {
         if ( ! isset( $_POST['competitors_nonce'] ) ||
              ! wp_verify_nonce( $_POST['competitors_nonce'], 'competitors_nonce_action' ) ) {
             wp_send_json_error( array( 'message' => 'Error: Nonce verification failed.' ) );
+            return;
         }
+
+        // Rate limiting — max 3 registrations per IP per hour
+        $ip_key   = 'comp_reg_' . md5( $_SERVER['REMOTE_ADDR'] ?? '' );
+        $attempts = (int) get_transient( $ip_key );
+        if ( $attempts >= 3 ) {
+            wp_send_json_error( array( 'message' => 'Too many registration attempts. Please try again later.' ) );
+            return;
+        }
+        set_transient( $ip_key, $attempts + 1, 3600 );
 
         // Validate required fields
         $name    = sanitize_text_field( $_POST['name'] ?? '' );
@@ -73,8 +83,9 @@ class Competitors_Ajax_PublicAjaxHandler {
         $dinner            = isset( $_POST['dinner'] ) ? 'yes' : 'no';
         $competition_date  = sanitize_text_field( $_POST['competition_date'] ?? '' );
 
-        if ( empty( $competition_date ) ) {
+        if ( empty( $competition_date ) || ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $competition_date ) ) {
             wp_send_json_error( array( 'message' => 'Error: A valid competition date is required.' ) );
+            return;
         }
 
         // Resolve competition and class IDs
@@ -85,6 +96,11 @@ class Competitors_Ajax_PublicAjaxHandler {
                 $competition_id = (int) $comp['id'];
                 break;
             }
+        }
+
+        if ( ! $competition_id ) {
+            wp_send_json_error( array( 'message' => 'Error: Selected competition date is not available.' ) );
+            return;
         }
 
         $class = Competitors_ClassRepository::find_by_name( $participation_class );
@@ -242,8 +258,7 @@ class Competitors_Ajax_PublicAjaxHandler {
         Competitors_Public_Scoreboard::render_detail( $competitor_id );
         $html = ob_get_clean();
 
-        echo $html;
-        wp_die();
+        wp_send_json_success( array( 'html' => $html ) );
     }
 
     /**

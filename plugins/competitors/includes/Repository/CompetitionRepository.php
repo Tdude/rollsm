@@ -133,13 +133,45 @@ class Competitors_CompetitionRepository {
     }
 
     /**
-     * Delete a competition by ID.
+     * Delete a competition and all its child data (cascade).
      *
      * @param int $id
      * @return bool
      */
     public static function delete( $id ) {
         global $wpdb;
+        $id = (int) $id;
+
+        // Delete child data in dependency order
+        // 1. Scores + selected_rolls + timers for competitors in this competition
+        $competitor_ids = $wpdb->get_col( $wpdb->prepare(
+            "SELECT id FROM " . Competitors_Database::table( 'competitors' ) . " WHERE competition_id = %d",
+            $id
+        ) );
+
+        if ( ! empty( $competitor_ids ) ) {
+            $placeholders = implode( ',', array_fill( 0, count( $competitor_ids ), '%d' ) );
+            $wpdb->query( $wpdb->prepare(
+                "DELETE FROM " . Competitors_Database::table( 'scores' ) . " WHERE competitor_id IN ($placeholders)",
+                ...$competitor_ids
+            ) );
+            $wpdb->query( $wpdb->prepare(
+                "DELETE FROM " . Competitors_Database::table( 'selected_rolls' ) . " WHERE competitor_id IN ($placeholders)",
+                ...$competitor_ids
+            ) );
+            $wpdb->query( $wpdb->prepare(
+                "DELETE FROM " . Competitors_Database::table( 'timers' ) . " WHERE competitor_id IN ($placeholders)",
+                ...$competitor_ids
+            ) );
+        }
+
+        // 2. Competitors
+        $wpdb->delete( Competitors_Database::table( 'competitors' ), array( 'competition_id' => $id ), array( '%d' ) );
+
+        // 3. Competition rolls
+        $wpdb->delete( Competitors_Database::table( 'competition_rolls' ), array( 'competition_id' => $id ), array( '%d' ) );
+
+        // 4. The competition itself
         return (bool) $wpdb->delete( self::table(), array( 'id' => $id ), array( '%d' ) );
     }
 

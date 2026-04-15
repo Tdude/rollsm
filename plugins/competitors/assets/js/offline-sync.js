@@ -246,7 +246,10 @@
     notice.id = "offline-sync-notice";
     notice.className = "notice notice-" + (type === "error" ? "error" : type === "success" ? "success" : "info");
     notice.style.cssText = "padding:8px 12px;margin:5px 0;border-left-width:4px;";
-    notice.innerHTML = "<strong>Offline Sync:</strong> " + message;
+    var strong = document.createElement("strong");
+    strong.textContent = "Offline Sync: ";
+    notice.appendChild(strong);
+    notice.appendChild(document.createTextNode(message));
 
     var timer = document.getElementById("timer");
     if (timer && timer.parentNode) {
@@ -271,9 +274,17 @@
     var now = Date.now();
     var thirtyDays = 30 * 24 * 60 * 60 * 1000;
 
+    // Collect keys first to avoid index-shift bugs when removing during iteration
+    var keysToCheck = [];
     for (var i = 0; i < localStorage.length; i++) {
-      var key = localStorage.key(i);
-      if (key && key.startsWith(STORAGE_PREFIX)) {
+      var k = localStorage.key(i);
+      if (k && k.startsWith(STORAGE_PREFIX)) {
+        keysToCheck.push(k);
+      }
+    }
+
+    keysToCheck.forEach(function (key) {
+      if (key) {
         try {
           var data = JSON.parse(localStorage.getItem(key));
           // Check if all scores are synced and the oldest is 30+ days
@@ -298,7 +309,7 @@
           // Skip corrupt entries
         }
       }
-    }
+    });
   }
 
   // ─── Attach to scoring form events ────────────────────────────

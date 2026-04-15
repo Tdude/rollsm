@@ -118,6 +118,7 @@ class Competitors_CompetitorRepository {
         $fields = array(
             'competition_id' => '%d',
             'class_id'       => '%d',
+            'wp_post_id'     => '%d',
             'name'           => '%s',
             'email'          => '%s',
             'phone'          => '%s',

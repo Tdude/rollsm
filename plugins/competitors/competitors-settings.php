@@ -12,10 +12,6 @@ define('COMPETITORS_PLUGIN_VERSION', '0.99');
 define('COMPETITORS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
 
-// REMOVE OR COMMENT OUT AFTER DONE DEV!!!
-// error_reporting(E_ALL);
-// ini_set('display_errors', 1);
-
 
 /**
  * Autoloader for Competitors_* classes.
@@ -246,22 +242,6 @@ function competitors_enqueue_public_scripts() {
 add_action('wp_enqueue_scripts', 'competitors_enqueue_public_scripts');
 
 
-function competitors_debug_admin_hook($hook) {
-    error_log('Current admin page hook: ' . $hook);
-    
-    global $post_type;
-    if ($post_type) {
-        error_log('Current post type: ' . $post_type);
-    }
-    
-    // Log the current screen object
-    $screen = get_current_screen();
-    if ($screen) {
-        error_log('Current screen ID: ' . $screen->id);
-        error_log('Current screen base: ' . $screen->base);
-    }
-}
-add_action('admin_enqueue_scripts', 'competitors_debug_admin_hook', 1);
 
 /**
  * Enqueues for admin area.

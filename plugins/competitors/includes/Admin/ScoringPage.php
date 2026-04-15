@@ -87,8 +87,9 @@ class Competitors_Admin_ScoringPage {
 
     /**
      * Render the competitors scoring table.
+     * Public so AdminAjaxHandler::handle_filter() can call it.
      */
-    private static function render_competitors_table( $competition, $filter_class = '', $filter_gender = '' ) {
+    public static function render_competitors_table( $competition, $filter_class = '', $filter_gender = '' ) {
         $competition_id = (int) $competition['id'];
         $is_readonly    = Competitors_CompetitionLock::is_locked( $competition_id );
 
@@ -138,7 +139,7 @@ class Competitors_Admin_ScoringPage {
         echo <<<HTML
         <form action="{$action_url}" method="post" id="scoring-form">
             {$nonce_field}
-            <input type="hidden" name="action" value="competitors_score_update">
+            <input type="hidden" name="action" value="competitors_score_update_v2">
             <input type="hidden" name="competition_id" value="{$competition_id}">
             <div id="timer">
                 <span class="hideonsmallscreens"><b>{$timer_label}</b></span>
@@ -270,8 +271,8 @@ class Competitors_Admin_ScoringPage {
 
         // Timer data
         $timer = Competitors_ScoreRepository::get_timer( $comp_id );
-        $start = $timer && $timer['start_time'] ? esc_html( date( 'H:i:s', strtotime( $timer['start_time'] ) ) ) : esc_html__( 'N/A', 'competitors' );
-        $stop  = $timer && $timer['stop_time'] ? esc_html( date( 'H:i:s', strtotime( $timer['stop_time'] ) ) ) : esc_html__( 'N/A', 'competitors' );
+        $start = $timer && $timer['start_time'] ? esc_html( wp_date( 'H:i:s', strtotime( $timer['start_time'] ) ) ) : esc_html__( 'N/A', 'competitors' );
+        $stop  = $timer && $timer['stop_time'] ? esc_html( wp_date( 'H:i:s', strtotime( $timer['stop_time'] ) ) ) : esc_html__( 'N/A', 'competitors' );
         $elapsed = $timer ? esc_html( $timer['elapsed_time'] ) : esc_html__( 'N/A', 'competitors' );
 
         $l = array(

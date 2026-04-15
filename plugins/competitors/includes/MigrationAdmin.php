@@ -254,9 +254,11 @@ class Competitors_MigrationAdmin {
             'selected_rolls', 'competitors', 'competition_rolls',
             'rolls', 'classes', 'competitions',
         );
+        $wpdb->query( 'START TRANSACTION' );
         foreach ( $tables as $name ) {
-            $wpdb->query( "TRUNCATE TABLE " . Competitors_Database::table( $name ) );
+            $wpdb->query( "DELETE FROM " . Competitors_Database::table( $name ) );
         }
+        $wpdb->query( 'COMMIT' );
 
         Competitors_Migration::revert();
 

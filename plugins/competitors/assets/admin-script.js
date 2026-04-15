@@ -892,7 +892,8 @@ jQuery(document).ready(function ($) {
   });
 
   // Add Event button functionality for Settings page
-  $("#add-event-button").click(function () {
+  $("#add-event-button").click(function (e) {
+    e.preventDefault();
     var newDate = $("#new_competition_date").val();
     var eventName = $("#new_event_name").val();
     if (newDate && eventName) {
@@ -915,7 +916,8 @@ jQuery(document).ready(function ($) {
   });
 
   // Add Class button functionality for Settings page
-  $("#add-class-button").click(function () {
+  $("#add-class-button").click(function (e) {
+    e.preventDefault();
     var newClassName = $("#new_class_name").val();
     var newClassComment = $("#new_class_comment").val();
     if (newClassName && newClassComment) {
@@ -988,11 +990,17 @@ jQuery(document).ready(function ($) {
     `;
   }
 
-  // Event listener for adding roll names
+  // Event listener for adding roll names (only for roll buttons, not event/class buttons)
   $(document).on("click", ".plus-button", function () {
+    var btnId = $(this).attr("id") || "";
+    // Skip event and class add buttons — they have their own handlers
+    if (btnId === "add-event-button" || btnId === "add-class-button") {
+      return;
+    }
+
     // Use data-class for the original class name (with spaces etc.)
     // and the sanitized slug from the ID for DOM targeting
-    var classSlug = $(this).attr("id").replace("add_more_roll_names_", "");
+    var classSlug = btnId.replace("add_more_roll_names_", "");
     var classType = $(this).data("class") || classSlug;
     var $wrapper = $("#competitors_roll_names_wrapper_" + classSlug);
 
