@@ -852,8 +852,8 @@ add_action('admin_init', 'initialize_competitors_settings');
 function initialize_competitors_classes_settings() {
     add_settings_section(
         'competitors_classes_section',
-        esc_html__('Competition Classes', 'competitors'),
-        'render_competitors_classes_section', // Combined callback: description + fields
+        '', // No title — the page h1 is sufficient
+        'render_competitors_classes_section',
         'competitors_classes_settings'
     );
 }
@@ -861,8 +861,8 @@ function initialize_competitors_classes_settings() {
 function initialize_competitors_dates_settings() {
     add_settings_section(
         'competitors_dates_section',
-        esc_html__('Competition Dates', 'competitors'),
-        'render_competitors_dates_section', // Combined callback: description + fields
+        '', // No title — avoids duplicate heading under h1
+        'render_competitors_dates_section',
         'competitors_dates_settings'
     );
 }
@@ -929,6 +929,7 @@ function initialize_roll_date_mapping_settings() {
  * Renders directly instead of via add_settings_field to avoid nested form-tables.
  */
 function render_competitors_classes_section() {
+    echo '<h3>' . esc_html__('Classes', 'competitors') . '</h3>';
     echo '<p>' . esc_html__('Add competition classes below. The "Class Name" is what competitors see in the registration form. An internal ID is generated automatically.', 'competitors') . '</p>';
     render_competitors_classes_field();
 }
@@ -937,6 +938,7 @@ function render_competitors_classes_section() {
  * Combined section callback for dates: description + add form + list.
  */
 function render_competitors_dates_section() {
+    echo '<h3>' . esc_html__('Dates', 'competitors') . '</h3>';
     echo '<p>' . esc_html__('Click in the date field to pick a date. Each date creates a competition event.', 'competitors') . '</p>';
     render_competitors_dates_field();
 }

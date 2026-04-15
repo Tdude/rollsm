@@ -41,12 +41,8 @@ class Competitors_Admin_PersonalDataPage {
             return;
         }
 
-        $page_slug = 'test-results-list-page';
         echo '<p class="hide-for-print">'
-            . esc_html__( 'Click on headers to sort.', 'competitors' )
-            . ' <a href="' . esc_url( site_url( '/' . $page_slug . '/' ) ) . '">'
-            . esc_html__( 'Public page', 'competitors' ) . '</a> '
-            . esc_html__( 'for this data.', 'competitors' )
+            . esc_html__( 'Click on column headers to sort.', 'competitors' )
             . '</p>';
 
         echo '<table class="competitors-table" id="sortable-table">';

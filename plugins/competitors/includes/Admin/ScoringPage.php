@@ -77,7 +77,7 @@ class Competitors_Admin_ScoringPage {
         $classes = Competitors_ClassRepository::find_all();
         ?>
         <div id="filter_form">
-            <p><strong><?php esc_html_e( 'Choose class and gender, then click Filter.', 'competitors' ); ?></strong></p>
+            <p><?php esc_html_e( 'Choose class and gender, then click Filter.', 'competitors' ); ?></p>
 
             <input type="hidden" id="filter_date" value="<?php echo esc_attr( $competition['event_date'] ); ?>">
 
@@ -257,7 +257,7 @@ class Competitors_Admin_ScoringPage {
 
         return <<<HTML
         <tr class="competitor-header" data-competitor-id="{$comp_id}">
-            <th colspan="5">
+            <th colspan="6">
                 <span class="toggle-details-icon dashicons dashicons-arrow-down-alt2"></span>
                 <b class="competitor-name larger-text">{$rank}. {$name_esc}</b>
             </th>
