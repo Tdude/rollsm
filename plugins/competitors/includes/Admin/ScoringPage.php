@@ -370,12 +370,15 @@ class Competitors_Admin_ScoringPage {
     }
 
     private static function radio_inputs( $prefix, $max, $less, $scores, $no_rl ) {
+        $more_label = esc_html__( 'More', 'competitors' );
+        $less_label = esc_html__( 'Less', 'competitors' );
+
         if ( $no_rl ) {
             $name = "{$prefix}[score]";
             $sc   = isset( $scores['left_group'] ) && (int) $scores['left_group'] === $max ? 'checked' : '';
             $dc   = isset( $scores['left_group'] ) && (int) $scores['left_group'] === $less ? 'checked' : '';
-            return "<td class=\"success-light\"><label><input type=\"radio\" class=\"score-input\" name=\"{$name}\" value=\"{$max}\" {$sc}> {$max}p</label></td>"
-                 . "<td class=\"danger-light\"><label><input type=\"radio\" class=\"deduct-input\" name=\"{$name}\" value=\"{$less}\" {$dc}> {$less}p</label></td>";
+            return "<td class=\"success-light\"><label><input type=\"radio\" class=\"score-input\" name=\"{$name}\" value=\"{$max}\" {$sc}> {$more_label} ({$max}p)</label></td>"
+                 . "<td class=\"danger-light\"><label><input type=\"radio\" class=\"deduct-input\" name=\"{$name}\" value=\"{$less}\" {$dc}> {$less_label} ({$less}p)</label></td>";
         }
 
         $ln = "{$prefix}[left_group]";
@@ -385,10 +388,10 @@ class Competitors_Admin_ScoringPage {
         $rs = isset( $scores['right_group'] ) && (int) $scores['right_group'] === $max ? 'checked' : '';
         $rd = isset( $scores['right_group'] ) && (int) $scores['right_group'] === $less ? 'checked' : '';
 
-        return "<td class=\"success-light\"><label><input type=\"radio\" class=\"score-input\" name=\"{$ln}\" value=\"{$max}\" {$ls}> {$max}p</label></td>"
-             . "<td class=\"danger-light\"><label><input type=\"radio\" class=\"deduct-input\" name=\"{$ln}\" value=\"{$less}\" {$ld}> {$less}p</label></td>"
-             . "<td class=\"success-light\"><label><input type=\"radio\" class=\"score-input\" name=\"{$rn}\" value=\"{$max}\" {$rs}> {$max}p</label></td>"
-             . "<td class=\"danger-light\"><label><input type=\"radio\" class=\"deduct-input\" name=\"{$rn}\" value=\"{$less}\" {$rd}> {$less}p</label></td>";
+        return "<td class=\"success-light\"><label><input type=\"radio\" class=\"score-input\" name=\"{$ln}\" value=\"{$max}\" {$ls}> {$more_label} ({$max}p)</label></td>"
+             . "<td class=\"danger-light\"><label><input type=\"radio\" class=\"deduct-input\" name=\"{$ln}\" value=\"{$less}\" {$ld}> {$less_label} ({$less}p)</label></td>"
+             . "<td class=\"success-light\"><label><input type=\"radio\" class=\"score-input\" name=\"{$rn}\" value=\"{$max}\" {$rs}> {$more_label} ({$max}p)</label></td>"
+             . "<td class=\"danger-light\"><label><input type=\"radio\" class=\"deduct-input\" name=\"{$rn}\" value=\"{$less}\" {$rd}> {$less_label} ({$less}p)</label></td>";
     }
 
     private static function calc_total( $is_numeric, $scores, $max, $less, $no_rl ) {
