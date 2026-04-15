@@ -299,11 +299,22 @@ b.larger-txt {
   text-align: left;
 }
 
+.competitors-table .danger-light,
+.competitors-table .success-light {
+  padding: 0;
+}
 .competitors-table .danger-light {
   background-color: var(--danger-light);
 }
 .competitors-table .success-light {
   background-color: var(--success-light);
+}
+.competitors-table .danger-light label,
+.competitors-table .success-light label {
+  display: block;
+  padding: 10px 8px;
+  cursor: pointer;
+  margin: 0;
 }
 
 /* Specific styles for the inner table within .competitors-info row to remove borders */
