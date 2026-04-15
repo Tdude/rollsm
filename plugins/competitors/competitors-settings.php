@@ -851,48 +851,26 @@ add_action('admin_init', 'initialize_competitors_settings');
  */
 function initialize_competitors_classes_settings() {
     add_settings_section(
-        'competitors_classes_section', // Section ID
-        esc_html__('Manage Competition Classes', 'competitors'), // Title
-        'competitors_classes_section_callback', // Callback to display description
-        'competitors_classes_settings' // Page slug
-    );
-
-    add_settings_field(
-        'competitors_classes_field', // Field ID
-        esc_html__('Competition Classes', 'competitors'), // Label
-        'render_competitors_classes_field', // Callback to render the field
-        'competitors_classes_settings', // Page slug
-        'competitors_classes_section' // Section ID
+        'competitors_classes_section',
+        esc_html__('Competition Classes', 'competitors'),
+        'render_competitors_classes_section', // Combined callback: description + fields
+        'competitors_classes_settings'
     );
 }
-
-
-
 
 function initialize_competitors_dates_settings() {
     add_settings_section(
         'competitors_dates_section',
-        // Translatable string for section title
-        esc_html__('Event Date and Name', 'competitors'),
-        'competitors_dates_section_callback',
-        'competitors_dates_settings'
-    );
-
-    add_settings_field(
-        'competitors_dates_field',
-        // Translatable string for field label
         esc_html__('Competition Dates', 'competitors'),
-        'render_competitors_dates_field',
-        'competitors_dates_settings',
-        'competitors_dates_section'
+        'render_competitors_dates_section', // Combined callback: description + fields
+        'competitors_dates_settings'
     );
 }
 
 function initialize_competitors_rollnames_settings() {
     add_settings_section(
         'competitors_rollnames_section',
-        // Translatable string for section title
-        esc_html__('Roll Names and Points for all competition classes', 'competitors'),
+        esc_html__('Roll Definitions', 'competitors'),
         'competitors_rollnames_section_callback',
         'competitors_rollnames_settings'
     );
@@ -946,18 +924,21 @@ function initialize_roll_date_mapping_settings() {
 }
 
 
-function competitors_classes_section_callback() {
-    echo wp_kses(
-        '<p>' . esc_html__('Add competition classes below. The "Class Name" is what competitors see in the registration form. A short internal identifier is generated automatically from the name.', 'competitors') . '</p>',
-        ['p' => []]
-    );
+/**
+ * Combined section callback for classes: description + add form + list.
+ * Renders directly instead of via add_settings_field to avoid nested form-tables.
+ */
+function render_competitors_classes_section() {
+    echo '<p>' . esc_html__('Add competition classes below. The "Class Name" is what competitors see in the registration form. An internal ID is generated automatically.', 'competitors') . '</p>';
+    render_competitors_classes_field();
 }
 
-function competitors_dates_section_callback() {
-    echo wp_kses(
-        '<p>' . esc_html__('Click in the date field and a calendar where you choose date should appear.', 'competitors') . '</p>',
-        ['p' => []]
-    );
+/**
+ * Combined section callback for dates: description + add form + list.
+ */
+function render_competitors_dates_section() {
+    echo '<p>' . esc_html__('Click in the date field to pick a date. Each date creates a competition event.', 'competitors') . '</p>';
+    render_competitors_dates_field();
 }
 
 function competitors_roll_date_mapping_section_callback() {
