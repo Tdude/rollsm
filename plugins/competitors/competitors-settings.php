@@ -73,6 +73,21 @@ add_action('admin_init', function () {
     if (Competitors_Database::needs_upgrade()) {
         Competitors_Database::create_tables();
     }
+
+    // Ensure current competition has roll snapshots (catch-up for pre-existing competitions)
+    if (Competitors_Migration::is_complete()) {
+        $current = Competitors_CompetitionRepository::find_current();
+        if ($current) {
+            global $wpdb;
+            $snapshot_count = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM " . Competitors_Database::table('competition_rolls') . " WHERE competition_id = %d",
+                (int) $current['id']
+            ));
+            if ($snapshot_count === 0) {
+                Competitors_CompetitionRepository::snapshot_rolls_for_competition((int) $current['id']);
+            }
+        }
+    }
 });
 
 // Initialize migration admin notice + AJAX handlers

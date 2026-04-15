@@ -102,7 +102,41 @@ class Competitors_CompetitionRepository {
             array( '%s', '%s', '%s', '%d', '%d' )
         );
 
-        return $result ? $wpdb->insert_id : false;
+        if ( ! $result ) {
+            return false;
+        }
+
+        $new_id = $wpdb->insert_id;
+
+        // Lock all previous competitions
+        self::lock_all_except( $new_id );
+
+        // Auto-snapshot current master rolls for all classes
+        self::snapshot_rolls_for_competition( $new_id );
+
+        return $new_id;
+    }
+
+    /**
+     * Snapshot master rolls for all classes into a competition.
+     * This freezes the roll definitions so future edits to master rolls
+     * don't affect this competition's scoring or public display.
+     *
+     * @param int $competition_id
+     * @return int Total rows snapshotted.
+     */
+    public static function snapshot_rolls_for_competition( $competition_id ) {
+        $classes = Competitors_ClassRepository::find_all();
+        $total   = 0;
+
+        foreach ( $classes as $class ) {
+            $total += Competitors_RollRepository::snapshot_for_competition(
+                $competition_id,
+                (int) $class['id']
+            );
+        }
+
+        return $total;
     }
 
     /**
