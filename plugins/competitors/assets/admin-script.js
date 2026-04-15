@@ -928,16 +928,21 @@ jQuery(document).ready(function ($) {
     if (newDate && eventName) {
       var eventObj = { date: newDate, name: eventName };
       var eventString = JSON.stringify(eventObj);
-      $("#existing_events").append(
-        `<li class="event-item" data-date="${escapeHtml(
+      // Remove "no items" row if present
+      $("#existing_events tbody .no-items").remove();
+      $("#existing_events tbody").append(
+        `<tr class="event-item" data-date="${escapeHtml(
           newDate
         )}" data-name="${escapeHtml(eventName)}">
-                <input type="hidden" name="competitors_options[available_competition_dates][]" value="${encodeURIComponent(
-                  eventString
-                )}">
-                ${escapeHtml(newDate)} - ${escapeHtml(eventName)}
-                <button type="button" class="button-secondary remove-event-button">Remove</button>
-            </li>`
+                <td><strong>${escapeHtml(newDate)}</strong></td>
+                <td>${escapeHtml(eventName)}</td>
+                <td>
+                  <input type="hidden" name="competitors_options[available_competition_dates][]" value="${encodeURIComponent(
+                    eventString
+                  )}">
+                  <button type="button" class="button-secondary button-small remove-event-button">Remove</button>
+                </td>
+            </tr>`
       );
       $("#new_competition_date").val("").datepicker("setDate", null);
       $("#new_event_name").val("");
@@ -977,37 +982,34 @@ jQuery(document).ready(function ($) {
     }
     var classObj = { name: newClassName, comment: newClassComment };
     var classString = JSON.stringify(classObj);
-    $("#existing_classes").append(
-      `<li class="class-item" data-name="${escapeHtml(
+    // Remove "no items" row if present
+    $("#existing_classes tbody .no-items").remove();
+    $("#existing_classes tbody").append(
+      `<tr class="class-item" data-name="${escapeHtml(
         newClassName
       )}" data-comment="${escapeHtml(newClassComment)}">
-              <input type="hidden" name="competitors_options[available_competition_classes][]" value="${encodeURIComponent(
-                classString
-              )}">
-              <strong>${escapeHtml(newClassComment)}</strong>
-              <code style="margin-left:6px; color:#666; font-size:0.85em;">${escapeHtml(
-                newClassName
-              )}</code>
-              <button type="button" class="button-secondary remove-class-button">Remove</button>
-          </li>`
+              <td><strong>${escapeHtml(newClassComment)}</strong></td>
+              <td><code>${escapeHtml(newClassName)}</code></td>
+              <td>
+                <input type="hidden" name="competitors_options[available_competition_classes][]" value="${encodeURIComponent(
+                  classString
+                )}">
+                <button type="button" class="button-secondary button-small remove-class-button">Remove</button>
+              </td>
+          </tr>`
     );
     $("#new_class_comment").val("");
     $("#class-slug-preview").text("");
   });
 
   // Remove Class button functionality
-  $("#existing_classes").on("click", ".remove-class-button", function () {
-    $(this).closest("li").remove();
-  });
-
-  // Delegate click event for the event and class row remove buttons
   $(document).on("click", ".remove-class-button", function () {
-    $(this).closest("li").remove();
+    $(this).closest("tr").remove();
   });
 
-  // Delegate click event for the event and class row remove buttons
+  // Remove Event button functionality
   $(document).on("click", ".remove-event-button", function () {
-    $(this).closest("li").remove();
+    $(this).closest("tr").remove();
   });
 
   // Function to escape HTML

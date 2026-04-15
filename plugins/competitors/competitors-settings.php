@@ -1048,7 +1048,7 @@ function render_competitors_roll_date_mapping_field() {
 
 function competitors_rollnames_section_callback() {
     echo wp_kses(
-        '<p>' . esc_html__('The numeric checkbox is for speedrolls or meters paddled under water, so there is no more/less button but an input field.', 'competitors') . '</p>',
+        '<p>' . esc_html__('The numeric checkbox is for speedrolls or meters paddled under water (so there is no more/less button but an input field on the scoresheet).', 'competitors') . '</p>',
         ['p' => []]
     );
 }
@@ -1062,24 +1062,43 @@ function render_competitors_classes_field() {
     }
     ob_start();
     ?>
-    <div id="add-class-form">
-        <label for="new_class_comment"><?php esc_html_e('Class Name:', 'competitors'); ?></label>
-        <input type="text" id="new_class_comment" name="new_class_comment" value="" placeholder="<?php esc_attr_e('e.g. Open (International)', 'competitors'); ?>" size="40" />
-        <span id="class-slug-preview" style="color:#666; margin-left:8px;"></span>
-        <button type="button" id="add-class-button" class="button button-primary plus-button"></button>
-    </div>
-    <ul id="existing_classes">
-        <?php foreach ($classes as $index => $class) : ?>
-            <?php if (is_array($class) && isset($class['name']) && isset($class['comment'])) : ?>
-                <li class="class-item <?php echo $index % 2 == 0 ? 'alternate' : ''; ?>" data-name="<?php echo esc_attr($class['name']); ?>" data-comment="<?php echo esc_attr($class['comment']); ?>">
-                    <strong><?php echo esc_html($class['comment'] ?: $class['name']); ?></strong>
-                    <code style="margin-left:6px; color:#666; font-size:0.85em;"><?php echo esc_html($class['name']); ?></code>
-                    <input type="hidden" name="competitors_options[available_competition_classes][]" value="<?php echo esc_attr(json_encode($class)); ?>" />
-                    <button type="button" class="button-secondary remove-class-button"><?php esc_html_e('Remove', 'competitors'); ?></button>
-                </li>
+    <table class="form-table" role="presentation">
+        <tr>
+            <th scope="row"><label for="new_class_comment"><?php esc_html_e('Class Name:', 'competitors'); ?></label></th>
+            <td>
+                <input type="text" id="new_class_comment" name="new_class_comment" value="" placeholder="<?php esc_attr_e('e.g. Open (International)', 'competitors'); ?>" class="regular-text" />
+                <span id="class-slug-preview" style="color:#666; margin-left:8px;"></span>
+                <button type="button" id="add-class-button" class="button button-primary plus-button"></button>
+            </td>
+        </tr>
+    </table>
+
+    <table class="wp-list-table widefat fixed striped" id="existing_classes">
+        <thead>
+            <tr>
+                <th><?php esc_html_e('Class Name', 'competitors'); ?></th>
+                <th style="width:200px;"><?php esc_html_e('ID', 'competitors'); ?></th>
+                <th style="width:100px;"><?php esc_html_e('Actions', 'competitors'); ?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if (empty($classes)) : ?>
+                <tr class="no-items"><td colspan="3"><?php esc_html_e('No classes added yet.', 'competitors'); ?></td></tr>
             <?php endif; ?>
-        <?php endforeach; ?>
-    </ul>
+            <?php foreach ($classes as $index => $class) : ?>
+                <?php if (is_array($class) && isset($class['name']) && isset($class['comment'])) : ?>
+                    <tr class="class-item" data-name="<?php echo esc_attr($class['name']); ?>" data-comment="<?php echo esc_attr($class['comment']); ?>">
+                        <td><strong><?php echo esc_html($class['comment'] ?: $class['name']); ?></strong></td>
+                        <td><code><?php echo esc_html($class['name']); ?></code></td>
+                        <td>
+                            <input type="hidden" name="competitors_options[available_competition_classes][]" value="<?php echo esc_attr(json_encode($class)); ?>" />
+                            <button type="button" class="button-secondary button-small remove-class-button"><?php esc_html_e('Remove', 'competitors'); ?></button>
+                        </td>
+                    </tr>
+                <?php endif; ?>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
     <?php
     echo ob_get_clean();
 }
@@ -1092,22 +1111,42 @@ function render_competitors_dates_field() {
     }
     ob_start();
     ?>
-    <div id="add-event-form">
-        <label for="new_competition_date"><?php esc_html_e('New Competition Date:', 'competitors'); ?></label>
-        <input type="text" id="new_competition_date" class="date-picker" name="new_competition_date" value="" />
-        <label for="new_event_name"><?php esc_html_e('Event Name:', 'competitors'); ?></label>
-        <input type="text" id="new_event_name" name="new_event_name" value="" />
-        <button type="button" id="add-event-button" class="button custom-button button-primary plus-button"></button>
-    </div>
-    <ul id="existing_events">
-        <?php foreach ($events as $index => $event): ?>
-            <li class="event-item <?php echo $index % 2 == 0 ? 'alternate' : ''; ?>" data-date="<?php echo esc_attr($event['date']); ?>" data-name="<?php echo esc_attr($event['name']); ?>">
-                <?php echo esc_html($event['date'] . ' - ' . $event['name']); ?>
-                <input type="hidden" name="competitors_options[available_competition_dates][]" value="<?php echo esc_attr(json_encode($event)); ?>" />
-                <button type="button" class="button custom-button button-secondary remove-event-button"><?php esc_html_e('Remove', 'competitors'); ?></button>
-            </li>
-        <?php endforeach; ?>
-    </ul>
+    <table class="form-table" role="presentation">
+        <tr>
+            <th scope="row"><label for="new_competition_date"><?php esc_html_e('Date:', 'competitors'); ?></label></th>
+            <td>
+                <input type="text" id="new_competition_date" class="date-picker" name="new_competition_date" value="" />
+                <label for="new_event_name" style="margin-left:12px;"><?php esc_html_e('Event Name:', 'competitors'); ?></label>
+                <input type="text" id="new_event_name" name="new_event_name" value="" class="regular-text" />
+                <button type="button" id="add-event-button" class="button button-primary plus-button"></button>
+            </td>
+        </tr>
+    </table>
+
+    <table class="wp-list-table widefat fixed striped" id="existing_events">
+        <thead>
+            <tr>
+                <th style="width:140px;"><?php esc_html_e('Date', 'competitors'); ?></th>
+                <th><?php esc_html_e('Event Name', 'competitors'); ?></th>
+                <th style="width:100px;"><?php esc_html_e('Actions', 'competitors'); ?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if (empty($events)) : ?>
+                <tr class="no-items"><td colspan="3"><?php esc_html_e('No events added yet.', 'competitors'); ?></td></tr>
+            <?php endif; ?>
+            <?php foreach ($events as $index => $event): ?>
+                <tr class="event-item" data-date="<?php echo esc_attr($event['date']); ?>" data-name="<?php echo esc_attr($event['name']); ?>">
+                    <td><strong><?php echo esc_html($event['date']); ?></strong></td>
+                    <td><?php echo esc_html($event['name']); ?></td>
+                    <td>
+                        <input type="hidden" name="competitors_options[available_competition_dates][]" value="<?php echo esc_attr(json_encode($event)); ?>" />
+                        <button type="button" class="button-secondary button-small remove-event-button"><?php esc_html_e('Remove', 'competitors'); ?></button>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
     <?php
     echo ob_get_clean();
  }
