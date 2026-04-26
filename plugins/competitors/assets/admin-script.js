@@ -5,8 +5,11 @@ document.addEventListener("DOMContentLoaded", () => {
     let resetButton = document.getElementById("reset_button");
     let filterDateSelect = document.getElementById("filter_date");
     let filterClassSelect = document.getElementById("filter_class");
+    let filterGenderSelect = document.getElementById("filter_gender");
     const nonce = competitorsAdminAjax.nonce;
     const spinner = document.getElementById("spinner");
+    // Use v2 action if available (migration complete), otherwise old action
+    const filterAction = (typeof competitorsOfflineSync !== "undefined") ? "filter_competitors_v2" : "filter_competitors";
 
     // Function to initialize all events on DOMContentLoaded
     reattachAllEvents();
@@ -94,8 +97,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function filterCompetitors() {
-      const filterDate = filterDateSelect.value;
-      const filterClass = filterClassSelect.value;
+      const filterDate = filterDateSelect ? filterDateSelect.value : "";
+      const filterClass = filterClassSelect ? filterClassSelect.value : "";
+      const filterGender = filterGenderSelect ? filterGenderSelect.value : "";
 
       if (filterDate) {
         localStorage.setItem("filter_date", filterDate);
@@ -109,6 +113,12 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.removeItem("filter_class");
       }
 
+      if (filterGender) {
+        localStorage.setItem("filter_gender", filterGender);
+      } else {
+        localStorage.removeItem("filter_gender");
+      }
+
       showSpinner();
 
       fetch(competitorsAdminAjax.ajaxurl, {
@@ -117,9 +127,10 @@ document.addEventListener("DOMContentLoaded", () => {
           "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         },
         body: new URLSearchParams({
-          action: "filter_competitors",
+          action: filterAction,
           filter_date: filterDate,
           filter_class: filterClass,
+          filter_gender: filterGender,
           nonce: nonce,
         }),
       })
@@ -153,11 +164,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function resetFilters() {
-      filterDateSelect.value = "";
-      filterClassSelect.value = "";
+      if (filterDateSelect) filterDateSelect.value = "";
+      if (filterClassSelect) filterClassSelect.value = "";
+      if (filterGenderSelect) filterGenderSelect.value = "";
 
       localStorage.removeItem("filter_date");
       localStorage.removeItem("filter_class");
+      localStorage.removeItem("filter_gender");
 
       scoringContainer.innerHTML = "<p>Loading...</p>";
       showSpinner();
@@ -168,9 +181,10 @@ document.addEventListener("DOMContentLoaded", () => {
           "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         },
         body: new URLSearchParams({
-          action: "filter_competitors",
+          action: filterAction,
           filter_date: "",
           filter_class: "",
+          filter_gender: "",
           nonce: nonce,
         }),
       })
@@ -209,43 +223,58 @@ document.addEventListener("DOMContentLoaded", () => {
       if (scoringContainer) {
         const savedFilterDate = localStorage.getItem("filter_date");
         const savedFilterClass = localStorage.getItem("filter_class");
+        const savedFilterGender = localStorage.getItem("filter_gender");
 
-        if (savedFilterDate) {
+        if (savedFilterDate && filterDateSelect) {
           filterDateSelect.value = savedFilterDate;
         }
-        if (savedFilterClass) {
+        if (savedFilterClass && filterClassSelect) {
           filterClassSelect.value = savedFilterClass;
         }
-        if (savedFilterDate || savedFilterClass) {
+        if (savedFilterGender && filterGenderSelect) {
+          filterGenderSelect.value = savedFilterGender;
+        }
+        if (savedFilterDate || savedFilterClass || savedFilterGender) {
           filterCompetitors();
         }
       }
     }
 
     function reattachAllEvents() {
-      if (
-        !filterDateSelect ||
-        !filterClassSelect ||
-        !filterButton ||
-        !resetButton ||
-        !scoringContainer
-      ) {
-        console.error(
-          "One or more elements are missing. Cannot reattach events."
-        );
+      if (!scoringContainer) {
+        console.error("Scoring container not found. Cannot reattach events.");
         return;
       }
 
-      filterDateSelect.removeEventListener("change", filterCompetitors);
-      filterClassSelect.removeEventListener("change", filterCompetitors);
-      filterButton.removeEventListener("click", filterCompetitors);
-      resetButton.removeEventListener("click", resetFilters);
-      scoringContainer.removeEventListener("click", handleCompetitorToggle);
+      // Re-grab filter elements (they may have been replaced by AJAX)
+      filterButton = document.getElementById("filter_button");
+      resetButton = document.getElementById("reset_button");
+      filterDateSelect = document.getElementById("filter_date");
+      filterClassSelect = document.getElementById("filter_class");
+      filterGenderSelect = document.getElementById("filter_gender");
 
-      filterDateSelect.addEventListener("change", filterCompetitors);
-      filterClassSelect.addEventListener("change", filterCompetitors);
-      filterButton.addEventListener("click", filterCompetitors);
-      resetButton.addEventListener("click", resetFilters);
+      if (filterDateSelect) {
+        filterDateSelect.removeEventListener("change", filterCompetitors);
+        filterDateSelect.addEventListener("change", filterCompetitors);
+      }
+      if (filterClassSelect) {
+        filterClassSelect.removeEventListener("change", filterCompetitors);
+        filterClassSelect.addEventListener("change", filterCompetitors);
+      }
+      if (filterGenderSelect) {
+        filterGenderSelect.removeEventListener("change", filterCompetitors);
+        filterGenderSelect.addEventListener("change", filterCompetitors);
+      }
+      if (filterButton) {
+        filterButton.removeEventListener("click", filterCompetitors);
+        filterButton.addEventListener("click", filterCompetitors);
+      }
+      if (resetButton) {
+        resetButton.removeEventListener("click", resetFilters);
+        resetButton.addEventListener("click", resetFilters);
+      }
+
+      scoringContainer.removeEventListener("click", handleCompetitorToggle);
       scoringContainer.addEventListener("click", handleCompetitorToggle);
 
       attachScoringEvents();
@@ -613,7 +642,7 @@ document.addEventListener("DOMContentLoaded", () => {
           startBtn.textContent = "Pause";
           if (elapsedTime === 0) {
             document.getElementById(`start-time-${currentCompetitorId}`).value =
-              getLocalizedTime(timezone);
+              toMySQLDatetime(new Date());
           }
           interval = setInterval(() => {
             elapsedTime += 100;
@@ -642,16 +671,29 @@ document.addEventListener("DOMContentLoaded", () => {
           return localizedTime;
         }
 
+        // Format a Date as MySQL-compatible datetime: YYYY-MM-DD HH:MM:SS
+        function toMySQLDatetime(date) {
+          const pad = (n) => String(n).padStart(2, "0");
+          return (
+            date.getFullYear() + "-" +
+            pad(date.getMonth() + 1) + "-" +
+            pad(date.getDate()) + " " +
+            pad(date.getHours()) + ":" +
+            pad(date.getMinutes()) + ":" +
+            pad(date.getSeconds())
+          );
+        }
+
         // Handle score saving
         function prepareFormData(competitorId) {
           if (competitorId) {
-            const stopTime = getLocalizedTime(timezone);
-            const elapsedTimeValue = timerDisplay.textContent;
+            const stopTime = toMySQLDatetime(new Date());
+            const elapsedSeconds = Math.floor(elapsedTime / 1000);
 
             document.getElementById(`stop-time-${competitorId}`).value =
               stopTime;
             document.getElementById(`elapsed-time-${competitorId}`).value =
-              elapsedTimeValue;
+              elapsedSeconds;
           }
         }
 
@@ -728,34 +770,23 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
           }
 
+          // Use FormData directly — it preserves nested array keys
+          // like competitor_scores[2][37][left_group]
           const formData = new FormData(scoringForm);
-          formData.append("action", "competitors_score_update");
-          formData.append(
-            "competitors_score_update_nonce",
-            competitorsAdminAjax.nonce
-          );
 
-          // Log hidden field values
-          const stopTimeField = document.getElementById(
-            `stop-time-${currentCompetitorId}`
-          );
-          const elapsedTimeField = document.getElementById(
-            `elapsed-time-${currentCompetitorId}`
-          );
-
-          const dataObject = {};
-          formData.forEach((value, key) => {
-            dataObject[key] = value;
-          });
+          // The form already has a hidden "action" field (competitors_score_update_v2)
+          // and a nonce field. Only add nonce if missing.
+          if (!formData.has("competitors_score_update_nonce")) {
+            formData.append(
+              "competitors_score_update_nonce",
+              competitorsAdminAjax.nonce
+            );
+          }
 
           fetch(competitorsAdminAjax.ajaxurl, {
             method: "POST",
             credentials: "same-origin",
-            headers: {
-              "Content-Type":
-                "application/x-www-form-urlencoded; charset=UTF-8",
-            },
-            body: new URLSearchParams(dataObject),
+            body: formData,
           })
             .then((response) => {
               if (!response.ok) {
@@ -892,64 +923,95 @@ jQuery(document).ready(function ($) {
   });
 
   // Add Event button functionality for Settings page
-  $("#add-event-button").click(function () {
+  $("#add-event-button").click(function (e) {
+    e.preventDefault();
     var newDate = $("#new_competition_date").val();
     var eventName = $("#new_event_name").val();
     if (newDate && eventName) {
       var eventObj = { date: newDate, name: eventName };
       var eventString = JSON.stringify(eventObj);
-      $("#existing_events").append(
-        `<li class="event-item" data-date="${escapeHtml(
+      // Remove "no items" row if present
+      $("#existing_events tbody .no-items").remove();
+      $("#existing_events tbody").append(
+        `<tr class="event-item" data-date="${escapeHtml(
           newDate
         )}" data-name="${escapeHtml(eventName)}">
-                <input type="hidden" name="competitors_options[available_competition_dates][]" value="${encodeURIComponent(
-                  eventString
-                )}">
-                ${escapeHtml(newDate)} - ${escapeHtml(eventName)}
-                <button type="button" class="button-secondary remove-event-button">Remove</button>
-            </li>`
+                <td><strong>${escapeHtml(newDate)}</strong></td>
+                <td>${escapeHtml(eventName)}</td>
+                <td>
+                  <input type="hidden" name="competitors_options[available_competition_dates][]" value="${encodeURIComponent(
+                    eventString
+                  )}">
+                  <button type="button" class="button-secondary button-small remove-event-button">Remove</button>
+                </td>
+            </tr>`
       );
       $("#new_competition_date").val("").datepicker("setDate", null);
       $("#new_event_name").val("");
     }
   });
 
+  // Derive a URL-safe slug from a string (JS equivalent of WP sanitize_title)
+  function slugify(text) {
+    return text
+      .toString()
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, "") // remove non-word chars (except spaces and hyphens)
+      .replace(/[\s_]+/g, "-") // spaces/underscores to hyphens
+      .replace(/-+/g, "-") // collapse multiple hyphens
+      .replace(/^-|-$/g, ""); // trim leading/trailing hyphens
+  }
+
+  // Live slug preview when typing class name
+  $("#new_class_comment").on("input", function () {
+    var slug = slugify($(this).val());
+    $("#class-slug-preview").text(slug ? "ID: " + slug : "");
+  });
+
   // Add Class button functionality for Settings page
-  $("#add-class-button").click(function () {
-    var newClassName = $("#new_class_name").val();
-    var newClassComment = $("#new_class_comment").val();
-    if (newClassName && newClassComment) {
-      var classObj = { name: newClassName, comment: newClassComment };
-      var classString = JSON.stringify(classObj);
-      $("#existing_classes").append(
-        `<li class="class-item" data-name="${escapeHtml(
-          newClassName
-        )}" data-comment="${escapeHtml(newClassComment)}">
+  // User enters the visible "Class Name" (stored as comment).
+  // The internal data name (stored as name) is auto-derived as a slug.
+  $("#add-class-button").click(function (e) {
+    e.preventDefault();
+    var newClassComment = $.trim($("#new_class_comment").val());
+    if (!newClassComment) {
+      return;
+    }
+    var newClassName = slugify(newClassComment);
+    if (!newClassName) {
+      return;
+    }
+    var classObj = { name: newClassName, comment: newClassComment };
+    var classString = JSON.stringify(classObj);
+    // Remove "no items" row if present
+    $("#existing_classes tbody .no-items").remove();
+    $("#existing_classes tbody").append(
+      `<tr class="class-item" data-name="${escapeHtml(
+        newClassName
+      )}" data-comment="${escapeHtml(newClassComment)}">
+              <td><strong>${escapeHtml(newClassComment)}</strong></td>
+              <td><code>${escapeHtml(newClassName)}</code></td>
+              <td>
                 <input type="hidden" name="competitors_options[available_competition_classes][]" value="${encodeURIComponent(
                   classString
                 )}">
-                ${escapeHtml(newClassName)} - ${escapeHtml(newClassComment)}
-                <button type="button" class="button-secondary remove-class-button">Remove</button>
-            </li>`
-      );
-      $("#new_class_name").val("");
-      $("#new_class_comment").val("");
-    }
+                <button type="button" class="button-secondary button-small remove-class-button">Remove</button>
+              </td>
+          </tr>`
+    );
+    $("#new_class_comment").val("");
+    $("#class-slug-preview").text("");
   });
 
   // Remove Class button functionality
-  $("#existing_classes").on("click", ".remove-class-button", function () {
-    $(this).closest("li").remove();
-  });
-
-  // Delegate click event for the event and class row remove buttons
   $(document).on("click", ".remove-class-button", function () {
-    $(this).closest("li").remove();
+    $(this).closest("tr").remove();
   });
 
-  // Delegate click event for the event and class row remove buttons
+  // Remove Event button functionality
   $(document).on("click", ".remove-event-button", function () {
-    $(this).closest("li").remove();
+    $(this).closest("tr").remove();
   });
 
   // Function to escape HTML
@@ -967,30 +1029,48 @@ jQuery(document).ready(function ($) {
   }
 
   // Function to create a new roll field
-  function createNewRollField(classType, index) {
+  // classType = original class name (for form name attributes)
+  // classSlug = sanitized slug (for HTML IDs) — falls back to classType if not provided
+  function createNewRollField(classType, index, classSlug) {
+    var slug = classSlug || classType;
     return `
       <p class="roll-item ${
         index % 2 === 0 ? "alternate" : ""
       }" data-index="${index}">
-        <label for="maneuver_${classType}_${index}">${index + 1}. Maneuver </label>
-        <input type="text" id="maneuver_${classType}_${index}" name="competitors_options[custom_values_${classType}][]" size="60" value="" />
-        <label for="points_${classType}_${index}"> Points: </label>
-        <input type="text" class="numeric-input" id="points_${classType}_${index}" name="competitors_options[numeric_values_${classType}][]" size="2" maxlength="2" pattern="\\d*" value="0" />
-        <label for="numeric_${classType}_${index}"> Numeric:</label>
-        <input type="checkbox" id="numeric_${classType}_${index}" name="competitors_options[is_numeric_field_${classType}][${index}]" value="1">
-        <label for="no_right_left_${classType}_${index}"> No Right/Left:</label>
-        <input type="checkbox" id="no_right_left_${classType}_${index}" name="competitors_options[no_right_left_${classType}][${index}]" value="1">
+        <label for="maneuver_${slug}_${index}">${index + 1}. Maneuver </label>
+        <input type="text" id="maneuver_${slug}_${index}" name="competitors_options[custom_values_${classType}][]" size="60" value="" />
+        <label for="points_${slug}_${index}"> Points: </label>
+        <input type="text" class="numeric-input" id="points_${slug}_${index}" name="competitors_options[numeric_values_${classType}][]" size="2" maxlength="2" pattern="\\d*" value="0" />
+        <label for="numeric_${slug}_${index}"> Numeric:</label>
+        <input type="checkbox" id="numeric_${slug}_${index}" name="competitors_options[is_numeric_field_${classType}][${index}]" value="1">
+        <label for="no_right_left_${slug}_${index}"> No Right/Left:</label>
+        <input type="checkbox" id="no_right_left_${slug}_${index}" name="competitors_options[no_right_left_${classType}][${index}]" value="1">
         <button type="button" class="button custom-button button-secondary remove-row">Remove</button>
       </p>
     `;
   }
 
-  // Event listener for adding roll names
+  // Event listener for adding roll names (only for roll buttons, not event/class buttons)
   $(document).on("click", ".plus-button", function () {
-    var classType = $(this).attr("id").replace("add_more_roll_names_", "");
-    var $wrapper = $("#competitors_roll_names_wrapper_" + classType);
+    var btnId = $(this).attr("id") || "";
+    // Skip event and class add buttons — they have their own handlers
+    if (btnId === "add-event-button" || btnId === "add-class-button") {
+      return;
+    }
+
+    // Use data-class for the original class name (with spaces etc.)
+    // and the sanitized slug from the ID for DOM targeting
+    var classSlug = btnId.replace("add_more_roll_names_", "");
+    var classType = $(this).data("class") || classSlug;
+    var $wrapper = $("#competitors_roll_names_wrapper_" + classSlug);
+
+    if (!$wrapper.length) {
+      console.error("Wrapper not found for class slug:", classSlug);
+      return;
+    }
+
     var index = $wrapper.find("p").length;
-    var newField = createNewRollField(classType, index);
+    var newField = createNewRollField(classType, index, classSlug);
 
     $wrapper.append(newField);
   });

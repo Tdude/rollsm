@@ -1,31 +1,73 @@
 # RollSM
-This is the Wordpress Greenland Rolling Competition plugin for participant registration and judges' scoring. 
-This plugin arose due to a need for a robust system handed over each year to a new organizer. The hurdles to get it going should be as small as possible.
 
-UPDATE: Due to popular input, there now is a date setup in the admin which allows competitors to register for several events if you make a club's battle or something. A user can filter the score lists by date.
+A WordPress plugin for Greenland Rolling Championship registration and live scoring. Built for organizers who change yearly -- the setup should be as simple as possible.
 
 ## Installation
 
-1. Download the RollSM plugin.
-2. Upload the plugin files to your `/wp-content/plugins/` directory, or install the plugin through the WordPress plugins screen directly.
-3. Activate the plugin through the 'Plugins' screen in WordPress.
-4. Use the plugin settings page to configure the Roll names.
-5. A default Wordpress "page" will be created with the URL (slug) '/competitors-display-page/'.
-
+1. Upload the `competitors` folder to `/wp-content/plugins/` or install via the WordPress plugin screen.
+2. Activate through **Plugins** in WP Admin.
+3. Go to **Competitors Settings** to configure rolls and classes.
+4. A default page is created at `/competitors-display-page/`.
 
 ## Features
 
-- **Competitor Registration**: Allows competitors to register for events directly through the WordPress site. Now including dates created by admins.
-- **Scoring System**: Judges or Admins can score competitors based on their roll performances and publish the score live as it is saved, ensuring an interesting, fair and transparent competition.
-- **Customizable Maneuvers**: Admins can define their competition dates and rolling maneuvers names, making the plugin adaptive to many languages.
-- **Language Support**: The plugin's readiness for translations and internationalization is somewhat scarce. If you like it, cheer me on and I will try a little harder! Or, you can contribute to the code yourself!
+- **Online Registration** -- competitors sign up via a public form with class, roll, and dinner selection.
+- **Live Scoring** -- judges score from a tablet or laptop; results publish instantly on save.
+- **Offline-First** -- scores save to the device (localStorage) immediately. If WiFi drops, data syncs automatically when connection returns. Local data is never deleted -- it persists as a backup even after sync.
+- **Competition Snapshots** -- roll definitions are frozen per competition (see below). Editing rolls for next year never affects past results.
+- **Customizable** -- define your own roll names, point values, classes, and dates. Supports multiple events per season.
+- **Competition Lock** -- old competitions are automatically locked. Scores and settings cannot be changed.
 
+## Shortcodes
 
-## Usage
+- `[competitors_form_public]` -- registration form
+- `[competitors_scoring_public]` -- public scoreboard with filters
 
-- **Adding Competitors**: Navigate to the RollSM section in the WordPress admin to add competitors on the spot or use shortcodes to add a form for online registration.
-- **Scoring**: During a competition, enter scores for each competitor through the RollSM admin panel. As soon as you save, the score is live.
-- **Shortcodes**: Use `[rollsm_register]` to display the registration form and `[rollsm_scoreboard]` to display the scoring board on any page.
+Place either shortcode on any WordPress page or post.
+
+## Admin Guide
+
+### Setting Up a New Season
+
+1. **Rolls Settings** -- define the master roll list (names, points, numeric/non-numeric, left/right). This is your template for all future competitions.
+2. **Classes & Dates** -- add classes (e.g. "Championship", "Open"). Type the class name; an internal ID is auto-generated. Add competition dates and event names.
+3. **Create a competition** -- when you add a new date, the current master rolls are snapshotted (copied) for that competition. This snapshot is what judges and the public see.
+
+### How Roll Snapshots Work
+
+This is the most important concept for organizers:
+
+- **Roll Settings** = your master template. Edit it freely between competitions.
+- **Creating a new competition** = freezes a copy of the master rolls at that moment.
+- **Scoring and public results** always read from the frozen snapshot, never the master.
+- **Editing the master after creation** only affects the next competition you create.
+
+This means you can safely add, remove, or change rolls in settings without worrying about corrupting past scores. Each competition is self-contained.
+
+### Scoring at the Dock
+
+- Open **Judges Scoring** on a laptop or tablet.
+- Click a competitor name to expand their score sheet. Start the timer.
+- Score each roll with More/Less buttons (or numeric input for speed rolls).
+- Hit **Save scores**. Results go live immediately if online.
+- **If WiFi drops**: scores are saved locally on the device. A notice appears. When connection returns, scores sync automatically in the background.
+- **Switching competitor** resets the timer. If offline, unsaved scores are stored locally first.
+- **Multiple judges**: each judge works on their own device. If a device runs out of battery, another can pick up where it left off -- scores are per-competitor, not per-device.
+
+### Data Migration (v2)
+
+If you are upgrading from an older version of the plugin:
+
+1. Go to **Competitors Settings**. A migration notice will appear.
+2. Click **Migrate Data Now**. This copies your existing data to the new format.
+3. Your original data is never deleted. You can re-run the migration at any time.
+4. Once verified, optionally click **Clean Up Old CPT Data** to remove the legacy posts.
+
+### Competition Locking
+
+- Creating a new competition automatically locks all previous ones.
+- Locked competitions are read-only -- scores, rolls, and settings cannot be changed.
+- If you need to correct a past competition, an admin with `manage_options` can temporarily unlock it (auto-relocks after 30 minutes).
 
 
 

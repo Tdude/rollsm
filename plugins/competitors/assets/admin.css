@@ -8,9 +8,9 @@
   --gray: rgba(205, 204, 203, 1);
   --dark-gray: rgba(100, 100, 119, 1);
   --light-gray: rgba(245, 245, 244, 1);
-  --success-light: rgba(240, 255, 240, 0.6);
-  --warning-light: rgba(255, 250, 220, 0.6);
-  --danger-light: rgba(255, 240, 240, 0.6);
+  --success-light: rgba(225, 250, 225, 1);
+  --warning-light: rgba(255, 247, 205, 1);
+  --danger-light: rgba(255, 229, 229, 1);
 
   /* Warning, Danger, Success button colors */
   --info: rgba(4, 164, 204, 0.8);
@@ -41,6 +41,64 @@
 
   /* Overlay color for the spinner */
   --semi-white: rgba(255, 255, 255, 0.5);
+
+  /* Global transition speed */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+}
+
+/* ─── Global Smooth Transitions ────────────────────────── */
+
+/* Smooth fade/slide for all table rows, notices, buttons */
+.competitors-table tr,
+.competitors-table td,
+.competitors-table th,
+.wp-list-table tr,
+.notice,
+.button,
+.nav-tab {
+  transition: all var(--transition-fast);
+}
+
+/* Page content fade-in on load */
+.wrap,
+#judges-scoring-container,
+#settings-page {
+  animation: comp-fade-in var(--transition-normal) ease-out;
+}
+@keyframes comp-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Smooth row hover for competitor lists */
+.competitors-table tbody tr:hover {
+  background-color: rgba(0, 115, 170, 0.04);
+}
+
+/* Active nav tab highlight */
+.nav-tab:hover {
+  background: #f1f1f1;
+}
+.nav-tab-active,
+.nav-tab-active:hover {
+  border-bottom-color: #f1f1f1;
+  background: #f1f1f1;
+}
+
+/* Smooth button hover */
+.button:hover,
+.button:focus {
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+/* Smooth notice appearance */
+.notice {
+  animation: comp-slide-down var(--transition-normal) ease-out;
+}
+@keyframes comp-slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .fixed-timer {
@@ -241,11 +299,22 @@ b.larger-txt {
   text-align: left;
 }
 
+.competitors-table .danger-light,
+.competitors-table .success-light {
+  padding: 0;
+}
 .competitors-table .danger-light {
   background-color: var(--danger-light);
 }
 .competitors-table .success-light {
   background-color: var(--success-light);
+}
+.competitors-table .danger-light label,
+.competitors-table .success-light label {
+  display: block;
+  padding: 10px 8px;
+  cursor: pointer;
+  margin: 0;
 }
 
 /* Specific styles for the inner table within .competitors-info row to remove borders */
@@ -279,6 +348,12 @@ b.larger-txt {
   overflow: visible;
   white-space: normal;
   cursor: pointer;
+}
+
+/* Already-scored competitor header — subtle visual distinction */
+tr.competitor-header.scored th {
+  color: #555;
+  background-color: #f4f4f4;
 }
 
 /* Hover Effect */
@@ -667,4 +742,64 @@ th.competitors-table {
 .non-selected-roll {
   color: #999;
   font-style: italic;
+}
+
+/* ─── UX Improvements ──────────────────────────────────── */
+
+/* Sticky class/gender banner when filter is active */
+#active-class-banner {
+  position: sticky;
+  top: 32px; /* below WP admin bar */
+  z-index: 98;
+  background: #0073aa;
+  color: #fff;
+  padding: 8px 16px;
+  font-size: 1.25em;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0;
+}
+
+/* Scoring summary bar (replaces grand-total table row) */
+.scoring-summary {
+  background: var(--success-light);
+  border: 1px solid var(--gray);
+  padding: 12px 16px;
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.95em;
+}
+
+/* Sticky column headers within expanded competitor */
+.competitor-columns th {
+  position: sticky;
+  top: 120px; /* below admin bar + class banner + timer */
+  background: #f1f1f1;
+  z-index: 95;
+}
+
+/* Sortable table headers affordance */
+.competitors-table thead th {
+  cursor: pointer;
+  user-select: none;
+}
+.competitors-table thead th:hover {
+  background-color: #0073aa;
+  color: #fff;
+}
+
+/* WP list table header padding (matches td default) */
+.wp-list-table thead th,
+.wp-list-table tfoot th {
+  padding: 8px 10px;
+}
+
+/* Hide low-priority columns on narrow screens (tablets) */
+@media (max-width: 1024px) {
+  .hide-on-narrow {
+    display: none;
+  }
 }
