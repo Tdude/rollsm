@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Competitors
  * Description:  For RollSM, A Greenland Rolling Championships registering and scoreboard plugin with live scores.
- * Version: 1.7
+ * Version: 1.8
  * Author: <a href="https://klickomaten.com">Tibor Berki</a>. /Tdude @Github.
  * Text Domain: competitors
  * Domain Path: /languages
  */
 
-define('COMPETITORS_PLUGIN_VERSION', '1.7');
+define('COMPETITORS_PLUGIN_VERSION', '1.8');
 define('COMPETITORS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
 
@@ -1149,8 +1149,43 @@ function render_competitors_dates_field() {
     // Sanitize class name for use in HTML IDs (no spaces, lowercase)
     $class_slug = sanitize_title($class);
 
+    // Build options list of OTHER classes for the copy-from picker
+    $other_classes = array();
+    $all_classes_opt = get_option('competitors_options', array());
+    $available = isset($all_classes_opt['available_competition_classes']) ? $all_classes_opt['available_competition_classes'] : array();
+    if (!is_array($available)) {
+        $available = array();
+    }
+    foreach ($available as $c) {
+        if (!is_array($c) || empty($c['name']) || $c['name'] === $class) {
+            continue;
+        }
+        $other_classes[] = array(
+            'name'  => sanitize_text_field($c['name']),
+            'label' => !empty($c['comment']) ? sanitize_text_field($c['comment']) : sanitize_text_field($c['name']),
+        );
+    }
+
     ob_start();
     ?>
+    <?php if (!empty($other_classes)) : ?>
+    <div class="copy-rolls-control" style="margin-bottom:.75em;padding:.5em;background:#f6f7f7;border-left:3px solid #2271b1;">
+        <label for="copy_rolls_src_<?php echo esc_attr($class_slug); ?>"><?php esc_html_e('Copy rolls from another class:', 'competitors'); ?></label>
+        <select id="copy_rolls_src_<?php echo esc_attr($class_slug); ?>" data-target="<?php echo esc_attr($class); ?>">
+            <option value=""><?php esc_html_e('— select source —', 'competitors'); ?></option>
+            <?php foreach ($other_classes as $oc) : ?>
+                <option value="<?php echo esc_attr($oc['name']); ?>"><?php echo esc_html($oc['label']); ?></option>
+            <?php endforeach; ?>
+        </select>
+        <button type="button" class="button copy-rolls-btn"
+                data-target="<?php echo esc_attr($class); ?>"
+                data-select="copy_rolls_src_<?php echo esc_attr($class_slug); ?>"
+                data-nonce="<?php echo esc_attr(wp_create_nonce('competitors_copy_rolls_' . $class)); ?>">
+            <?php esc_html_e('Copy & overwrite', 'competitors'); ?>
+        </button>
+        <span class="copy-rolls-status" style="margin-left:.5em;"></span>
+    </div>
+    <?php endif; ?>
     <div id="competitors_roll_names_wrapper_<?php echo esc_attr($class_slug); ?>" data-class="<?php echo esc_attr($class); ?>">
         <?php if (empty($roll_names)) {
             $roll_names = [''];
@@ -1245,6 +1280,118 @@ function handle_ajax_row_removal_for_competitors() {
 
     wp_die();
 }
+
+/**
+ * AJAX: copy rolls from one class to another inside competitors_options.
+ * Triggers SettingsSync via update_option, which mirrors to comp_rolls
+ * and rebuilds comp_competition_rolls for unlocked competitions.
+ */
+function handle_ajax_copy_rolls_between_classes() {
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error(array('message' => 'Permission denied.'));
+    }
+
+    $source = isset($_POST['source']) ? sanitize_text_field(wp_unslash($_POST['source'])) : '';
+    $target = isset($_POST['target']) ? sanitize_text_field(wp_unslash($_POST['target'])) : '';
+    $nonce  = isset($_POST['nonce'])  ? sanitize_text_field(wp_unslash($_POST['nonce']))  : '';
+
+    if ($source === '' || $target === '' || $source === $target) {
+        wp_send_json_error(array('message' => 'Invalid source or target class.'));
+    }
+
+    if (!wp_verify_nonce($nonce, 'competitors_copy_rolls_' . $target)) {
+        wp_send_json_error(array('message' => 'Nonce verification failed.'));
+    }
+
+    $options = get_option('competitors_options', array());
+    if (!is_array($options)) {
+        $options = array();
+    }
+
+    $copied_keys = array();
+    foreach (array('custom_values', 'numeric_values', 'is_numeric_field', 'no_right_left') as $k) {
+        $src_key = "{$k}_{$source}";
+        $tgt_key = "{$k}_{$target}";
+        if (isset($options[$src_key]) && is_array($options[$src_key])) {
+            $options[$tgt_key] = $options[$src_key];
+            $copied_keys[]     = $tgt_key;
+        }
+    }
+
+    if (empty($copied_keys)) {
+        wp_send_json_error(array('message' => "No rolls found for source class '{$source}'."));
+    }
+
+    update_option('competitors_options', $options);
+
+    wp_send_json_success(array(
+        'message' => sprintf('Copied %d field group(s) from %s to %s.', count($copied_keys), $source, $target),
+        'keys'    => $copied_keys,
+    ));
+}
+add_action('wp_ajax_competitors_copy_rolls_between_classes', 'handle_ajax_copy_rolls_between_classes');
+
+/**
+ * Inline JS for the "Copy & overwrite" button on the Roll Settings page.
+ */
+function competitors_copy_rolls_inline_js() {
+    $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+    if (!$screen || strpos($screen->id, 'competitors') === false) {
+        return;
+    }
+    ?>
+    <script>
+    (function () {
+        document.addEventListener('click', function (e) {
+            var btn = e.target.closest('.copy-rolls-btn');
+            if (!btn) return;
+            var selectId = btn.dataset.select;
+            var sel = document.getElementById(selectId);
+            var source = sel ? sel.value : '';
+            var target = btn.dataset.target;
+            var status = btn.parentNode.querySelector('.copy-rolls-status');
+            if (!source) {
+                status.textContent = 'Pick a source class first.';
+                status.style.color = 'red';
+                return;
+            }
+            if (!confirm('Overwrite all rolls in "' + target + '" with the rolls from "' + source + '"? This cannot be undone.')) {
+                return;
+            }
+            btn.disabled = true;
+            status.textContent = 'Copying…';
+            status.style.color = '';
+            var data = new URLSearchParams({
+                action: 'competitors_copy_rolls_between_classes',
+                source: source,
+                target: target,
+                nonce:  btn.dataset.nonce
+            });
+            fetch(ajaxurl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: data
+            }).then(function (r) { return r.json(); }).then(function (res) {
+                if (res && res.success) {
+                    status.textContent = (res.data && res.data.message) || 'Copied.';
+                    status.style.color = 'green';
+                    setTimeout(function () { location.reload(); }, 800);
+                } else {
+                    status.textContent = (res && res.data && res.data.message) || 'Failed.';
+                    status.style.color = 'red';
+                    btn.disabled = false;
+                }
+            }).catch(function () {
+                status.textContent = 'Network error.';
+                status.style.color = 'red';
+                btn.disabled = false;
+            });
+        });
+    })();
+    </script>
+    <?php
+}
+add_action('admin_footer', 'competitors_copy_rolls_inline_js');
 
 function competitors_custom_values_sanitize($input) {
     return array_map('sanitize_text_field', is_array($input) ? $input : []);
