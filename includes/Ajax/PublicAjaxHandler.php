@@ -265,7 +265,7 @@ class Competitors_Ajax_PublicAjaxHandler {
      * Get performing rolls fieldset when class changes in registration form.
      */
     public static function handle_get_rolls() {
-        check_ajax_referer( 'competitors_nonce_action', 'nonce' );
+        check_ajax_referer( 'competitors_nonce_action', 'security' );
 
         $class_type = sanitize_text_field( $_POST['class_type'] ?? '' );
         if ( empty( $class_type ) ) {

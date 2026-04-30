@@ -352,7 +352,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function updatePerformingRolls(classType) {
     try {
-      const data = await fetchData("get_performing_rolls", {
+      const data = await fetchData("get_performing_rolls_v2", {
         class_type: classType,
       });
       if (data.success) {
@@ -370,10 +370,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function fetchCompetitorDetails(competitorId, participationClass) {
     try {
-      const html = await fetchData("load_competitor_details", {
+      const result = await fetchData("load_competitor_details_v2", {
         competitor_id: competitorId,
-        participation_class: participationClass,
       });
+      const html = result?.data?.html ?? "";
       detailsContainer.innerHTML = html.trim()
         ? html
         : "<p>No details available for this competitor.</p>";
@@ -454,7 +454,7 @@ document.addEventListener("DOMContentLoaded", () => {
         gender: genderSelect.value,
       });
 
-      const data = await fetchData("load_competitors_list", {
+      const data = await fetchData("load_competitors_list_v2", {
         date_select: dateSelect.value,
         class_select: classSelect.value,
         gender_select: genderSelect.value,
