@@ -37,6 +37,43 @@ class Competitors_SettingsSync {
         self::sync_classes( $new_value );
         self::sync_competitions( $new_value );
         self::sync_rolls( $new_value );
+        self::refresh_unlocked_snapshots();
+    }
+
+    /**
+     * After master rolls are re-seeded, rebuild competition_rolls for any
+     * competition that is not locked. Locked competitions keep their existing
+     * snapshot so historical scoring is preserved.
+     *
+     * Note: this clobbers any per-event customization on unlocked competitions.
+     * If you need per-event overrides to survive, lock the competition first.
+     */
+    private static function refresh_unlocked_snapshots() {
+        global $wpdb;
+
+        $unlocked = $wpdb->get_results(
+            "SELECT id FROM " . Competitors_Database::table( 'competitions' ) . " WHERE is_locked = 0",
+            ARRAY_A
+        );
+
+        if ( empty( $unlocked ) ) {
+            return;
+        }
+
+        $classes = Competitors_ClassRepository::find_all();
+        $cr_table = Competitors_Database::table( 'competition_rolls' );
+
+        foreach ( $unlocked as $comp ) {
+            $comp_id = (int) $comp['id'];
+
+            // Drop existing snapshot rows for this competition
+            $wpdb->delete( $cr_table, array( 'competition_id' => $comp_id ), array( '%d' ) );
+
+            // Re-snapshot from master for each class
+            foreach ( $classes as $class ) {
+                Competitors_RollRepository::snapshot_for_competition( $comp_id, (int) $class['id'] );
+            }
+        }
     }
 
     /**
