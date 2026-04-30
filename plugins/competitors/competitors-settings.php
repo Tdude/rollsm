@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Competitors
  * Description:  For RollSM, A Greenland Rolling Championships registering and scoreboard plugin with live scores.
- * Version: 0.99
+ * Version: 1.1
  * Author: <a href="https://klickomaten.com">Tibor Berki</a>. /Tdude @Github.
  * Text Domain: competitors
  * Domain Path: /languages
  */
 
-define('COMPETITORS_PLUGIN_VERSION', '0.99');
+define('COMPETITORS_PLUGIN_VERSION', '1.1');
 define('COMPETITORS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
 
