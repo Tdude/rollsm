@@ -2,6 +2,37 @@
 
 A WordPress plugin for Greenland Rolling Championship registration and live scoring. Built for organizers who change yearly -- the setup should be as simple as possible.
 
+# UPDATE: Migration and total refactor
+  1. Back up the DB first (always)
+  wp db export backup-before-rewrite.sql
+  2. Replace the plugin code — pull the branch or copy plugins/competitors/ over the old one
+  3. Visit WP Admin — no need to deactivate/reactivate. The admin_init hook detects the missing DB version and auto-creates all 10 tables:
+  // This fires automatically:
+  if (Competitors_Database::needs_upgrade()) {
+      Competitors_Database::create_tables();
+  }
+  4. Go to Competitors Settings — you'll see a yellow notice: "Database Migration Available". Click "Migrate Data Now". It reads:
+    - competitors CPT posts → comp_competitors
+    - postmeta (scores, selected rolls, email, phone...) → comp_scores, comp_selected_rolls
+    - competitors_options (classes, dates, rolls) → comp_classes, comp_competitions, comp_rolls
+    - competitors_roll_definitions_* snapshots → comp_competition_rolls
+    - sent_emails CPT → comp_emails + comp_email_recipients
+  5. Verify — the notice shows counts. Check Judges Scoring and Competitor List tabs.
+  6. Optionally click "Clean Up Old CPT Data" to remove the legacy posts.
+
+  What's safe:
+  - Migration is wrapped in a transaction — rolls back on any failure
+  - Original CPT/postmeta data is never deleted (unless you explicitly click cleanup)
+  - Both old and new code coexist — if you set comp_migration_complete to false in wp_options, it reverts to the old code paths
+  - The "Re-run Migration" button lets you start over
+
+  One caveat: if your live site has competitors with competition_date postmeta values that don't match any date in competitors_options['available_competition_dates'], those competitors get assigned to the first available
+  competition. Check the migration counts to spot any mismatches.
+
+  Rollback plan: restore the DB backup and the old plugin files. Everything is reversible.
+  
+
+
 ## Installation
 
 1. Upload the `competitors` folder to `/wp-content/plugins/` or install via the WordPress plugin screen.
