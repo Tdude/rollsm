@@ -22,6 +22,7 @@ class Competitors_MigrationAdmin {
         add_action( 'wp_ajax_competitors_run_migration', array( __CLASS__, 'handle_ajax_migration' ) );
         add_action( 'wp_ajax_competitors_revert_migration', array( __CLASS__, 'handle_ajax_revert' ) );
         add_action( 'wp_ajax_competitors_cleanup_cpt', array( __CLASS__, 'handle_ajax_cleanup_cpt' ) );
+        add_action( 'wp_ajax_competitors_rescue_scores', array( __CLASS__, 'handle_ajax_rescue_scores' ) );
     }
 
     /**
@@ -142,6 +143,11 @@ class Competitors_MigrationAdmin {
                         style="margin-left: 10px;">
                     <?php esc_html_e( 'Re-run Migration', 'competitors' ); ?>
                 </button>
+                <button type="button" class="button" id="comp-rescue-scores"
+                        data-nonce="<?php echo esc_attr( $nonce ); ?>"
+                        style="margin-left: 10px;">
+                    <?php esc_html_e( 'Rescue Missing Scores', 'competitors' ); ?>
+                </button>
                 <?php if ( $cpt_count > 0 ) : ?>
                     <button type="button" class="button" id="comp-cleanup-cpt"
                             data-nonce="<?php echo esc_attr( $nonce ); ?>"
@@ -211,6 +217,49 @@ class Competitors_MigrationAdmin {
                         }
                     };
                     xhr2.send('action=competitors_cleanup_cpt&nonce=' + cleanupBtn.dataset.nonce);
+                });
+            }
+
+            // Rescue missing scores button
+            var rescueBtn = document.getElementById('comp-rescue-scores');
+            if (rescueBtn) {
+                rescueBtn.addEventListener('click', function() {
+                    if (!confirm('<?php echo esc_js( __( 'Backfill missing competition_rolls from master rolls and re-import scores from postmeta for competitors that have none. Non-destructive — only inserts. Continue?', 'competitors' ) ); ?>')) return;
+                    rescueBtn.disabled = true;
+                    var status = document.getElementById('comp-revert-status');
+                    status.textContent = '<?php echo esc_js( __( 'Rescuing...', 'competitors' ) ); ?>';
+
+                    var xhr3 = new XMLHttpRequest();
+                    xhr3.open('POST', ajaxurl);
+                    xhr3.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                    xhr3.onload = function() {
+                        try {
+                            var res = JSON.parse(xhr3.responseText);
+                            if (res.success) {
+                                var d = res.data;
+                                var msg = 'Snapshots added: ' + (d.snapshots_added || 0)
+                                    + ', Scores added: ' + (d.scores_added || 0)
+                                    + ', Competitors rescued: ' + (d.competitors_rescued || 0);
+                                if (d.missing_master_rolls && d.missing_master_rolls.length) {
+                                    msg += ' (Warning: ' + d.missing_master_rolls.length
+                                        + ' (competition,class) combos still have no master rolls — see error log)';
+                                    status.style.color = 'orange';
+                                } else {
+                                    status.style.color = 'green';
+                                }
+                                status.textContent = msg;
+                            } else {
+                                status.textContent = res.data.message || 'Failed';
+                                status.style.color = 'red';
+                                rescueBtn.disabled = false;
+                            }
+                        } catch(e) {
+                            status.textContent = 'Error';
+                            status.style.color = 'red';
+                            rescueBtn.disabled = false;
+                        }
+                    };
+                    xhr3.send('action=competitors_rescue_scores&nonce=' + rescueBtn.dataset.nonce);
                 });
             }
         })();
@@ -339,6 +388,31 @@ class Competitors_MigrationAdmin {
                 $deleted_emails
             ),
         ) );
+    }
+
+    /**
+     * AJAX: Rescue missing scores by backfilling competition_rolls snapshots
+     * from master rolls and re-importing competitor_scores postmeta.
+     */
+    public static function handle_ajax_rescue_scores() {
+        check_ajax_referer( 'competitors_migration_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied.' ) );
+        }
+
+        if ( ! Competitors_Migration::is_complete() ) {
+            wp_send_json_error( array( 'message' => 'Migration must be completed first.' ) );
+        }
+
+        $result = Competitors_MigrationRescue::run();
+
+        if ( ! empty( $result['missing_master_rolls'] ) ) {
+            error_log( '[Competitors] Rescue: master rolls missing for: '
+                . wp_json_encode( $result['missing_master_rolls'] ) );
+        }
+
+        wp_send_json_success( $result );
     }
 
     /**
