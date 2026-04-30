@@ -5,7 +5,7 @@ A WordPress plugin for Greenland Rolling Championship registration and live scor
 # UPDATE: Migration and total refactor
   1. Back up the DB first (always)
   wp db export backup-before-rewrite.sql
-  2. Replace the plugin code — pull the branch or copy plugins/competitors/ over the old one
+  2. Replace the plugin code — pull main or copy the plugin folder over the old one
   3. Visit WP Admin — no need to deactivate/reactivate. The admin_init hook detects the missing DB version and auto-creates all 10 tables:
   // This fires automatically:
   if (Competitors_Database::needs_upgrade()) {
@@ -133,55 +133,55 @@ Distributed under the GNU License. See `LICENSE` for more information.
 ## Screenshots
 
 ### Default page (created for you on install)
-![Screenshot](plugins/screenshots/Screenshot%202024-02-24%20at%2023.30.27.png "Default page explaining text")
+![Screenshot](screenshots/Screenshot%202024-02-24%20at%2023.30.27.png "Default page explaining text")
 
 
 ### List of competitors (public)
-![List of competitors](plugins/screenshots/Screenshot%202024-02-24%20at%2023.32.32.png "List of competitors")
+![List of competitors](screenshots/Screenshot%202024-02-24%20at%2023.32.32.png "List of competitors")
 
 Competitor scoring details opens without page reload
-![Competitor score](plugins/screenshots/Screenshot%202024-02-24%20at%2023.33.32.png "Competitor score")
+![Competitor score](screenshots/Screenshot%202024-02-24%20at%2023.33.32.png "Competitor score")
 
 Total score added together live
-![Competitor score total](plugins/screenshots/Screenshot%202024-02-24%20at%2023.33.39.png "Competitor score total")
+![Competitor score total](screenshots/Screenshot%202024-02-24%20at%2023.33.39.png "Competitor score total")
 
 
 ### Registration Form
-![Registration Form](plugins/screenshots/Screenshot%202024-02-24%20at%2023.34.15.png "Registration Form Screenshot")
+![Registration Form](screenshots/Screenshot%202024-02-24%20at%2023.34.15.png "Registration Form Screenshot")
 
 And a lot of rolls...
-![Registration Form](plugins/screenshots/Screenshot%202024-02-24%20at%2023.34.27.png "Registration Form Screenshot")
+![Registration Form](screenshots/Screenshot%202024-02-24%20at%2023.34.27.png "Registration Form Screenshot")
 
 
 ### Admin Settings Interface
-![Admin Settings Interface](plugins/screenshots/Screenshot%202024-02-24%20at%2023.37.27.png "Admin Settings Interface Screenshot")
+![Admin Settings Interface](screenshots/Screenshot%202024-02-24%20at%2023.37.27.png "Admin Settings Interface Screenshot")
 
 Competitors details
-![Competitors details](plugins/screenshots/Screenshot%202024-02-24%20at%2023.37.44.png "Competitors details")
+![Competitors details](screenshots/Screenshot%202024-02-24%20at%2023.37.44.png "Competitors details")
 
 Order by clicking on table headers
-![Competitors details ordered by club](plugins/screenshots/Screenshot%202024-02-24%20at%2023.37.57.png "Competitors details ordered by club")
+![Competitors details ordered by club](screenshots/Screenshot%202024-02-24%20at%2023.37.57.png "Competitors details ordered by club")
 
 
 ### Scoreboard Display
 You can't start scoring competitor's rolls without starting the timer. Here are the different cases screenshot
-![Scoreboard participant listing](plugins/screenshots/Screenshot%202024-02-24%20at%2023.38.14.png "Scoreboard participant listing")
+![Scoreboard participant listing](screenshots/Screenshot%202024-02-24%20at%2023.38.14.png "Scoreboard participant listing")
 
 Can't score without timer running
-![Can't score without timer running](plugins/screenshots/Screenshot%202024-02-24%20at%2023.38.23.png "Can't score without timer running")
-![Timer running](plugins/screenshots/Screenshot%202024-02-24%20at%2023.38.28.png "Timer running")
+![Can't score without timer running](screenshots/Screenshot%202024-02-24%20at%2023.38.23.png "Can't score without timer running")
+![Timer running](screenshots/Screenshot%202024-02-24%20at%2023.38.28.png "Timer running")
 
 Can't score with paused timer
-![Paused timer can't score](plugins/screenshots/Screenshot%202024-02-24%20at%2023.39.23.png "Paused timer can't score")
+![Paused timer can't score](screenshots/Screenshot%202024-02-24%20at%2023.39.23.png "Paused timer can't score")
 
 Timer value is saved with scores
-![Timer is saved with scoring](plugins/screenshots/Screenshot%202024-02-24%20at%2023.39.33.png "Timer is saved with scoring")
+![Timer is saved with scoring](screenshots/Screenshot%202024-02-24%20at%2023.39.33.png "Timer is saved with scoring")
 
 Latest timing saved. Great success!
-![Great success](plugins/screenshots/Screenshot%202024-02-24%20at%2023.39.55.png "Great success")
+![Great success](screenshots/Screenshot%202024-02-24%20at%2023.39.55.png "Great success")
 
 
 ### Admin registration of participants 
 Individual edit for easy manual registration. Ie. on premise for queuing competitors. With order quick edit possibility. 
-![Quick edit for order of participants](plugins/screenshots/Screenshot%202024-02-24%20at%2023.42.09.png "Quick edit for order of participants")
-![Enter or update all competitor's details](plugins/screenshots/Screenshot%202024-02-24%20at%2023.43.16.png "Enter or update all competitor's details")
+![Quick edit for order of participants](screenshots/Screenshot%202024-02-24%20at%2023.42.09.png "Quick edit for order of participants")
+![Enter or update all competitor's details](screenshots/Screenshot%202024-02-24%20at%2023.43.16.png "Enter or update all competitor's details")
