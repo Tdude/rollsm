@@ -237,7 +237,8 @@ class Competitors_MigrationAdmin {
                             var res = JSON.parse(xhr3.responseText);
                             if (res.success) {
                                 var d = res.data;
-                                var msg = 'Snapshots added: ' + (d.snapshots_added || 0)
+                                var msg = 'Master rolls added: ' + (d.master_rolls_added || 0)
+                                    + ', Snapshots added: ' + (d.snapshots_added || 0)
                                     + ', Scores added: ' + (d.scores_added || 0)
                                     + ', Competitors rescued: ' + (d.competitors_rescued || 0);
                                 if (d.missing_master_rolls && d.missing_master_rolls.length) {

@@ -23,9 +23,15 @@ class Competitors_MigrationRescue {
     /**
      * Run the full rescue.
      *
-     * @return array { snapshots_added, scores_added, competitors_rescued, missing_master_rolls }
+     * @return array { master_rolls_added, snapshots_added, scores_added, competitors_rescued, missing_master_rolls }
      */
     public static function run() {
+        // Step 0: Seed master comp_rolls from legacy top-level options for any
+        // class that currently has no master rolls. This unblocks the snapshot
+        // backfill for classes that the original migrate_rolls() missed
+        // (it only looked inside the competitors_options array).
+        $master_rolls_added = self::seed_missing_master_rolls();
+
         $missing_combos = self::find_missing_snapshot_combos();
 
         $snapshots_added       = 0;
@@ -42,11 +48,83 @@ class Competitors_MigrationRescue {
         list( $scores_added, $competitors_rescued ) = self::reimport_missing_scores();
 
         return array(
+            'master_rolls_added'   => $master_rolls_added,
             'snapshots_added'      => $snapshots_added,
             'scores_added'         => $scores_added,
             'competitors_rescued'  => $competitors_rescued,
             'missing_master_rolls' => $missing_master_rolls,
         );
+    }
+
+    /**
+     * For each class with zero master rolls, try to seed comp_rolls from
+     * legacy top-level options:
+     *   - competitors_custom_values_{class_name}        (roll names)
+     *   - competitors_numeric_values_{class_name}       (max scores)
+     *   - competitors_is_numeric_field_{class_name}     (numeric flags)
+     *   - competitors_no_right_left_{class_name}        (no L/R flags, optional)
+     *
+     * @return int Rows inserted.
+     */
+    private static function seed_missing_master_rolls() {
+        global $wpdb;
+        $classes_table = Competitors_Database::table( 'classes' );
+        $rolls_table   = Competitors_Database::table( 'rolls' );
+
+        $classes = $wpdb->get_results( "SELECT * FROM {$classes_table}", ARRAY_A );
+
+        $count = 0;
+        foreach ( $classes as $class ) {
+            $class_id   = (int) $class['id'];
+            $class_name = $class['name'];
+
+            $existing = (int) $wpdb->get_var( $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$rolls_table} WHERE class_id = %d",
+                $class_id
+            ) );
+            if ( $existing > 0 ) {
+                continue;
+            }
+
+            $roll_names    = get_option( "competitors_custom_values_{$class_name}", array() );
+            $points_values = get_option( "competitors_numeric_values_{$class_name}", array() );
+            $is_numeric    = get_option( "competitors_is_numeric_field_{$class_name}", array() );
+            $no_right_left = get_option( "competitors_no_right_left_{$class_name}", array() );
+
+            if ( ! is_array( $roll_names ) || empty( $roll_names ) ) {
+                continue;
+            }
+
+            foreach ( $roll_names as $index => $name ) {
+                $name = trim( (string) $name );
+                if ( $name === '' ) {
+                    continue;
+                }
+
+                $max_score = isset( $points_values[ $index ] ) && is_numeric( $points_values[ $index ] )
+                    ? (int) $points_values[ $index ]
+                    : 0;
+
+                $result = $wpdb->insert(
+                    $rolls_table,
+                    array(
+                        'class_id'      => $class_id,
+                        'name'          => sanitize_text_field( $name ),
+                        'max_score'     => $max_score,
+                        'is_numeric'    => ! empty( $is_numeric[ $index ] ) ? 1 : 0,
+                        'no_right_left' => ! empty( $no_right_left[ $index ] ) ? 1 : 0,
+                        'display_order' => $index + 1,
+                    ),
+                    array( '%d', '%s', '%d', '%d', '%d', '%d' )
+                );
+
+                if ( $result ) {
+                    $count++;
+                }
+            }
+        }
+
+        return $count;
     }
 
     /**
