@@ -167,8 +167,11 @@ class Competitors_CompetitorRepository {
      */
     public static function delete( $id ) {
         global $wpdb;
-        // Delete selected rolls first
+        $id = (int) $id;
+        // Cascade child rows (no FKs in schema)
         $wpdb->delete( self::selected_rolls_table(), array( 'competitor_id' => $id ), array( '%d' ) );
+        $wpdb->delete( Competitors_Database::table( 'scores' ), array( 'competitor_id' => $id ), array( '%d' ) );
+        $wpdb->delete( Competitors_Database::table( 'timers' ), array( 'competitor_id' => $id ), array( '%d' ) );
         return (bool) $wpdb->delete( self::table(), array( 'id' => $id ), array( '%d' ) );
     }
 
