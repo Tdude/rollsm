@@ -19,6 +19,26 @@ class Competitors_CptSync {
      */
     public static function init() {
         add_action( 'save_post_competitors', array( __CLASS__, 'sync_to_custom_table' ), 20, 2 );
+        add_action( 'wp_trash_post',         array( __CLASS__, 'sync_delete' ), 10, 1 );
+        add_action( 'before_delete_post',    array( __CLASS__, 'sync_delete' ), 10, 1 );
+    }
+
+    /**
+     * Mirror a competitor CPT trash/delete to the custom table.
+     *
+     * @param int $post_id
+     */
+    public static function sync_delete( $post_id ) {
+        if ( get_post_type( $post_id ) !== 'competitors' ) {
+            return;
+        }
+        if ( ! Competitors_Migration::is_complete() ) {
+            return;
+        }
+        $row = Competitors_CompetitorRepository::find_by_wp_post_id( $post_id );
+        if ( $row ) {
+            Competitors_CompetitorRepository::delete( (int) $row['id'] );
+        }
     }
 
     /**
