@@ -447,12 +447,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function fetchCompetitorsList() {
     try {
-      //console.log("Fetching competitors list...");
-      console.log("Filter values:", {
-        date: dateSelect.value,
-        class: classSelect.value,
-        gender: genderSelect.value,
-      });
+      // Clear any open competitor detail when filters change so the previously
+      // selected competitor doesn't linger below the new list.
+      if (detailsContainer) {
+        detailsContainer.innerHTML = "";
+        detailsContainer.style.display = "none";
+      }
+      updateURL(null);
 
       const data = await fetchData("load_competitors_list_v2", {
         date_select: dateSelect.value,
