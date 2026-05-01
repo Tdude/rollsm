@@ -646,6 +646,17 @@ tr.competitor-header:hover,
   margin-left: auto;
 }
 
+/* Dynamic numbering for roll lists — survives add/remove without re-render */
+[id^="competitors_roll_names_wrapper_"] {
+  counter-reset: roll-counter;
+}
+[id^="competitors_roll_names_wrapper_"] .roll-item {
+  counter-increment: roll-counter;
+}
+[id^="competitors_roll_names_wrapper_"] .roll-item .roll-number::before {
+  content: counter(roll-counter) ". ";
+}
+
 /* For printing admin pages */
 @media print {
   #adminmenumain,

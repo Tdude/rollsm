@@ -1028,6 +1028,27 @@ jQuery(document).ready(function ($) {
     });
   }
 
+  // Re-index checkbox name attributes after add/remove. Text inputs use `[]`
+  // so they auto-index on submit, but is_numeric_field/no_right_left checkboxes
+  // need explicit numeric indices since unchecked ones don't submit. Indices
+  // must match each row's array position in custom_values_*, otherwise data
+  // drifts on save.
+  function renumberRollRows($wrapper) {
+    if (!$wrapper || !$wrapper.length) return;
+    $wrapper.find(".roll-item").each(function (idx) {
+      var $row = $(this);
+      $row.attr("data-index", idx);
+      $row.removeClass("alternate");
+      if (idx % 2 === 0) $row.addClass("alternate");
+      $row.find('input[type="checkbox"]').each(function () {
+        var name = $(this).attr("name") || "";
+        // matches the trailing [N] of names like
+        // competitors_options[is_numeric_field_<class>][N]
+        $(this).attr("name", name.replace(/\[\d+\]$/, "[" + idx + "]"));
+      });
+    });
+  }
+
   // Function to create a new roll field
   // classType = original class name (for form name attributes)
   // classSlug = sanitized slug (for HTML IDs) — falls back to classType if not provided
@@ -1037,7 +1058,7 @@ jQuery(document).ready(function ($) {
       <p class="roll-item ${
         index % 2 === 0 ? "alternate" : ""
       }" data-index="${index}">
-        <label for="maneuver_${slug}_${index}">${index + 1}. Maneuver </label>
+        <label for="maneuver_${slug}_${index}"><span class="roll-number"></span></label>
         <input type="text" id="maneuver_${slug}_${index}" name="competitors_options[custom_values_${classType}][]" size="60" value="" />
         <label for="points_${slug}_${index}"> Points: </label>
         <input type="text" class="numeric-input" id="points_${slug}_${index}" name="competitors_options[numeric_values_${classType}][]" size="2" maxlength="2" pattern="\\d*" value="0" />
@@ -1045,12 +1066,15 @@ jQuery(document).ready(function ($) {
         <input type="checkbox" id="numeric_${slug}_${index}" name="competitors_options[is_numeric_field_${classType}][${index}]" value="1">
         <label for="no_right_left_${slug}_${index}"> No Right/Left:</label>
         <input type="checkbox" id="no_right_left_${slug}_${index}" name="competitors_options[no_right_left_${classType}][${index}]" value="1">
+        <button type="button" class="button custom-button button-primary plus-button" data-class="${classType}" title="Insert new roll below"></button>
         <button type="button" class="button custom-button button-secondary remove-row">Remove</button>
       </p>
     `;
   }
 
-  // Event listener for adding roll names (only for roll buttons, not event/class buttons)
+  // Plus button: insert a new empty roll immediately AFTER the clicked row.
+  // Falls back to appending at the end of the wrapper if the click somehow
+  // isn't inside a row (e.g. an external trigger).
   $(document).on("click", ".plus-button", function () {
     var btnId = $(this).attr("id") || "";
     // Skip event and class add buttons — they have their own handlers
@@ -1058,28 +1082,46 @@ jQuery(document).ready(function ($) {
       return;
     }
 
-    // Use data-class for the original class name (with spaces etc.)
-    // and the sanitized slug from the ID for DOM targeting
-    var classSlug = btnId.replace("add_more_roll_names_", "");
-    var classType = $(this).data("class") || classSlug;
-    var $wrapper = $("#competitors_roll_names_wrapper_" + classSlug);
+    var $row = $(this).closest(".roll-item");
+    var $wrapper, classType, classSlug;
 
-    if (!$wrapper.length) {
-      console.error("Wrapper not found for class slug:", classSlug);
+    if ($row.length) {
+      $wrapper = $row.parent();
+      classType = $wrapper.data("class") || $(this).data("class");
+      var wrapperId = $wrapper.attr("id") || "";
+      classSlug = wrapperId.replace("competitors_roll_names_wrapper_", "");
+    } else {
+      // Legacy fallback: standalone plus button (id="add_more_roll_names_<slug>")
+      classSlug = btnId.replace("add_more_roll_names_", "");
+      classType = $(this).data("class") || classSlug;
+      $wrapper = $("#competitors_roll_names_wrapper_" + classSlug);
+    }
+
+    if (!$wrapper || !$wrapper.length) {
+      console.error("Wrapper not found for plus button");
       return;
     }
 
-    var index = $wrapper.find("p").length;
-    var newField = createNewRollField(classType, index, classSlug);
+    var newIndex = $wrapper.find(".roll-item").length;
+    var newFieldHtml = createNewRollField(classType, newIndex, classSlug);
 
-    $wrapper.append(newField);
+    if ($row.length) {
+      $row.after(newFieldHtml);
+    } else {
+      $wrapper.append(newFieldHtml);
+    }
+
+    renumberRollRows($wrapper);
   });
 
-  // Event listener for removing a roll field
+  // Remove a roll row from the DOM. Form save reconciles to the option array
+  // — no AJAX needed. Renumber after removal so indices match positions.
   $(document).on("click", ".remove-row", function () {
-    var $wrapper = $(this).closest(".roll-item").parent();
+    var $row = $(this).closest(".roll-item");
+    var $wrapper = $row.parent();
     if ($wrapper.find(".roll-item").length > 1) {
-      $(this).parent().remove();
+      $row.remove();
+      renumberRollRows($wrapper);
     } else {
       alert("At least one roll must remain. Remove the class instead!");
     }

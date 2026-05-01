@@ -98,6 +98,34 @@ roll index. Each value is `{left_group, right_group, left_score, right_score, to
 The migration maps roll_index → `competition_roll_id` via `display_order` (1-based).
 Mismatch causes silent skip — that's why we now have the rescue tool.
 
+## Roll Settings page — row management
+
+The Roll Settings admin page (`page=competitors-settings`, function
+`render_competitors_roll_field`) renders one editable list per class, with
+per-row plus and remove buttons.
+
+**Contract** (since v2.1):
+
+- Every row has its own plus button. Clicking inserts a new empty row
+  *immediately after* the clicked row — supports inserting between existing
+  rolls, not just at the end.
+- Every row has a remove button. Removal is DOM-only; the form save
+  reconciles the underlying `competitors_options` array. No AJAX delete.
+- Row numbers are rendered via CSS `counter-reset/counter-increment` on
+  `[id^="competitors_roll_names_wrapper_"] .roll-item`. They auto-update
+  when rows are added/removed without any JS.
+- Checkbox indices (`is_numeric_field_<class>[N]`, `no_right_left_<class>[N]`)
+  must match each row's array position in `custom_values_<class>` (which uses
+  `[]`). `renumberRollRows()` in `admin-script.js` reassigns those after every
+  add/remove. **Never skip the renumber call** — checkbox/input drift on save
+  silently corrupts the rolls array.
+
+**Copy-rolls dropdown**: source list is built from any
+`competitors_options['custom_values_*']` key with non-empty data (in
+`render_competitors_roll_field`). This includes legacy/orphaned keys from
+classes that no longer appear in `available_competition_classes` — useful
+when restoring rolls from a class that was renamed or removed.
+
 ## Public/admin sync flow for roll edits
 
 User edits rolls in admin Roll Settings (`render_competitors_roll_field`):

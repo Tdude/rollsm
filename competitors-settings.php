@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Competitors
  * Description:  For RollSM, A Greenland Rolling Championships registering and scoreboard plugin with live scores.
- * Version: 2.0
+ * Version: 2.1
  * Author: <a href="https://klickomaten.com">Tibor Berki</a>. /Tdude @Github.
  * Text Domain: competitors
  * Domain Path: /languages
  */
 
-define('COMPETITORS_PLUGIN_VERSION', '2.0');
+define('COMPETITORS_PLUGIN_VERSION', '2.1');
 define('COMPETITORS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
 
@@ -1149,20 +1149,34 @@ function render_competitors_dates_field() {
     // Sanitize class name for use in HTML IDs (no spaces, lowercase)
     $class_slug = sanitize_title($class);
 
-    // Build options list of OTHER classes for the copy-from picker
+    // Build options list of source classes for the copy-from picker.
+    // Scan the option for any custom_values_* keys with data — this includes
+    // legacy/orphaned class data not currently in available_competition_classes.
     $other_classes = array();
-    $all_classes_opt = get_option('competitors_options', array());
-    $available = isset($all_classes_opt['available_competition_classes']) ? $all_classes_opt['available_competition_classes'] : array();
-    if (!is_array($available)) {
-        $available = array();
+    $active_class_labels = array();
+    if (!empty($options['available_competition_classes']) && is_array($options['available_competition_classes'])) {
+        foreach ($options['available_competition_classes'] as $c) {
+            if (is_array($c) && !empty($c['name'])) {
+                $active_class_labels[$c['name']] = !empty($c['comment']) ? $c['comment'] : $c['name'];
+            }
+        }
     }
-    foreach ($available as $c) {
-        if (!is_array($c) || empty($c['name']) || $c['name'] === $class) {
+    foreach ($options as $opt_key => $opt_value) {
+        if (strpos($opt_key, 'custom_values_') !== 0) {
+            continue;
+        }
+        $src_name = substr($opt_key, strlen('custom_values_'));
+        if ($src_name === '' || $src_name === $class) {
+            continue;
+        }
+        if (!is_array($opt_value) || count(array_filter($opt_value, 'strlen')) === 0) {
             continue;
         }
         $other_classes[] = array(
-            'name'  => sanitize_text_field($c['name']),
-            'label' => !empty($c['comment']) ? sanitize_text_field($c['comment']) : sanitize_text_field($c['name']),
+            'name'  => sanitize_text_field($src_name),
+            'label' => isset($active_class_labels[$src_name])
+                ? sanitize_text_field($active_class_labels[$src_name])
+                : sanitize_text_field($src_name),
         );
     }
 
@@ -1201,7 +1215,7 @@ function render_competitors_dates_field() {
             $no_right_left_checked = isset($no_right_left[$index]) && $no_right_left[$index] === '1' ? 'checked' : '';
             ?>
             <p class="roll-item <?php echo $index % 2 == 0 ? 'alternate' : ''; ?>" data-index="<?php echo esc_attr($index); ?>">
-                <label for="maneuver_<?php echo esc_attr($class_slug . '_' . $index); ?>"><?php echo esc_html($index + 1); ?>. </label>
+                <label for="maneuver_<?php echo esc_attr($class_slug . '_' . $index); ?>"><span class="roll-number"></span></label>
                 <input type="text" id="maneuver_<?php echo esc_attr($class_slug . '_' . $index); ?>" name="competitors_options[custom_values_<?php echo esc_attr($class); ?>][]" size="60" value="<?php echo esc_attr($roll_name); ?>" />
                 <label for="points_<?php echo esc_attr($class_slug . '_' . $index); ?>"><?php esc_html_e('Points:', 'competitors'); ?></label>
                 <input type="text" class="numeric-input" id="points_<?php echo esc_attr($class_slug . '_' . $index); ?>" name="competitors_options[numeric_values_<?php echo esc_attr($class); ?>][]" size="2" maxlength="2" pattern="\d*" value="<?php echo esc_attr($point_value); ?>" />
@@ -1209,9 +1223,7 @@ function render_competitors_dates_field() {
                 <input type="checkbox" id="numeric_<?php echo esc_attr($class_slug . '_' . $index); ?>" name="competitors_options[is_numeric_field_<?php echo esc_attr($class); ?>][<?php echo esc_attr($index); ?>]" value="1" <?php echo $numeric_checked; ?>>
                 <label for="no_right_left_<?php echo esc_attr($class_slug . '_' . $index); ?>"><?php esc_html_e('No Right/Left:', 'competitors'); ?></label>
                 <input type="checkbox" id="no_right_left_<?php echo esc_attr($class_slug . '_' . $index); ?>" name="competitors_options[no_right_left_<?php echo esc_attr($class); ?>][<?php echo esc_attr($index); ?>]" value="1" <?php echo $no_right_left_checked; ?>>
-                <?php if ($index === 0) { ?>
-                    <button type="button" id="add_more_roll_names_<?php echo esc_attr($class_slug); ?>" class="button custom-button button-primary plus-button" data-class="<?php echo esc_attr($class); ?>"></button>
-                <?php } ?>
+                <button type="button" class="button custom-button button-primary plus-button" data-class="<?php echo esc_attr($class); ?>" title="<?php esc_attr_e('Insert new roll below', 'competitors'); ?>"></button>
                 <button type="button" class="button custom-button button-secondary remove-row"><?php esc_html_e('Remove', 'competitors'); ?></button>
             </p>
         <?php } ?>
