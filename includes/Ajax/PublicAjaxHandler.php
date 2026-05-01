@@ -143,7 +143,19 @@ class Competitors_Ajax_PublicAjaxHandler {
             Competitors_CompetitorRepository::set_selected_rolls( $competitor_id, $selected_rolls );
         }
 
-        // Also create CPT post for backward compatibility
+        // Also create CPT post for backward compatibility.
+        //
+        // Suppress CptSync for this insert: we already created the
+        // comp_competitors row above and will link it to wp_post_id
+        // immediately after. Without this, CptSync's save_post hook fires
+        // before the link is written and creates a SECOND row, which then
+        // shows up as a duplicate on the public scoreboard and admin list.
+        $cpt_sync_callback = array( 'Competitors_CptSync', 'sync_to_custom_table' );
+        $cpt_sync_was_hooked = has_action( 'save_post_competitors', $cpt_sync_callback );
+        if ( $cpt_sync_was_hooked ) {
+            remove_action( 'save_post_competitors', $cpt_sync_callback, 20 );
+        }
+
         $wp_post_id = wp_insert_post( array(
             'post_title'  => wp_strip_all_tags( $name ),
             'post_status' => 'publish',
@@ -166,6 +178,10 @@ class Competitors_Ajax_PublicAjaxHandler {
                 'fee'                => $total_sum,
             ),
         ) );
+
+        if ( $cpt_sync_was_hooked ) {
+            add_action( 'save_post_competitors', $cpt_sync_callback, 20, 2 );
+        }
 
         // Link the custom table row to the CPT post
         if ( $wp_post_id && ! is_wp_error( $wp_post_id ) ) {
