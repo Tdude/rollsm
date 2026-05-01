@@ -236,11 +236,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function submitForm() {
       const formData = new FormData(form);
-      formData.append("action", "competitors_form_submit");
+      // The form's hidden input is competitors_form_submit_v2. Use .set so
+      // we never end up with two `action` entries in FormData (which would
+      // collapse to the legacy action via Object.fromEntries).
+      formData.set("action", "competitors_form_submit_v2");
 
       try {
         const data = await fetchData(
-          "competitors_form_submit",
+          "competitors_form_submit_v2",
           Object.fromEntries(formData)
         );
 

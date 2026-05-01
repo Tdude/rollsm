@@ -106,6 +106,28 @@ class Competitors_Ajax_PublicAjaxHandler {
         $class = Competitors_ClassRepository::find_by_name( $participation_class );
         $class_id = $class ? (int) $class['id'] : 0;
 
+        // Idempotency guard: if the same person already registered for this
+        // competition in the last 30 seconds, treat the second click as a
+        // no-op rather than creating a duplicate. Defensive against rapid
+        // double-clicks, accidental form resubmits, and browser retries.
+        global $wpdb;
+        $existing = $wpdb->get_row( $wpdb->prepare(
+            "SELECT id FROM " . Competitors_Database::table( 'competitors' ) . "
+             WHERE competition_id = %d AND email = %s AND name = %s
+               AND created_at >= DATE_SUB(NOW(), INTERVAL 30 SECOND)
+             LIMIT 1",
+            $competition_id,
+            $email,
+            $name
+        ), ARRAY_A );
+        if ( $existing ) {
+            wp_send_json_success( array(
+                'message'      => __( 'Thanks — your registration is already in.', 'competitors' ),
+                'total_sum'    => 0,
+                'redirect_url' => add_query_arg( array( 'fee' => 0 ), get_home_url() . '/competitors-thank-you' ),
+            ) );
+        }
+
         // Calculate fee
         $prices = function_exists( 'get_competitor_price_list' ) ? get_competitor_price_list() : array();
         $total_sum = 0;
