@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Competitors
  * Description:  For RollSM, A Greenland Rolling Championships registering and scoreboard plugin with live scores.
- * Version: 2.2
+ * Version: 2.3
  * Author: <a href="https://klickomaten.com">Tibor Berki</a>. /Tdude @Github.
  * Text Domain: competitors
  * Domain Path: /languages
  */
 
-define('COMPETITORS_PLUGIN_VERSION', '2.2');
+define('COMPETITORS_PLUGIN_VERSION', '2.3');
 define('COMPETITORS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
 
@@ -809,11 +809,12 @@ function render_classes_dates_page() {
     echo '<div class="wrap">';
     echo '<h1>' . esc_html__('Classes & Dates', 'competitors') . '</h1>';
 
-    // Render settings form
+    // Render settings form. Classes first (set up once, global across events),
+    // then Competitions (one row per event).
     echo '<form method="post" action="options.php">';
     settings_fields('competitors_classes_dates_settings_group'); // Security nonce for this settings group
-    do_settings_sections('competitors_dates_settings'); // Output date-specific settings
     do_settings_sections('competitors_classes_settings'); // Output class-specific settings
+    do_settings_sections('competitors_dates_settings'); // Output date-specific settings
     submit_button(); // Render default submit button
     echo '</form>';
     echo '</div>';
@@ -929,8 +930,16 @@ function initialize_roll_date_mapping_settings() {
  * Renders directly instead of via add_settings_field to avoid nested form-tables.
  */
 function render_competitors_classes_section() {
-    echo '<h3>' . esc_html__('Classes', 'competitors') . '</h3>';
-    echo '<p>' . esc_html__('Add competition classes below. The "Class Name" is what competitors see in the registration form. An internal ID is generated automatically.', 'competitors') . '</p>';
+    echo '<h3>' . esc_html__('Competition classes', 'competitors') . '</h3>';
+    echo '<p>' . wp_kses_post(__(
+        'Classes are <strong>global</strong> — they apply to every competition, past and future. Set them up once. '
+      . 'The <em>Class Name</em> field is what competitors see in the registration form. An internal ID (slug) is generated automatically.',
+        'competitors'
+    )) . '</p>';
+    echo '<p>' . esc_html__(
+        'After adding a class, define its rolls in the Roll Settings tab.',
+        'competitors'
+    ) . '</p>';
     render_competitors_classes_field();
 }
 
@@ -938,8 +947,17 @@ function render_competitors_classes_section() {
  * Combined section callback for dates: description + add form + list.
  */
 function render_competitors_dates_section() {
-    echo '<h3>' . esc_html__('Dates', 'competitors') . '</h3>';
-    echo '<p>' . esc_html__('Click in the date field to pick a date. Each date creates a competition event.', 'competitors') . '</p>';
+    echo '<h3>' . esc_html__('Competitions', 'competitors') . '</h3>';
+    echo '<p>' . esc_html__(
+        'Each row below is one competition. The active competition is the one judges score against and where new registrations land. '
+      . 'Past competitions stay visible on the public scoreboard as historical archive.',
+        'competitors'
+    ) . '</p>';
+    echo '<p style="color:#d63638;"><strong>' . esc_html__('Warning:', 'competitors') . '</strong> '
+       . esc_html__(
+            'Removing a competition deletes its metadata permanently. Historical score data tied to that event becomes orphaned and cannot be displayed on the public scoreboard.',
+            'competitors'
+         ) . '</p>';
     render_competitors_dates_field();
 }
 
@@ -1092,16 +1110,38 @@ function render_competitors_dates_field() {
     if (!is_array($events)) {
         $events = [];
     }
+
+    // Build a map of event_date → status from the custom tables (post-migration).
+    // Lets us show "Current" / "Locked" badges on the table without changing
+    // the source-of-truth option.
+    $status_by_date = array();
+    if (class_exists('Competitors_Migration') && Competitors_Migration::is_complete()
+        && class_exists('Competitors_Database')) {
+        global $wpdb;
+        $rows = $wpdb->get_results(
+            'SELECT event_date, is_current, is_locked FROM ' . Competitors_Database::table('competitions'),
+            ARRAY_A
+        );
+        if (is_array($rows)) {
+            foreach ($rows as $r) {
+                $status_by_date[$r['event_date']] = array(
+                    'is_current' => (int) $r['is_current'],
+                    'is_locked'  => (int) $r['is_locked'],
+                );
+            }
+        }
+    }
+
     ob_start();
     ?>
     <table class="form-table" role="presentation">
         <tr>
-            <th scope="row"><label for="new_competition_date"><?php esc_html_e('Date:', 'competitors'); ?></label></th>
+            <th scope="row"><label for="new_competition_date"><?php esc_html_e('Add new competition', 'competitors'); ?></label></th>
             <td>
-                <input type="text" id="new_competition_date" class="date-picker" name="new_competition_date" value="" />
+                <input type="text" id="new_competition_date" class="date-picker" name="new_competition_date" value="" placeholder="<?php esc_attr_e('YYYY-MM-DD', 'competitors'); ?>" />
                 <label for="new_event_name" style="margin-left:12px;"><?php esc_html_e('Event Name:', 'competitors'); ?></label>
-                <input type="text" id="new_event_name" name="new_event_name" value="" class="regular-text" />
-                <button type="button" id="add-event-button" class="button button-primary plus-button"></button>
+                <input type="text" id="new_event_name" name="new_event_name" value="" class="regular-text" placeholder="<?php esc_attr_e('e.g. RollSM 2027 Stockholm', 'competitors'); ?>" />
+                <button type="button" id="add-event-button" class="button button-primary plus-button" title="<?php esc_attr_e('Add this competition', 'competitors'); ?>" aria-label="<?php esc_attr_e('Add this competition', 'competitors'); ?>"></button>
             </td>
         </tr>
     </table>
@@ -1111,17 +1151,34 @@ function render_competitors_dates_field() {
             <tr>
                 <th style="width:140px;"><?php esc_html_e('Date', 'competitors'); ?></th>
                 <th><?php esc_html_e('Event Name', 'competitors'); ?></th>
+                <th style="width:140px;"><?php esc_html_e('Status', 'competitors'); ?></th>
                 <th style="width:100px;"><?php esc_html_e('Actions', 'competitors'); ?></th>
             </tr>
         </thead>
         <tbody>
             <?php if (empty($events)) : ?>
-                <tr class="no-items"><td colspan="3"><?php esc_html_e('No events added yet.', 'competitors'); ?></td></tr>
+                <tr class="no-items"><td colspan="4"><?php esc_html_e('No competitions added yet.', 'competitors'); ?></td></tr>
             <?php endif; ?>
-            <?php foreach ($events as $index => $event): ?>
-                <tr class="event-item" data-date="<?php echo esc_attr($event['date']); ?>" data-name="<?php echo esc_attr($event['name']); ?>">
-                    <td><strong><?php echo esc_html($event['date']); ?></strong></td>
+            <?php foreach ($events as $index => $event):
+                $event_date = isset($event['date']) ? $event['date'] : '';
+                $status     = isset($status_by_date[$event_date]) ? $status_by_date[$event_date] : null;
+                $is_current = $status && $status['is_current'];
+                $is_locked  = $status && $status['is_locked'];
+                if ($is_current) {
+                    $badge_html = '<span style="background:#00a32a;color:#fff;padding:2px 8px;border-radius:3px;font-size:11px;">' . esc_html__('CURRENT', 'competitors') . '</span>';
+                } elseif ($is_locked) {
+                    $badge_html = '<span style="background:#dba617;color:#fff;padding:2px 8px;border-radius:3px;font-size:11px;">' . esc_html__('HISTORICAL', 'competitors') . '</span>';
+                } else {
+                    $badge_html = '<span style="color:#666;font-size:11px;">' . esc_html__('—', 'competitors') . '</span>';
+                }
+                $confirm_msg = $is_current
+                    ? __('This is the CURRENT competition. Removing it will break ongoing registrations and scoring. Continue?', 'competitors')
+                    : __('Removing this competition deletes its metadata permanently. Past score data will become orphaned. Continue?', 'competitors');
+            ?>
+                <tr class="event-item" data-date="<?php echo esc_attr($event_date); ?>" data-name="<?php echo esc_attr($event['name']); ?>" data-confirm="<?php echo esc_attr($confirm_msg); ?>">
+                    <td><strong><?php echo esc_html($event_date); ?></strong></td>
                     <td><?php echo esc_html($event['name']); ?></td>
+                    <td><?php echo $badge_html; // already escaped above ?></td>
                     <td>
                         <input type="hidden" name="competitors_options[available_competition_dates][]" value="<?php echo esc_attr(json_encode($event)); ?>" />
                         <button type="button" class="button-secondary button-small remove-event-button"><?php esc_html_e('Remove', 'competitors'); ?></button>

@@ -935,9 +935,10 @@ jQuery(document).ready(function ($) {
       $("#existing_events tbody").append(
         `<tr class="event-item" data-date="${escapeHtml(
           newDate
-        )}" data-name="${escapeHtml(eventName)}">
+        )}" data-name="${escapeHtml(eventName)}" data-confirm="Remove this unsaved competition?">
                 <td><strong>${escapeHtml(newDate)}</strong></td>
                 <td>${escapeHtml(eventName)}</td>
+                <td><span style="color:#666;font-size:11px;">unsaved</span></td>
                 <td>
                   <input type="hidden" name="competitors_options[available_competition_dates][]" value="${encodeURIComponent(
                     eventString
@@ -1010,8 +1011,16 @@ jQuery(document).ready(function ($) {
   });
 
   // Remove Event button functionality
+  // Uses per-row data-confirm attribute (set in PHP) so the warning text
+  // varies based on whether the event is current/historical/unsaved.
   $(document).on("click", ".remove-event-button", function () {
-    $(this).closest("tr").remove();
+    var $row = $(this).closest("tr");
+    var msg =
+      $row.attr("data-confirm") ||
+      "Removing this competition deletes its metadata permanently. Continue?";
+    if (window.confirm(msg)) {
+      $row.remove();
+    }
   });
 
   // Function to escape HTML
