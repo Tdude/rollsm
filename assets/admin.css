@@ -382,7 +382,7 @@ tr.competitor-header:hover,
 .wp-admin .plus-button {
   line-height: unset;
   font-size: 16px;
-  margin: 0 1em;
+  margin: 0 0 0 1em;
 }
 .wp-admin .plus-button:before {
   content: "+";
@@ -390,6 +390,28 @@ tr.competitor-header:hover,
   transform: scale(1.2);
   display: inline-block;
   vertical-align: middle;
+}
+
+/* − Button (mirrors plus-button, sits next to it) */
+.wp-admin .minus-button {
+  line-height: unset;
+  font-size: 16px;
+  margin: 0 0 0 0.4em;
+  border-color: #d63638;
+  color: #d63638;
+}
+.wp-admin .minus-button:before {
+  content: "\2212"; /* MINUS SIGN, matches the visual weight of the + */
+  font-weight: 500;
+  transform: scale(1.2);
+  display: inline-block;
+  vertical-align: middle;
+}
+.wp-admin .minus-button:hover,
+.wp-admin .minus-button:focus {
+  border-color: #d63638;
+  background: #d63638;
+  color: #fff;
 }
 
 /* Input Field Styling */
@@ -642,7 +664,10 @@ tr.competitor-header:hover,
   justify-content: space-between;
   align-items: center;
 }
-.wrap .remove-row {
+/* Roll row remove buttons sit next to the + button (no auto-pushed-right
+   layout). Class & event lists keep the legacy auto-right behavior. */
+.wrap li.class-item > .remove-row,
+.wrap li.event-item > .remove-row {
   margin-left: auto;
 }
 

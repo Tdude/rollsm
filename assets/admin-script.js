@@ -1066,8 +1066,8 @@ jQuery(document).ready(function ($) {
         <input type="checkbox" id="numeric_${slug}_${index}" name="competitors_options[is_numeric_field_${classType}][${index}]" value="1">
         <label for="no_right_left_${slug}_${index}"> No Right/Left:</label>
         <input type="checkbox" id="no_right_left_${slug}_${index}" name="competitors_options[no_right_left_${classType}][${index}]" value="1">
-        <button type="button" class="button custom-button button-primary plus-button" data-class="${classType}" title="Insert new roll below"></button>
-        <button type="button" class="button custom-button button-secondary remove-row">Remove</button>
+        <button type="button" class="button custom-button button-primary plus-button" data-class="${classType}" title="Insert new roll below" aria-label="Insert new roll below"></button>
+        <button type="button" class="button custom-button remove-row minus-button" title="Remove this roll" aria-label="Remove this roll"></button>
       </p>
     `;
   }

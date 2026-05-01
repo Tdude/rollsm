@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Competitors
  * Description:  For RollSM, A Greenland Rolling Championships registering and scoreboard plugin with live scores.
- * Version: 2.1
+ * Version: 2.2
  * Author: <a href="https://klickomaten.com">Tibor Berki</a>. /Tdude @Github.
  * Text Domain: competitors
  * Domain Path: /languages
  */
 
-define('COMPETITORS_PLUGIN_VERSION', '2.1');
+define('COMPETITORS_PLUGIN_VERSION', '2.2');
 define('COMPETITORS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
 
@@ -1223,8 +1223,8 @@ function render_competitors_dates_field() {
                 <input type="checkbox" id="numeric_<?php echo esc_attr($class_slug . '_' . $index); ?>" name="competitors_options[is_numeric_field_<?php echo esc_attr($class); ?>][<?php echo esc_attr($index); ?>]" value="1" <?php echo $numeric_checked; ?>>
                 <label for="no_right_left_<?php echo esc_attr($class_slug . '_' . $index); ?>"><?php esc_html_e('No Right/Left:', 'competitors'); ?></label>
                 <input type="checkbox" id="no_right_left_<?php echo esc_attr($class_slug . '_' . $index); ?>" name="competitors_options[no_right_left_<?php echo esc_attr($class); ?>][<?php echo esc_attr($index); ?>]" value="1" <?php echo $no_right_left_checked; ?>>
-                <button type="button" class="button custom-button button-primary plus-button" data-class="<?php echo esc_attr($class); ?>" title="<?php esc_attr_e('Insert new roll below', 'competitors'); ?>"></button>
-                <button type="button" class="button custom-button button-secondary remove-row"><?php esc_html_e('Remove', 'competitors'); ?></button>
+                <button type="button" class="button custom-button button-primary plus-button" data-class="<?php echo esc_attr($class); ?>" title="<?php esc_attr_e('Insert new roll below', 'competitors'); ?>" aria-label="<?php esc_attr_e('Insert new roll below', 'competitors'); ?>"></button>
+                <button type="button" class="button custom-button remove-row minus-button" title="<?php esc_attr_e('Remove this roll', 'competitors'); ?>" aria-label="<?php esc_attr_e('Remove this roll', 'competitors'); ?>"></button>
             </p>
         <?php } ?>
     </div>
