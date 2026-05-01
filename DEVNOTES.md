@@ -60,6 +60,26 @@ Three buttons appear on **Competitors → Settings**:
 | Rescue Missing Scores | Backfills missing master rolls + snapshots + scores | No (insert-only) |
 | Clean Up Old CPT Data | Permanently deletes CPT posts and legacy options | Yes — irreversible |
 
+### Visibility gate (v2.0+)
+
+The migration UI and all four AJAX handlers (`handle_ajax_migration`,
+`handle_ajax_revert`, `handle_ajax_cleanup_cpt`, `handle_ajax_rescue_scores`)
+are gated behind `Competitors_MigrationAdmin::is_migration_admin()` rather
+than the generic `manage_options` capability. Default check: **user ID 1**
+(the original site admin).
+
+Other admins on the site keep full access to the rest of the plugin
+(scoring, email blasts, settings) but never see the migration buttons and
+cannot fire the destructive endpoints even with a crafted request.
+
+To allow a different user, edit `is_migration_admin()` in
+`includes/MigrationAdmin.php`:
+```php
+return $user && (int) $user->ID === 1;        // user ID 1 only
+return $user && $user->user_email === 'me@example.com';  // by email
+return $user && in_array($user->ID, [1, 7], true);       // explicit allowlist
+```
+
 ### Why the rescue tool exists
 
 The original `migrate_rolls()` reads from `competitors_options['custom_values_*']`

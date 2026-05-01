@@ -26,10 +26,27 @@ class Competitors_MigrationAdmin {
     }
 
     /**
+     * Gate for the migration tools (notice + AJAX handlers).
+     *
+     * Only the original site admin sees the migration UI and can fire the
+     * destructive AJAX handlers. Other admins ("manage_options") still run
+     * the rest of the plugin normally — they just don't see Migrate / Revert
+     * / Rescue / Clean Up CPT.
+     *
+     * Default: user ID 1 (typical first admin on a single-site install).
+     * Adjust the ID below if the original admin has a different ID on this
+     * install.
+     */
+    private static function is_migration_admin() {
+        $user = wp_get_current_user();
+        return $user && (int) $user->ID === 1;
+    }
+
+    /**
      * Show admin notice if migration hasn't been completed.
      */
     public static function show_migration_notice() {
-        if ( ! current_user_can( 'manage_options' ) ) {
+        if ( ! self::is_migration_admin() ) {
             return;
         }
 
@@ -274,7 +291,7 @@ class Competitors_MigrationAdmin {
     public static function handle_ajax_migration() {
         check_ajax_referer( 'competitors_migration_nonce', 'nonce' );
 
-        if ( ! current_user_can( 'manage_options' ) ) {
+        if ( ! self::is_migration_admin() ) {
             wp_send_json_error( array( 'message' => 'Permission denied.' ) );
         }
 
@@ -293,7 +310,7 @@ class Competitors_MigrationAdmin {
     public static function handle_ajax_revert() {
         check_ajax_referer( 'competitors_migration_nonce', 'nonce' );
 
-        if ( ! current_user_can( 'manage_options' ) ) {
+        if ( ! self::is_migration_admin() ) {
             wp_send_json_error( array( 'message' => 'Permission denied.' ) );
         }
 
@@ -321,7 +338,7 @@ class Competitors_MigrationAdmin {
     public static function handle_ajax_cleanup_cpt() {
         check_ajax_referer( 'competitors_migration_nonce', 'nonce' );
 
-        if ( ! current_user_can( 'manage_options' ) ) {
+        if ( ! self::is_migration_admin() ) {
             wp_send_json_error( array( 'message' => 'Permission denied.' ) );
         }
 
@@ -398,7 +415,7 @@ class Competitors_MigrationAdmin {
     public static function handle_ajax_rescue_scores() {
         check_ajax_referer( 'competitors_migration_nonce', 'nonce' );
 
-        if ( ! current_user_can( 'manage_options' ) ) {
+        if ( ! self::is_migration_admin() ) {
             wp_send_json_error( array( 'message' => 'Permission denied.' ) );
         }
 
