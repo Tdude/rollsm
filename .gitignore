@@ -4,3 +4,12 @@
 .DS_Store?
 ._*
 .Trashes
+
+# DB dumps — contain PII (competitor emails, phones, ICE contacts).
+# Keep them in the working tree as backups but never commit to a public repo.
+*.sql
+*.sql.zip
+*.sql.gz
+
+# Exception: SQL scripts under tools/ are committed (no PII, only structural).
+!tools/*.sql
