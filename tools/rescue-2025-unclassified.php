@@ -14,7 +14,9 @@
  *   2. As an admin (user ID 1), visit:
  *        /wp-admin/?rescue_2025=1&dry_run=1   ← preview only, no writes
  *        /wp-admin/?rescue_2025=1              ← actually run
- *   3. Read the result page, then `rm` this file.
+ *   3. Read the result page, then click the "Delete this mu-plugin"
+ *      link at the bottom — or visit /wp-admin/?rescue_2025_cleanup=1.
+ *      No shell access required; works from Plesk too.
  *
  * WHAT IT DOES (in order)
  *   1. Ensures comp_classes has the 'junior' slug. INSERTs if missing.
@@ -50,6 +52,26 @@ const ROLLSM_RESCUE_TARGET_COMP   = 2;
 const ROLLSM_RESCUE_TARGET_SLUG   = 'junior';
 const ROLLSM_RESCUE_TARGET_LABEL  = 'Junior';
 const ROLLSM_RESCUE_TARGET_ORDER  = 5;
+
+// Self-delete endpoint — visited from the link in the result page so the
+// admin doesn't need shell or Plesk File Manager access to clean up.
+add_action( 'admin_init', function () {
+    if ( empty( $_GET['rescue_2025_cleanup'] ) ) {
+        return;
+    }
+    if ( ! current_user_can( 'manage_options' ) || get_current_user_id() !== 1 ) {
+        wp_die( 'Insufficient privileges.' );
+    }
+    $path    = __FILE__;
+    $deleted = @unlink( $path );
+    wp_die(
+        $deleted
+            ? '<h1>Cleanup complete</h1><p>Deleted <code>' . esc_html( $path ) . '</code>.</p>'
+            : '<h1>Cleanup failed</h1><p>Could not delete <code>' . esc_html( $path ) . '</code>. Remove it via Plesk File Manager (right-click → Delete) or shell.</p>',
+        'Rescue Cleanup',
+        array( 'response' => 200 )
+    );
+});
 
 add_action( 'admin_init', function () {
     if ( empty( $_GET['rescue_2025'] ) ) {
@@ -202,10 +224,18 @@ function rollsm_run_rescue_2025( array $reclassify_by_post_id, bool $dry_run ) {
         ARRAY_A
     );
 
+    $cleanup_url = admin_url( '?rescue_2025_cleanup=1' );
+
     wp_die(
         '<h1>RollSM Rescue 2025 — Result</h1><pre>'
         . esc_html( print_r( $report, true ) )
-        . '</pre><p>Delete this mu-plugin file once you are satisfied.</p>',
+        . '</pre>'
+        . '<p>Once you have verified the result above on the public scoreboard, '
+        . 'remove this one-shot mu-plugin:</p>'
+        . '<p><a href="' . esc_url( $cleanup_url ) . '" '
+        . 'class="button button-primary" '
+        . 'onclick="return confirm(\'Delete the rescue mu-plugin file now? This cannot be undone (but the rescue is already committed to the DB, so you only lose the ability to re-run).\');">'
+        . '🗑 Delete this mu-plugin file</a></p>',
         'Rescue Result',
         array( 'response' => 200 )
     );

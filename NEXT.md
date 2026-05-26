@@ -100,11 +100,16 @@ things, all reversible:
 
 ```
 1. Copy tools/rescue-2025-unclassified.php → wp-content/mu-plugins/
+   (via Plesk File Manager: navigate to wp-content/plugins/competitors/tools/,
+    download the file, upload it into wp-content/mu-plugins/ — create the
+    folder first if it doesn't exist.)
 2. As admin user ID 1, visit:
      /wp-admin/?rescue_2025=1&dry_run=1        ← preview only, no writes
      /wp-admin/?rescue_2025=1                    ← actually run
 3. Read the result page (printed report + post_state block at the bottom).
-4. rm the mu-plugin file.
+4. Click the "🗑 Delete this mu-plugin file" button on the result page
+   (or visit /wp-admin/?rescue_2025_cleanup=1 directly). The file
+   removes itself — no Plesk File Manager step needed for cleanup.
 ```
 
 The `.sql` companion at `tools/rescue-2025-unclassified.sql` does the same
