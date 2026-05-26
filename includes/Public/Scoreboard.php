@@ -31,9 +31,14 @@ class Competitors_Public_Scoreboard {
      */
     private static function render_list_page() {
         $competitions = Competitors_CompetitionRepository::find_all();
-        // include_archived=true so historical class filters (e.g. retired
-        // classes that still have results) remain reachable.
+        // include_archived=true so retired-but-still-used classes (e.g.
+        // 'junior' in the 2025 historical results) remain reachable in
+        // the filter dropdown.
         $classes      = Competitors_ClassRepository::find_all( true );
+        // Drop archived classes that have zero competitors — they were
+        // archived without ever holding data and would only clutter
+        // the filter dropdown with empty buckets.
+        $classes      = self::drop_empty_archived_classes( $classes );
 
         // Date options
         $date_options = '<option value="">' . esc_html__( 'All Dates', 'competitors' ) . '</option>';
@@ -77,6 +82,31 @@ class Competitors_Public_Scoreboard {
             <div id="competitors-details-container"></div>
         </div>
         HTML;
+    }
+
+    /**
+     * Remove archived classes that have no competitors. They would only
+     * show up as empty entries in the scoreboard filter dropdown.
+     * Non-archived classes are always kept regardless of whether they
+     * have competitors yet (e.g. a freshly added class for a future event).
+     *
+     * @param array $classes
+     * @return array
+     */
+    private static function drop_empty_archived_classes( array $classes ) {
+        global $wpdb;
+        $competitors_table = Competitors_Database::table( 'competitors' );
+
+        return array_values( array_filter( $classes, function ( $c ) use ( $wpdb, $competitors_table ) {
+            if ( empty( $c['is_archived'] ) ) {
+                return true;
+            }
+            $has_any = (int) $wpdb->get_var( $wpdb->prepare(
+                "SELECT EXISTS(SELECT 1 FROM {$competitors_table} WHERE class_id = %d)",
+                (int) $c['id']
+            ) );
+            return $has_any === 1;
+        } ) );
     }
 
     /**
