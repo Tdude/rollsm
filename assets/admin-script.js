@@ -995,7 +995,9 @@ jQuery(document).ready(function ($) {
       `<tr class="class-item" data-name="${escapeHtml(
         newClassName
       )}" data-comment="${escapeHtml(newClassComment)}" data-archived="0">
-              <td><strong>${escapeHtml(newClassComment)}</strong></td>
+              <td><input type="text" class="class-comment-input regular-text" value="${escapeHtml(
+                newClassComment
+              )}" aria-label="Class display name"></td>
               <td><code>${escapeHtml(newClassName)}</code></td>
               <td class="class-status-cell">
                 <span style="color:#00a32a;font-size:11px;">Active</span>
@@ -1064,6 +1066,27 @@ jQuery(document).ready(function ($) {
   $(document).on("click", ".unarchive-class-button", function () {
     var $row = $(this).closest("tr");
     setClassArchived($row, false);
+  });
+
+  // Inline edit for class display name. As the user types, sync the
+  // new comment into the hidden JSON payload so the next form save
+  // persists it via competitors_options_sanitize → SettingsSync →
+  // ClassRepository::update.
+  $(document).on("input change", ".class-comment-input", function () {
+    var $row = $(this).closest("tr");
+    var $hidden = $row.find('input[type="hidden"]');
+    var payload = {};
+    try {
+      payload = JSON.parse($hidden.val()) || {};
+    } catch (e) {
+      payload = {
+        name: $row.attr("data-name") || "",
+        is_archived: $row.attr("data-archived") === "1" ? 1 : 0,
+      };
+    }
+    payload.comment = $(this).val();
+    $hidden.val(JSON.stringify(payload));
+    $row.attr("data-comment", payload.comment);
   });
 
   // Remove Event button functionality

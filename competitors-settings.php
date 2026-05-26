@@ -1062,12 +1062,37 @@ function render_competitors_classes_field() {
         $classes = [];
     }
 
-    // Pull is_archived state from comp_classes so the UI reflects DB truth
-    // even if a class is missing the flag in the options array (legacy data).
-    $archived_by_name = array();
+    // Pull full state from comp_classes so the UI reflects DB truth even
+    // when a class is missing from the options array (orphaned by past
+    // edits) or missing the is_archived flag (legacy rows).
+    $db_classes_by_name = array();
     if (class_exists('Competitors_ClassRepository')) {
         foreach (Competitors_ClassRepository::find_all(true) as $c) {
-            $archived_by_name[$c['name']] = ! empty($c['is_archived']);
+            $db_classes_by_name[$c['name']] = $c;
+        }
+    }
+    $archived_by_name = array();
+    foreach ($db_classes_by_name as $name => $c) {
+        $archived_by_name[$name] = ! empty($c['is_archived']);
+    }
+
+    // Append orphan classes — present in comp_classes but missing from
+    // the options array. Saving the form will re-incorporate them so
+    // the option becomes the single source of truth again.
+    $option_names = array();
+    foreach ($classes as $c) {
+        if (is_array($c) && !empty($c['name'])) {
+            $option_names[$c['name']] = true;
+        }
+    }
+    foreach ($db_classes_by_name as $name => $c) {
+        if (empty($option_names[$name])) {
+            $classes[] = array(
+                'name'        => $name,
+                'comment'     => isset($c['comment']) ? $c['comment'] : '',
+                'is_archived' => !empty($c['is_archived']) ? 1 : 0,
+                '_is_orphan'  => true,
+            );
         }
     }
 
@@ -1085,7 +1110,7 @@ function render_competitors_classes_field() {
     </table>
 
     <p class="description" style="margin: 8px 0 12px;">
-        <?php echo wp_kses_post(__('<strong>Archive</strong> hides a class from the public registration form but keeps its historical competitors, snapshot rolls, and scores intact — so existing scoreboard results still render. <strong>Unarchive</strong> restores it. Save settings after toggling.', 'competitors')); ?>
+        <?php echo wp_kses_post(__('<strong>Archive</strong> hides a class from the public registration form but keeps its historical competitors, snapshot rolls, and scores intact — so existing scoreboard results still render. <strong>Unarchive</strong> restores it. Edit the class name inline to rename it. Save settings after any change.', 'competitors')); ?>
     </p>
 
     <table class="wp-list-table widefat fixed striped" id="existing_classes">
@@ -1105,7 +1130,6 @@ function render_competitors_classes_field() {
             // Render every class present in the option, in their stored order.
             // Carry the live is_archived flag forward via the hidden JSON
             // payload so it survives the form save.
-            $rendered_names = array();
             foreach ($classes as $index => $class) :
                 if (!is_array($class) || empty($class['name'])) {
                     continue;
@@ -1113,22 +1137,24 @@ function render_competitors_classes_field() {
                 $name        = $class['name'];
                 $comment     = isset($class['comment']) ? $class['comment'] : '';
                 $is_archived = !empty($class['is_archived']) || !empty($archived_by_name[$name]);
+                $is_orphan   = !empty($class['_is_orphan']);
                 $payload     = array(
                     'name'        => $name,
                     'comment'     => $comment,
                     'is_archived' => $is_archived ? 1 : 0,
                 );
-                $rendered_names[$name] = true;
             ?>
-                <tr class="class-item<?php echo $is_archived ? ' class-archived' : ''; ?>"
+                <tr class="class-item<?php echo $is_archived ? ' class-archived' : ''; ?><?php echo $is_orphan ? ' class-orphan' : ''; ?>"
                     data-name="<?php echo esc_attr($name); ?>"
                     data-comment="<?php echo esc_attr($comment); ?>"
                     data-archived="<?php echo $is_archived ? '1' : '0'; ?>">
-                    <td><strong><?php echo esc_html($comment ?: $name); ?></strong></td>
+                    <td><input type="text" class="class-comment-input regular-text" value="<?php echo esc_attr($comment); ?>" aria-label="<?php esc_attr_e('Class display name', 'competitors'); ?>" /></td>
                     <td><code><?php echo esc_html($name); ?></code></td>
                     <td class="class-status-cell">
                         <?php if ($is_archived) : ?>
                             <span style="background:#dba617;color:#fff;padding:2px 8px;border-radius:3px;font-size:11px;"><?php esc_html_e('ARCHIVED', 'competitors'); ?></span>
+                        <?php elseif ($is_orphan) : ?>
+                            <span style="background:#7e8993;color:#fff;padding:2px 8px;border-radius:3px;font-size:11px;" title="<?php esc_attr_e('Present in DB but missing from saved options — will be re-incorporated on next save.', 'competitors'); ?>"><?php esc_html_e('ORPHAN', 'competitors'); ?></span>
                         <?php else : ?>
                             <span style="color:#00a32a;font-size:11px;"><?php esc_html_e('Active', 'competitors'); ?></span>
                         <?php endif; ?>
