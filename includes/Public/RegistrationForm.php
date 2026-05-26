@@ -16,6 +16,71 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Competitors_Public_RegistrationForm {
 
     /**
+     * Defaults for toggleable / re-labelable registration form fields.
+     * Used by the Form Settings admin page to know which fields are
+     * exposed and what the fallback labels are when no override is set.
+     * Adding a key here also adds it to the admin UI automatically.
+     *
+     * @return array<string,array{visible:int,label:string,required?:int}>
+     */
+    public static function field_defaults() {
+        return array(
+            'club' => array(
+                'visible' => 1,
+                'label'   => __( 'Club', 'competitors' ),
+            ),
+            'sponsors' => array(
+                'visible' => 1,
+                'label'   => __( 'Your Sponsors', 'competitors' ),
+            ),
+            'speaker_info' => array(
+                'visible'  => 1,
+                'label'    => __( 'Support text (ICE phone number, info about you, food preferences/allergies etc.)', 'competitors' ),
+                'required' => 1,
+            ),
+            'license' => array(
+                'visible' => 1,
+                'label'   => __( 'I have a competition license or will get one for this comp!', 'competitors' ),
+            ),
+            'dinner' => array(
+                'visible' => 1,
+                'label'   => __( 'Join competition dinner (200 SEK)', 'competitors' ),
+            ),
+        );
+    }
+
+    /**
+     * Resolve admin override + default for a single field. Returns null
+     * if the key is not a toggleable field. Custom labels are honoured
+     * even when empty string is stored — admin can explicitly blank a
+     * label by toggling visibility off instead.
+     *
+     * @param string $key
+     * @return array|null
+     */
+    public static function field_setting( $key ) {
+        $defaults = self::field_defaults();
+        if ( ! isset( $defaults[ $key ] ) ) {
+            return null;
+        }
+        $opts   = get_option( 'competitors_options', array() );
+        $stored = isset( $opts['form_field_settings'][ $key ] ) && is_array( $opts['form_field_settings'][ $key ] )
+            ? $opts['form_field_settings'][ $key ]
+            : array();
+
+        $merged = array_merge( $defaults[ $key ], $stored );
+        // Treat blank custom label as "use default".
+        if ( isset( $stored['label'] ) && trim( (string) $stored['label'] ) === '' ) {
+            $merged['label'] = $defaults[ $key ]['label'];
+        }
+        $merged['visible'] = ! empty( $merged['visible'] ) ? 1 : 0;
+        if ( isset( $merged['required'] ) ) {
+            $merged['required'] = ! empty( $merged['required'] ) ? 1 : 0;
+        }
+        return $merged;
+    }
+
+    /**
      * Render the registration form shortcode.
      *
      * @return string
@@ -36,8 +101,10 @@ class Competitors_Public_RegistrationForm {
                 <input aria-label="Email" type="text" id="email" name="email"><br>
                 <label for="phone"><?php esc_html_e( 'Phone', 'competitors' ); ?> <span class="text-danger">*</span></label>
                 <input aria-label="Phone" type="text" id="phone" name="phone"><br>
-                <label for="club"><?php esc_html_e( 'Club', 'competitors' ); ?></label>
-                <input aria-label="Club" type="text" id="club" name="club"><br>
+                <?php $club = self::field_setting( 'club' ); if ( $club && $club['visible'] ) : ?>
+                    <label for="club"><?php echo wp_kses_post( $club['label'] ); ?></label>
+                    <input aria-label="Club" type="text" id="club" name="club"><br>
+                <?php endif; ?>
 
                 <div class="extra-visible gender-container">
                     <label><?php esc_html_e( 'Gender', 'competitors' ); ?> <span class="text-danger">*</span></label><br>
@@ -47,22 +114,32 @@ class Competitors_Public_RegistrationForm {
                     <label for="gender_man"><?php esc_html_e( 'Man', 'competitors' ); ?></label>
                 </div>
 
-                <label for="sponsors"><?php esc_html_e( 'Your Sponsors', 'competitors' ); ?></label>
-                <input aria-label="Sponsors" type="text" id="sponsors" name="sponsors"><br>
-                <label for="speaker_info"><?php esc_html_e( 'Support text (ICE phone number, info about you, food preferences/allergies etc.)', 'competitors' ); ?> <span class="text-danger">*</span></label>
-                <textarea aria-label="Speaker Info" id="speaker_info" name="speaker_info"></textarea><br>
+                <?php $sponsors = self::field_setting( 'sponsors' ); if ( $sponsors && $sponsors['visible'] ) : ?>
+                    <label for="sponsors"><?php echo wp_kses_post( $sponsors['label'] ); ?></label>
+                    <input aria-label="Sponsors" type="text" id="sponsors" name="sponsors"><br>
+                <?php endif; ?>
+
+                <?php $speaker = self::field_setting( 'speaker_info' ); if ( $speaker && $speaker['visible'] ) : ?>
+                    <label for="speaker_info"><?php echo wp_kses_post( $speaker['label'] ); ?><?php if ( ! empty( $speaker['required'] ) ) : ?> <span class="text-danger">*</span><?php endif; ?></label>
+                    <textarea aria-label="Speaker Info" id="speaker_info" name="speaker_info"<?php echo ! empty( $speaker['required'] ) ? ' data-required="1"' : ''; ?>></textarea><br>
+                <?php endif; ?>
 
                 <?php echo self::render_date_field(); ?>
                 <?php echo self::render_class_field(); ?>
 
-                <div class="extra-visible" id="license-container">
-                    <input aria-label="License agreement" type="checkbox" id="license" name="license">
-                    <label for="license"><?php echo wp_kses_post( __( 'I have a competition license or will get one for this comp!', 'competitors' ) ); ?></label>
-                </div>
-                <div class="extra-visible" id="dinner-container">
-                    <input aria-label="Join competition dinner" type="checkbox" id="dinner" name="dinner">
-                    <label for="dinner"><?php esc_html_e( 'Join competition dinner (200 SEK)', 'competitors' ); ?></label>
-                </div>
+                <?php $license = self::field_setting( 'license' ); if ( $license && $license['visible'] ) : ?>
+                    <div class="extra-visible" id="license-container">
+                        <input aria-label="License agreement" type="checkbox" id="license" name="license">
+                        <label for="license"><?php echo wp_kses_post( $license['label'] ); ?></label>
+                    </div>
+                <?php endif; ?>
+
+                <?php $dinner = self::field_setting( 'dinner' ); if ( $dinner && $dinner['visible'] ) : ?>
+                    <div class="extra-visible" id="dinner-container">
+                        <input aria-label="Join competition dinner" type="checkbox" id="dinner" name="dinner">
+                        <label for="dinner"><?php echo wp_kses_post( $dinner['label'] ); ?></label>
+                    </div>
+                <?php endif; ?>
                 <div class="extra-visible" id="consent-container">
                     <input aria-label="Consent" type="checkbox" id="consent" name="consent" value="yes" required>
                     <label for="consent"><?php echo wp_kses_post( __( 'I agree <span class="text-danger"> * </span> for you to save my data, publish results, photos, etc.', 'competitors' ) ); ?></label>

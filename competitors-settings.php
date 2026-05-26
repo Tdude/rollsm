@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Competitors
  * Description:  For RollSM, A Greenland Rolling Championships registering and scoreboard plugin with live scores.
- * Version: 2.6
+ * Version: 2.7
  * Author: <a href="https://klickomaten.com">Tibor Berki</a>. /Tdude @Github.
  * Text Domain: competitors
  * Domain Path: /languages
  */
 
-define('COMPETITORS_PLUGIN_VERSION', '2.6');
+define('COMPETITORS_PLUGIN_VERSION', '2.7');
 define('COMPETITORS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
 
@@ -645,6 +645,22 @@ function add_competitors_submenu_for_classes_dates() {
 add_action('admin_menu', 'add_competitors_submenu_for_classes_dates');
 
 /**
+ * Adds a submenu page for per-field registration form settings
+ * (visibility + custom labels for optional/event-dependent fields).
+ */
+function add_competitors_submenu_for_form_settings() {
+    add_submenu_page(
+        'competitors-settings',
+        esc_html__('Form Settings', 'competitors'),
+        esc_html__('Form Settings', 'competitors'),
+        'manage_options',
+        'competitors-form-settings',
+        'render_form_settings_page'
+    );
+}
+add_action('admin_menu', 'add_competitors_submenu_for_form_settings');
+
+/**
  * Adds a submenu page under the plugin's settings for personal data management.
  * When migration is complete, delegates to the new custom-table-backed class.
  */
@@ -677,6 +693,7 @@ function render_admin_page_header() {
     $tabs = [
         'competitors-settings' => esc_html__('Rolls & Points', 'competitors'),
         'competitors-classes-dates' => esc_html__('Classes & Dates', 'competitors'),
+        'competitors-form-settings' => esc_html__('Form Settings', 'competitors'),
         'competitors-detailed-data' => esc_html__('Competitor List', 'competitors'),
         'competitors-scoring' => esc_html__('Judges Scoring', 'competitors'),
     ];
@@ -794,6 +811,30 @@ function render_competitors_main_settings_page() {
 
 
 /**
+ * Renders the Form Settings tab — per-field visibility and label
+ * overrides for the public registration form.
+ */
+function render_form_settings_page() {
+    if (!current_user_can('manage_options')) {
+        echo esc_html__('Access denied to settings, sorry.', 'competitors');
+        return;
+    }
+
+    render_admin_page_header();
+
+    echo '<div class="wrap">';
+    echo '<h1>' . esc_html__('Form Settings', 'competitors') . '</h1>';
+    echo '<p class="description">' . esc_html__('Toggle visibility and rename optional registration form fields. Mandatory fields (name, email, phone, gender, competition date, participation class, consent) are always shown and not listed here.', 'competitors') . '</p>';
+
+    echo '<form method="post" action="options.php">';
+    settings_fields('competitors_form_settings_group');
+    do_settings_sections('competitors_form_settings');
+    submit_button();
+    echo '</form>';
+    echo '</div>';
+}
+
+/**
  * Renders the Classes and Dates tab content.
  */
 function render_classes_dates_page() {
@@ -837,12 +878,18 @@ function initialize_competitors_settings() {
         'competitors_options',
         'competitors_options_sanitize' // Sanitization callback
     );
+    register_setting(
+        'competitors_form_settings_group',
+        'competitors_options',
+        'competitors_options_sanitize' // Sanitization callback
+    );
 
     // Initialize individual settings sections
     initialize_competitors_classes_settings();
     initialize_competitors_dates_settings();
     initialize_competitors_rollnames_settings();
     initialize_roll_date_mapping_settings();
+    initialize_competitors_form_field_settings();
 }
 add_action('admin_init', 'initialize_competitors_settings');
 
@@ -866,6 +913,92 @@ function initialize_competitors_dates_settings() {
         'render_competitors_dates_section',
         'competitors_dates_settings'
     );
+}
+
+/**
+ * Initializes the section for per-field registration form settings —
+ * visibility toggle + custom label override for each optional field.
+ */
+function initialize_competitors_form_field_settings() {
+    add_settings_section(
+        'competitors_form_settings_section',
+        '', // No title — page h1 is sufficient
+        '__return_false',
+        'competitors_form_settings'
+    );
+
+    add_settings_field(
+        'competitors_form_field_settings_field',
+        esc_html__('Optional Registration Fields', 'competitors'),
+        'render_competitors_form_field_settings_field',
+        'competitors_form_settings',
+        'competitors_form_settings_section'
+    );
+}
+
+/**
+ * Renders the per-field settings table. One row per toggleable field
+ * from RegistrationForm::field_defaults(). Stored under
+ * competitors_options[form_field_settings][<key>].
+ */
+function render_competitors_form_field_settings_field() {
+    if (!class_exists('Competitors_Public_RegistrationForm')) {
+        echo '<p>' . esc_html__('Registration form class not loaded.', 'competitors') . '</p>';
+        return;
+    }
+
+    $defaults = Competitors_Public_RegistrationForm::field_defaults();
+    $options  = get_option('competitors_options', []);
+    $stored   = isset($options['form_field_settings']) && is_array($options['form_field_settings'])
+        ? $options['form_field_settings']
+        : [];
+    ?>
+    <p class="description" style="margin: 0 0 12px;">
+        <?php echo wp_kses_post(__('Uncheck <strong>Visible</strong> to hide a field from the public registration form. Set a <strong>Custom label</strong> to override the default wording (e.g. update the dinner price, or translate the label). Leave the custom label blank to use the default.', 'competitors')); ?>
+    </p>
+
+    <table class="wp-list-table widefat fixed striped">
+        <thead>
+            <tr>
+                <th style="width:140px;"><?php esc_html_e('Field', 'competitors'); ?></th>
+                <th style="width:80px;"><?php esc_html_e('Visible', 'competitors'); ?></th>
+                <th><?php esc_html_e('Custom label (blank = use default)', 'competitors'); ?></th>
+                <th><?php esc_html_e('Default label', 'competitors'); ?></th>
+                <th style="width:90px;"><?php esc_html_e('Required', 'competitors'); ?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($defaults as $key => $field) :
+                $row_visible = isset($stored[$key]['visible']) ? !empty($stored[$key]['visible']) : !empty($field['visible']);
+                $row_label   = isset($stored[$key]['label']) ? (string) $stored[$key]['label'] : '';
+                $has_required = array_key_exists('required', $field);
+                $row_required = $has_required
+                    ? (isset($stored[$key]['required']) ? !empty($stored[$key]['required']) : !empty($field['required']))
+                    : false;
+            ?>
+                <tr>
+                    <td><code><?php echo esc_html($key); ?></code></td>
+                    <td>
+                        <input type="hidden" name="competitors_options[form_field_settings][<?php echo esc_attr($key); ?>][visible]" value="0">
+                        <input type="checkbox" name="competitors_options[form_field_settings][<?php echo esc_attr($key); ?>][visible]" value="1" <?php checked($row_visible); ?>>
+                    </td>
+                    <td>
+                        <input type="text" class="regular-text" name="competitors_options[form_field_settings][<?php echo esc_attr($key); ?>][label]" value="<?php echo esc_attr($row_label); ?>" placeholder="<?php echo esc_attr($field['label']); ?>">
+                    </td>
+                    <td style="color:#666;font-style:italic;"><?php echo esc_html($field['label']); ?></td>
+                    <td>
+                        <?php if ($has_required) : ?>
+                            <input type="hidden" name="competitors_options[form_field_settings][<?php echo esc_attr($key); ?>][required]" value="0">
+                            <input type="checkbox" name="competitors_options[form_field_settings][<?php echo esc_attr($key); ?>][required]" value="1" <?php checked($row_required); ?>>
+                        <?php else : ?>
+                            <span style="color:#999;">—</span>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+    <?php
 }
 
 function initialize_competitors_rollnames_settings() {
@@ -1599,6 +1732,31 @@ function competitors_options_sanitize($input) {
 					];
 				}
 			}
+		}
+	}
+
+	// Sanitize per-field registration form settings.
+	if (isset($input['form_field_settings']) && is_array($input['form_field_settings'])) {
+		$known = class_exists('Competitors_Public_RegistrationForm')
+			? array_keys(Competitors_Public_RegistrationForm::field_defaults())
+			: [];
+		$sanitized['form_field_settings'] = [];
+		foreach ($input['form_field_settings'] as $field_key => $field_value) {
+			$field_key = sanitize_key($field_key);
+			if (!empty($known) && !in_array($field_key, $known, true)) {
+				continue; // ignore unknown keys to keep the option tidy
+			}
+			if (!is_array($field_value)) {
+				continue;
+			}
+			$row = [
+				'visible' => !empty($field_value['visible']) ? 1 : 0,
+				'label'   => isset($field_value['label']) ? wp_kses_post((string) $field_value['label']) : '',
+			];
+			if (array_key_exists('required', $field_value)) {
+				$row['required'] = !empty($field_value['required']) ? 1 : 0;
+			}
+			$sanitized['form_field_settings'][$field_key] = $row;
 		}
 	}
 
