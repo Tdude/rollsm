@@ -31,7 +31,9 @@ class Competitors_Public_Scoreboard {
      */
     private static function render_list_page() {
         $competitions = Competitors_CompetitionRepository::find_all();
-        $classes      = Competitors_ClassRepository::find_all();
+        // include_archived=true so historical class filters (e.g. retired
+        // classes that still have results) remain reachable.
+        $classes      = Competitors_ClassRepository::find_all( true );
 
         // Date options
         $date_options = '<option value="">' . esc_html__( 'All Dates', 'competitors' ) . '</option>';
@@ -95,9 +97,11 @@ class Competitors_Public_Scoreboard {
             return $b['total_score'] <=> $a['total_score'];
         } );
 
-        // Build class name map
+        // Build class name map — include archived so list items still
+        // get their data-participation-class attribute populated for
+        // historical results.
         $class_map = array();
-        foreach ( Competitors_ClassRepository::find_all() as $c ) {
+        foreach ( Competitors_ClassRepository::find_all( true ) as $c ) {
             $class_map[ (int) $c['id'] ] = $c['name'];
         }
 

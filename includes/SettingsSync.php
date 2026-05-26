@@ -94,8 +94,9 @@ class Competitors_SettingsSync {
                 continue;
             }
 
-            $name    = sanitize_text_field( $class_data['name'] );
-            $comment = sanitize_text_field( $class_data['comment'] ?? '' );
+            $name        = sanitize_text_field( $class_data['name'] );
+            $comment     = sanitize_text_field( $class_data['comment'] ?? '' );
+            $is_archived = ! empty( $class_data['is_archived'] ) ? 1 : 0;
 
             $existing = Competitors_ClassRepository::find_by_name( $name );
 
@@ -103,13 +104,18 @@ class Competitors_SettingsSync {
                 Competitors_ClassRepository::update( (int) $existing['id'], array(
                     'comment'       => $comment,
                     'display_order' => $index + 1,
+                    'is_archived'   => $is_archived,
                 ) );
             } else {
-                Competitors_ClassRepository::create( array(
+                $new_id = Competitors_ClassRepository::create( array(
                     'name'          => $name,
                     'comment'       => $comment,
                     'display_order' => $index + 1,
                 ) );
+                // create() doesn't accept is_archived; apply separately if set.
+                if ( $new_id && $is_archived ) {
+                    Competitors_ClassRepository::archive( (int) $new_id );
+                }
             }
         }
     }

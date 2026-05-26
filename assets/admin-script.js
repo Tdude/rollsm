@@ -983,21 +983,29 @@ jQuery(document).ready(function ($) {
     if (!newClassName) {
       return;
     }
-    var classObj = { name: newClassName, comment: newClassComment };
+    var classObj = {
+      name: newClassName,
+      comment: newClassComment,
+      is_archived: 0,
+    };
     var classString = JSON.stringify(classObj);
     // Remove "no items" row if present
     $("#existing_classes tbody .no-items").remove();
     $("#existing_classes tbody").append(
       `<tr class="class-item" data-name="${escapeHtml(
         newClassName
-      )}" data-comment="${escapeHtml(newClassComment)}">
+      )}" data-comment="${escapeHtml(newClassComment)}" data-archived="0">
               <td><strong>${escapeHtml(newClassComment)}</strong></td>
               <td><code>${escapeHtml(newClassName)}</code></td>
+              <td class="class-status-cell">
+                <span style="color:#00a32a;font-size:11px;">Active</span>
+              </td>
               <td>
-                <input type="hidden" name="competitors_options[available_competition_classes][]" value="${encodeURIComponent(
+                <input type="hidden" name="competitors_options[available_competition_classes][]" value="${escapeHtml(
                   classString
                 )}">
-                <button type="button" class="button-secondary button-small remove-class-button">Remove</button>
+                <button type="button" class="button-secondary button-small archive-class-button">Archive</button>
+                <button type="button" class="button-secondary button-small unarchive-class-button" style="display:none;">Unarchive</button>
               </td>
           </tr>`
     );
@@ -1005,9 +1013,57 @@ jQuery(document).ready(function ($) {
     $("#class-slug-preview").text("");
   });
 
-  // Remove Class button functionality
-  $(document).on("click", ".remove-class-button", function () {
-    $(this).closest("tr").remove();
+  // Archive / Unarchive Class buttons — toggle the row's is_archived flag
+  // in the hidden JSON payload, update the visible status and buttons.
+  // Persistence happens on the next form save (Save Settings).
+  function setClassArchived($row, archived) {
+    var $hidden = $row.find('input[type="hidden"]');
+    var payload = {};
+    try {
+      payload = JSON.parse($hidden.val()) || {};
+    } catch (e) {
+      payload = {
+        name: $row.attr("data-name") || "",
+        comment: $row.attr("data-comment") || "",
+      };
+    }
+    payload.is_archived = archived ? 1 : 0;
+    $hidden.val(JSON.stringify(payload));
+    $row.attr("data-archived", archived ? "1" : "0");
+    $row.toggleClass("class-archived", archived);
+    var $status = $row.find(".class-status-cell");
+    if ($status.length) {
+      $status.html(
+        archived
+          ? '<span style="background:#dba617;color:#fff;padding:2px 8px;border-radius:3px;font-size:11px;">ARCHIVED</span>'
+          : '<span style="color:#00a32a;font-size:11px;">Active</span>'
+      );
+    }
+    $row.find(".archive-class-button").toggle(!archived);
+    $row.find(".unarchive-class-button").toggle(!!archived);
+  }
+
+  $(document).on("click", ".archive-class-button", function () {
+    var $row = $(this).closest("tr");
+    var label =
+      $row.find("td:first strong").text() || $row.attr("data-name") || "class";
+    if (
+      window.confirm(
+        "Archive class “" +
+          label +
+          "”?\n\nIt will be hidden from the public registration form. " +
+          "Existing competitors, snapshot rolls, and scores remain " +
+          "untouched, so scoreboard results still render. You can " +
+          "Unarchive it later. Remember to save settings."
+      )
+    ) {
+      setClassArchived($row, true);
+    }
+  });
+
+  $(document).on("click", ".unarchive-class-button", function () {
+    var $row = $(this).closest("tr");
+    setClassArchived($row, false);
   });
 
   // Remove Event button functionality

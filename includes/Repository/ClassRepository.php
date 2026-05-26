@@ -18,13 +18,55 @@ class Competitors_ClassRepository {
     /**
      * Get all classes ordered by display_order.
      *
+     * @param bool $include_archived When false (default), archived classes
+     *                               are excluded — appropriate for the
+     *                               public registration form. Pass true
+     *                               from scoreboard / admin code that
+     *                               needs to surface historical classes.
      * @return array
      */
-    public static function find_all() {
+    public static function find_all( $include_archived = false ) {
         global $wpdb;
+        $where = $include_archived ? '' : 'WHERE is_archived = 0';
         return $wpdb->get_results(
-            "SELECT * FROM " . self::table() . " ORDER BY display_order ASC",
+            "SELECT * FROM " . self::table() . " {$where} ORDER BY display_order ASC",
             ARRAY_A
+        );
+    }
+
+    /**
+     * Mark a class as archived. Hides it from the public registration
+     * form but keeps all competitor assignments, snapshot rolls, and
+     * scores intact. Reversible via unarchive().
+     *
+     * @param int $id
+     * @return bool
+     */
+    public static function archive( $id ) {
+        global $wpdb;
+        return (bool) $wpdb->update(
+            self::table(),
+            array( 'is_archived' => 1 ),
+            array( 'id' => (int) $id ),
+            array( '%d' ),
+            array( '%d' )
+        );
+    }
+
+    /**
+     * Restore a previously archived class to active status.
+     *
+     * @param int $id
+     * @return bool
+     */
+    public static function unarchive( $id ) {
+        global $wpdb;
+        return (bool) $wpdb->update(
+            self::table(),
+            array( 'is_archived' => 0 ),
+            array( 'id' => (int) $id ),
+            array( '%d' ),
+            array( '%d' )
         );
     }
 
@@ -101,6 +143,10 @@ class Competitors_ClassRepository {
         if ( isset( $data['display_order'] ) ) {
             $update['display_order'] = (int) $data['display_order'];
             $format[]                = '%d';
+        }
+        if ( isset( $data['is_archived'] ) ) {
+            $update['is_archived'] = (int) (bool) $data['is_archived'];
+            $format[]              = '%d';
         }
 
         if ( empty( $update ) ) {

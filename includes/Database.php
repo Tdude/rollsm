@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Competitors_Database {
 
-    const DB_VERSION = '1.1.0';
+    const DB_VERSION = '1.2.0';
     const DB_VERSION_OPTION = 'comp_db_version';
 
     /**
@@ -115,13 +115,18 @@ class Competitors_Database {
         ) $charset_collate;";
 
         // 2. Classes — open, championship, amateur, etc.
+        //    is_archived: 1 = hidden from public registration form but still
+        //    shown in scoreboard filters. Used to retire a class without
+        //    losing historical competitor assignments or scores.
         $sql[] = "CREATE TABLE {$t['classes']} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             name varchar(100) NOT NULL DEFAULT '',
             comment varchar(255) NOT NULL DEFAULT '',
             display_order int NOT NULL DEFAULT 0,
+            is_archived tinyint(1) NOT NULL DEFAULT 0,
             PRIMARY KEY  (id),
-            UNIQUE KEY name (name)
+            UNIQUE KEY name (name),
+            KEY is_archived (is_archived)
         ) $charset_collate;";
 
         // 3. Rolls — master roll definitions per class

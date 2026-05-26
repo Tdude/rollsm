@@ -1061,6 +1061,16 @@ function render_competitors_classes_field() {
     if (!is_array($classes)) {
         $classes = [];
     }
+
+    // Pull is_archived state from comp_classes so the UI reflects DB truth
+    // even if a class is missing the flag in the options array (legacy data).
+    $archived_by_name = array();
+    if (class_exists('Competitors_ClassRepository')) {
+        foreach (Competitors_ClassRepository::find_all(true) as $c) {
+            $archived_by_name[$c['name']] = ! empty($c['is_archived']);
+        }
+    }
+
     ob_start();
     ?>
     <table class="form-table" role="presentation">
@@ -1074,29 +1084,61 @@ function render_competitors_classes_field() {
         </tr>
     </table>
 
+    <p class="description" style="margin: 8px 0 12px;">
+        <?php echo wp_kses_post(__('<strong>Archive</strong> hides a class from the public registration form but keeps its historical competitors, snapshot rolls, and scores intact — so existing scoreboard results still render. <strong>Unarchive</strong> restores it. Save settings after toggling.', 'competitors')); ?>
+    </p>
+
     <table class="wp-list-table widefat fixed striped" id="existing_classes">
         <thead>
             <tr>
                 <th><?php esc_html_e('Class Name', 'competitors'); ?></th>
                 <th style="width:200px;"><?php esc_html_e('ID', 'competitors'); ?></th>
-                <th style="width:100px;"><?php esc_html_e('Actions', 'competitors'); ?></th>
+                <th style="width:120px;"><?php esc_html_e('Status', 'competitors'); ?></th>
+                <th style="width:140px;"><?php esc_html_e('Actions', 'competitors'); ?></th>
             </tr>
         </thead>
         <tbody>
-            <?php if (empty($classes)) : ?>
-                <tr class="no-items"><td colspan="3"><?php esc_html_e('No classes added yet.', 'competitors'); ?></td></tr>
+            <?php if (empty($classes) && empty($archived_by_name)) : ?>
+                <tr class="no-items"><td colspan="4"><?php esc_html_e('No classes added yet.', 'competitors'); ?></td></tr>
             <?php endif; ?>
-            <?php foreach ($classes as $index => $class) : ?>
-                <?php if (is_array($class) && isset($class['name']) && isset($class['comment'])) : ?>
-                    <tr class="class-item" data-name="<?php echo esc_attr($class['name']); ?>" data-comment="<?php echo esc_attr($class['comment']); ?>">
-                        <td><strong><?php echo esc_html($class['comment'] ?: $class['name']); ?></strong></td>
-                        <td><code><?php echo esc_html($class['name']); ?></code></td>
-                        <td>
-                            <input type="hidden" name="competitors_options[available_competition_classes][]" value="<?php echo esc_attr(json_encode($class)); ?>" />
-                            <button type="button" class="button-secondary button-small remove-class-button"><?php esc_html_e('Remove', 'competitors'); ?></button>
-                        </td>
-                    </tr>
-                <?php endif; ?>
+            <?php
+            // Render every class present in the option, in their stored order.
+            // Carry the live is_archived flag forward via the hidden JSON
+            // payload so it survives the form save.
+            $rendered_names = array();
+            foreach ($classes as $index => $class) :
+                if (!is_array($class) || empty($class['name'])) {
+                    continue;
+                }
+                $name        = $class['name'];
+                $comment     = isset($class['comment']) ? $class['comment'] : '';
+                $is_archived = !empty($class['is_archived']) || !empty($archived_by_name[$name]);
+                $payload     = array(
+                    'name'        => $name,
+                    'comment'     => $comment,
+                    'is_archived' => $is_archived ? 1 : 0,
+                );
+                $rendered_names[$name] = true;
+            ?>
+                <tr class="class-item<?php echo $is_archived ? ' class-archived' : ''; ?>"
+                    data-name="<?php echo esc_attr($name); ?>"
+                    data-comment="<?php echo esc_attr($comment); ?>"
+                    data-archived="<?php echo $is_archived ? '1' : '0'; ?>">
+                    <td><strong><?php echo esc_html($comment ?: $name); ?></strong></td>
+                    <td><code><?php echo esc_html($name); ?></code></td>
+                    <td class="class-status-cell">
+                        <?php if ($is_archived) : ?>
+                            <span style="background:#dba617;color:#fff;padding:2px 8px;border-radius:3px;font-size:11px;"><?php esc_html_e('ARCHIVED', 'competitors'); ?></span>
+                        <?php else : ?>
+                            <span style="color:#00a32a;font-size:11px;"><?php esc_html_e('Active', 'competitors'); ?></span>
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <input type="hidden" name="competitors_options[available_competition_classes][]" value="<?php echo esc_attr(json_encode($payload)); ?>" />
+                        <button type="button" class="button-secondary button-small archive-class-button"<?php echo $is_archived ? ' style="display:none;"' : ''; ?>><?php esc_html_e('Archive', 'competitors'); ?></button>
+                        <button type="button" class="button-secondary button-small unarchive-class-button"<?php echo $is_archived ? '' : ' style="display:none;"'; ?>><?php esc_html_e('Unarchive', 'competitors'); ?></button>
+                    </td>
+                </tr>
             <?php endforeach; ?>
         </tbody>
     </table>
@@ -1500,6 +1542,7 @@ function competitors_options_sanitize($input) {
 				$sanitized['available_competition_classes'][] = [
 					'name' => sanitize_text_field($class['name']),
 					'comment' => sanitize_text_field($class['comment']),
+					'is_archived' => !empty($class['is_archived']) ? 1 : 0,
 				];
 			} elseif (is_string($class)) {
 				$decoded_class = json_decode(urldecode($class), true);
@@ -1507,6 +1550,7 @@ function competitors_options_sanitize($input) {
 					$sanitized['available_competition_classes'][] = [
 						'name' => sanitize_text_field($decoded_class['name']),
 						'comment' => sanitize_text_field($decoded_class['comment']),
+						'is_archived' => !empty($decoded_class['is_archived']) ? 1 : 0,
 					];
 				}
 			}

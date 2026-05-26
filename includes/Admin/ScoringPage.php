@@ -74,7 +74,9 @@ class Competitors_Admin_ScoringPage {
      * Render the filter form.
      */
     private static function render_filter_form( $competition, $filter_class, $filter_gender ) {
-        $classes = Competitors_ClassRepository::find_all();
+        // include_archived=true: admins still need to score / review
+        // competitors in classes that are retired from new registration.
+        $classes = Competitors_ClassRepository::find_all( true );
         ?>
         <div id="filter_form">
             <p><?php esc_html_e( 'Choose class and gender, then click Filter.', 'competitors' ); ?></p>

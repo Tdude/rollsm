@@ -59,9 +59,10 @@ class Competitors_Admin_PersonalDataPage {
            . '<th class="hide-for-print">' . esc_html__( 'Consent', 'competitors' ) . '</th>';
         echo '</tr></thead><tbody>';
 
-        // Build class name lookup
+        // Build class name lookup — include archived so historical
+        // competitors still resolve their class name.
         $class_map = array();
-        foreach ( Competitors_ClassRepository::find_all() as $c ) {
+        foreach ( Competitors_ClassRepository::find_all( true ) as $c ) {
             $class_map[ (int) $c['id'] ] = $c['name'];
         }
 
