@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Competitors
  * Description:  For RollSM, A Greenland Rolling Championships registering and scoreboard plugin with live scores.
- * Version: 2.5
+ * Version: 2.6
  * Author: <a href="https://klickomaten.com">Tibor Berki</a>. /Tdude @Github.
  * Text Domain: competitors
  * Domain Path: /languages
  */
 
-define('COMPETITORS_PLUGIN_VERSION', '2.5');
+define('COMPETITORS_PLUGIN_VERSION', '2.6');
 define('COMPETITORS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
 
@@ -1153,10 +1153,8 @@ function render_competitors_classes_field() {
                     <td class="class-status-cell">
                         <?php if ($is_archived) : ?>
                             <span style="background:#dba617;color:#fff;padding:2px 8px;border-radius:3px;font-size:11px;"><?php esc_html_e('ARCHIVED', 'competitors'); ?></span>
-                        <?php elseif ($is_orphan) : ?>
-                            <span style="background:#7e8993;color:#fff;padding:2px 8px;border-radius:3px;font-size:11px;" title="<?php esc_attr_e('Present in DB but missing from saved options — will be re-incorporated on next save.', 'competitors'); ?>"><?php esc_html_e('ORPHAN', 'competitors'); ?></span>
                         <?php else : ?>
-                            <span style="color:#00a32a;font-size:11px;"><?php esc_html_e('Active', 'competitors'); ?></span>
+                            <span style="color:#00a32a;font-size:11px;"<?php echo $is_orphan ? ' title="' . esc_attr__('Functionally active. Will be reconciled into saved options on next Save Settings.', 'competitors') . '"' : ''; ?>><?php esc_html_e('Active', 'competitors'); ?></span>
                         <?php endif; ?>
                     </td>
                     <td>
