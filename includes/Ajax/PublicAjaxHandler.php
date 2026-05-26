@@ -106,11 +106,37 @@ class Competitors_Ajax_PublicAjaxHandler {
         $class = Competitors_ClassRepository::find_by_name( $participation_class );
         $class_id = $class ? (int) $class['id'] : 0;
 
+        global $wpdb;
+
+        // Cross-request mutex on (competition, email, name). Stops two
+        // concurrent AJAX submissions from both passing the dedupe SELECT
+        // before either commits an INSERT. Without this, the
+        // application-level dedupe below has a TOCTOU race: both requests
+        // see "no existing row" and both create one.
+        //
+        // GET_LOCK is session-scoped and auto-released when the MySQL
+        // connection closes at the end of the PHP request, so we never
+        // strand a lock even if a fatal aborts before the explicit release.
+        // Name length is capped at 64 chars in MySQL; md5 hex is 32.
+        $lock_key  = 'comp_reg_' . md5( $competition_id . '|' . strtolower( $email ) . '|' . strtolower( $name ) );
+        $lock_held = (int) $wpdb->get_var( $wpdb->prepare( "SELECT GET_LOCK(%s, 0)", $lock_key ) );
+
+        if ( $lock_held !== 1 ) {
+            // A concurrent request is mid-flight for the same person.
+            // Treat as a duplicate-success so the user sees a friendly
+            // outcome and the actual row stays single.
+            wp_send_json_success( array(
+                'message'      => __( 'Thanks — your registration is being processed.', 'competitors' ),
+                'total_sum'    => 0,
+                'redirect_url' => add_query_arg( array( 'fee' => 0 ), get_home_url() . '/competitors-thank-you' ),
+            ) );
+            return;
+        }
+
         // Idempotency guard: if the same person already registered for this
         // competition in the last 30 seconds, treat the second click as a
         // no-op rather than creating a duplicate. Defensive against rapid
         // double-clicks, accidental form resubmits, and browser retries.
-        global $wpdb;
         $existing = $wpdb->get_row( $wpdb->prepare(
             "SELECT id FROM " . Competitors_Database::table( 'competitors' ) . "
              WHERE competition_id = %d AND email = %s AND name = %s
@@ -121,6 +147,7 @@ class Competitors_Ajax_PublicAjaxHandler {
             $name
         ), ARRAY_A );
         if ( $existing ) {
+            $wpdb->query( $wpdb->prepare( "SELECT RELEASE_LOCK(%s)", $lock_key ) );
             wp_send_json_success( array(
                 'message'      => __( 'Thanks — your registration is already in.', 'competitors' ),
                 'total_sum'    => 0,
@@ -217,6 +244,12 @@ class Competitors_Ajax_PublicAjaxHandler {
         if ( function_exists( 'send_confirmation_email' ) ) {
             send_confirmation_email( $name, $email, $competition_date, $total_sum, $dinner );
         }
+
+        // Release the cross-request mutex before signalling success.
+        // (MySQL would auto-release it on connection close anyway when the
+        // PHP request ends, but explicit release keeps the lock held for
+        // the minimum possible window.)
+        $wpdb->query( $wpdb->prepare( "SELECT RELEASE_LOCK(%s)", $lock_key ) );
 
         wp_send_json_success( array(
             'message'      => __( 'Thanks for registering, this will be fun!', 'competitors' ),
