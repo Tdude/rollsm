@@ -74,9 +74,11 @@ class Competitors_Admin_ScoringPage {
      * Render the filter form.
      */
     private static function render_filter_form( $competition, $filter_class, $filter_gender ) {
-        // include_archived=true: admins still need to score / review
-        // competitors in classes that are retired from new registration.
-        $classes = Competitors_ClassRepository::find_all( true );
+        // Exclude archived classes from the filter dropdown — a retired
+        // class should not be offered as a scoring choice. Competitors who
+        // happen to sit in an archived class are still reachable via the
+        // default "All Classes" view, so none become unscoreable.
+        $classes = Competitors_ClassRepository::find_all( false );
         ?>
         <div id="filter_form">
             <p><?php esc_html_e( 'Choose class and gender, then click Filter.', 'competitors' ); ?></p>

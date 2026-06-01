@@ -469,6 +469,54 @@ function show_meta_keys_in_competitors_column($column, $post_id) {
 }
 add_action('manage_competitors_posts_custom_column', 'show_meta_keys_in_competitors_column', 10, 2);
 
+// Add an "Event" column to the competitors list table that badges
+// competitors from a past event as historical — mirroring the
+// "Historical Data" indicator used on the public scoreboard.
+function add_event_column_to_competitors($columns) {
+    $new = array();
+    foreach ($columns as $key => $label) {
+        if ($key === 'date') {
+            $new['competitor_event'] = esc_html__('Event', 'competitors');
+        }
+        $new[$key] = $label;
+    }
+    if (!isset($new['competitor_event'])) {
+        $new['competitor_event'] = esc_html__('Event', 'competitors');
+    }
+    return $new;
+}
+add_filter('manage_competitors_posts_columns', 'add_event_column_to_competitors');
+
+function show_event_in_competitors_column($column, $post_id) {
+    if ($column !== 'competitor_event') {
+        return;
+    }
+    $date = get_post_meta($post_id, 'competition_date', true);
+    if (empty($date)) {
+        echo '&mdash;';
+        return;
+    }
+
+    // Resolve the current event date once per request.
+    static $current_date = null;
+    if ($current_date === null) {
+        $current_date = '';
+        if (class_exists('Competitors_CompetitionRepository')) {
+            $current = Competitors_CompetitionRepository::find_current();
+            $current_date = $current ? $current['event_date'] : '';
+        }
+    }
+
+    echo esc_html($date);
+    if ($current_date !== '' && $date !== $current_date) {
+        echo ' <span class="competitors-historical-badge" style="display:inline-block;background:#dba617;color:#fff;padding:1px 7px;border-radius:3px;font-size:11px;white-space:nowrap;">'
+           . '<span class="dashicons dashicons-database-view" style="font-size:13px;width:13px;height:13px;vertical-align:text-top;"></span> '
+           . esc_html__('Former event', 'competitors')
+           . '</span>';
+    }
+}
+add_action('manage_competitors_posts_custom_column', 'show_event_in_competitors_column', 10, 2);
+
 
 
 function display_filter_form($filter_date = '', $filter_class = '', $filter_gender = '') {
