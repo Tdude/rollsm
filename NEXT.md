@@ -15,8 +15,49 @@ Read alongside `MIGRATION.md` (the original migration story) and
 | Empty-archived classes hidden from scoreboard filter | Done |
 | Form Settings tab — toggle/relabel optional fields | Done |
 | Duplicate-row race fix via MySQL GET_LOCK mutex | Done |
+| 2026 personal fields: address, next-of-kin, special diet | Done |
+| Per-event custom fields engine (typed, self-describing) | Done |
+| Dinner → per-event headcount custom field (no fee) | Done |
 | **Silent-skip diagnostic admin notice** | **Pending — next up** |
-| Per-event registration form fields (NEXT v2 idea) | Backlog |
+| Class relabels + maxtid copy for 2026 | Manual (wp-admin / page content) |
+
+## 2026 registration changes (2026-06-01)
+
+The arranging club's 2026 form requests, implemented in three tiers
+(see commits `6c6b621`, `c5ce41c`, `1a8493a` on `main`):
+
+- **Stable personal fields as real columns** — `address`,
+  `emergency_contact` (next of kin + phone), `special_diet` on
+  `comp_competitors`. Toggleable/relabelable from the Form Settings tab
+  (one-line additions to `field_defaults()`); shown in the admin list,
+  admin email, and GDPR-relevant export. `DB_VERSION` → 1.3.0.
+- **Per-event custom-fields engine** — `Competitors_CustomFieldRepository`.
+  Definitions stored per competition under
+  `competitors_options[custom_fields][<id>]`; submitted values stored
+  self-describing (`key+label+type+value` JSON) on
+  `comp_competitors.extra_fields` (`DB_VERSION` → 1.4.0). Types: text,
+  textarea, number, yesno, select. Managed in the new **Custom Fields**
+  admin tab (`manage_options`), scoped to the current event, pre-filled
+  on first visit with the 2026 set (dinner headcount, planned rolls,
+  distance paddle).
+- **Dinner retired** as a fixed yes/no field — now a per-event headcount
+  custom field with no fee (attendees pay the restaurant). Old `dinner`
+  column kept for 2024/2025 history.
+- **Bug fix:** `CompetitorRepository::create()` format array was one
+  short of the column count — corrupted the JSON column and silently
+  coerced `fee` to int. Now 19/19, verified in Docker.
+
+The design rationale (which fields are hardcoded vs. configurable, and
+why a full form-builder was rejected) is the answer to "should each
+year's changes be hardcoded or fully customisable": structural fields
+that scoring/dedup/fee depend on stay hardcoded; volatile yearly
+logistics fields go through the custom-fields engine so organizers edit
+them in wp-admin.
+
+**Still manual for 2026:** relabel the four classes (Open *(intl.)* /
+Championship / Motion / Junior) in Classes & Dates, and put the "Maxtid
+30 min" note in the page content (it's event-volatile copy — was 20 min
+last year — so deliberately not hardcoded in the plugin).
 
 ## What got done in this session (2026-05-25 → 2026-05-26)
 
