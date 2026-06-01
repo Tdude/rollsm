@@ -880,23 +880,43 @@ function render_custom_fields_page() {
 
     $competition_id = (int) $current['id'];
 
-    // Handle save. Report the saved count + the exact event so a mismatch
-    // between "the event you think you're editing" and the one actually
-    // flagged current is immediately visible (the usual cause of
-    // "I saved but nothing shows on the form").
-    if (isset($_POST['competitors_custom_fields_nonce'])
-        && wp_verify_nonce($_POST['competitors_custom_fields_nonce'], 'competitors_custom_fields_save')) {
-        $rows = isset($_POST['cf']) && is_array($_POST['cf']) ? wp_unslash($_POST['cf']) : array();
-        Competitors_CustomFieldRepository::save_for_competition($competition_id, $rows);
-        $saved_count = count(Competitors_CustomFieldRepository::get_for_competition($competition_id));
-        echo '<div class="notice notice-success is-dismissible"><p>'
-            . esc_html(sprintf(
-                /* translators: 1: number of fields, 2: competition name + date */
-                _n('Saved %1$d custom field for “%2$s”.', 'Saved %1$d custom fields for “%2$s”.', $saved_count, 'competitors'),
-                $saved_count,
-                $current['name'] . ' — ' . $current['event_date']
-            ))
-            . '</p></div>';
+    // Handle save. This path is self-diagnosing: each distinct failure mode
+    // reports a distinct message, because a silent no-op (the old behaviour)
+    // looks identical to "save didn't work" on production where a WAF/cache
+    // can strip the POST or invalidate the nonce.
+    $save_attempted = isset($_POST['competitors_custom_fields_nonce'])
+        || isset($_POST['submit'])
+        || isset($_POST['cf']);
+    if ($save_attempted) {
+        $err = '';
+        if (!isset($_POST['competitors_custom_fields_nonce'])) {
+            // Submit reached us but the nonce field didn't — something stripped the POST.
+            $err = __('Save failed: the security token did not arrive with the form. A security plugin, proxy, or cache on your server is likely stripping the submission. Tell the developer.', 'competitors');
+        } elseif (!wp_verify_nonce($_POST['competitors_custom_fields_nonce'], 'competitors_custom_fields_save')) {
+            $err = __('Save failed: security check did not pass. Your session may have expired or a cache served a stale form — reload this page and try again.', 'competitors');
+        } elseif (empty($_POST['cf']) || !is_array($_POST['cf'])) {
+            $err = __('Save failed: no field rows were received (the form data was stripped in transit).', 'competitors');
+        }
+
+        if ($err !== '') {
+            echo '<div class="notice notice-error"><p>' . esc_html($err) . '</p></div>';
+        } else {
+            $rows = wp_unslash($_POST['cf']);
+            Competitors_CustomFieldRepository::save_for_competition($competition_id, $rows);
+            // Re-read to confirm the write actually persisted (catches an
+            // object cache that accepts the write but doesn't store it).
+            $saved_count = count(Competitors_CustomFieldRepository::get_for_competition($competition_id));
+            $class = $saved_count > 0 ? 'notice-success' : 'notice-warning';
+            $msg = $saved_count > 0
+                ? sprintf(
+                    /* translators: 1: number of fields, 2: competition name + date */
+                    _n('Saved %1$d custom field for “%2$s”.', 'Saved %1$d custom fields for “%2$s”.', $saved_count, 'competitors'),
+                    $saved_count,
+                    $current['name'] . ' — ' . $current['event_date']
+                )
+                : __('The form was received but 0 fields were stored — either every row was blank, or the option write did not persist (object cache). Tell the developer.', 'competitors');
+            echo '<div class="notice ' . esc_attr($class) . ' is-dismissible"><p>' . esc_html($msg) . '</p></div>';
+        }
     }
 
     $defs = Competitors_CustomFieldRepository::get_for_competition($competition_id);
