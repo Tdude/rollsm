@@ -931,13 +931,14 @@ function render_custom_fields_page() {
                     ))
                     . '</p></div>';
             } else {
-                // Copy-pasteable diagnostic so we can see where it breaks on prod.
-                echo '<div class="notice notice-error"><p><strong>Save diagnostic (send this to the developer):</strong><br>'
-                    . 'event_id=' . esc_html($competition_id)
-                    . ' &middot; rows_received=' . esc_html($received)
-                    . ' &middot; rows_after_sanitize=' . esc_html($cleaned)
-                    . ' &middot; reread_via_cache=' . esc_html($reread)
-                    . ' &middot; stored_in_db=' . esc_html($in_db)
+                // Persisted nothing. Keep the per-stage detail in the log for
+                // the developer; show the admin a plain, non-technical error.
+                error_log(sprintf(
+                    '[competitors] Custom Fields save stored 0 — event_id=%d rows_received=%d rows_after_sanitize=%d reread_via_cache=%d stored_in_db=%d',
+                    $competition_id, $received, $cleaned, $reread, $in_db
+                ));
+                echo '<div class="notice notice-error is-dismissible"><p>'
+                    . esc_html__('Sorry — your custom fields could not be saved. Please try again. If it keeps happening, contact the site administrator.', 'competitors')
                     . '</p></div>';
             }
         }
