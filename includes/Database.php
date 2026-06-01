@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Competitors_Database {
 
-    const DB_VERSION = '1.2.0';
+    const DB_VERSION = '1.3.0';
     const DB_VERSION_OPTION = 'comp_db_version';
 
     /**
@@ -169,9 +169,12 @@ class Competitors_Database {
             email varchar(255) NOT NULL DEFAULT '',
             phone varchar(50) NOT NULL DEFAULT '',
             club varchar(255) NOT NULL DEFAULT '',
+            address varchar(255) NOT NULL DEFAULT '',
             gender varchar(20) NOT NULL DEFAULT '',
             sponsors text NOT NULL,
             speaker_info text NOT NULL,
+            emergency_contact varchar(255) NOT NULL DEFAULT '',
+            special_diet varchar(255) NOT NULL DEFAULT '',
             license varchar(10) NOT NULL DEFAULT '',
             dinner varchar(10) NOT NULL DEFAULT '',
             consent varchar(10) NOT NULL DEFAULT '',

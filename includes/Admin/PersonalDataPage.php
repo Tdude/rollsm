@@ -53,6 +53,9 @@ class Competitors_Admin_PersonalDataPage {
            . '<th>' . esc_html__( 'Class', 'competitors' ) . '</th>'
            . '<th class="hide-on-narrow">' . esc_html__( 'Info', 'competitors' ) . '</th>'
            . '<th class="hide-on-narrow">' . esc_html__( 'Sponsors', 'competitors' ) . '</th>'
+           . '<th class="hide-on-narrow">' . esc_html__( 'Next of kin', 'competitors' ) . '</th>'
+           . '<th class="hide-on-narrow">' . esc_html__( 'Special diet', 'competitors' ) . '</th>'
+           . '<th class="hide-on-narrow">' . esc_html__( 'Address', 'competitors' ) . '</th>'
            . '<th class="hide-for-print">' . esc_html__( 'Email', 'competitors' ) . '</th>'
            . '<th>' . esc_html__( 'Phone', 'competitors' ) . '</th>'
            . '<th class="hide-for-print">' . esc_html__( 'Dinner', 'competitors' ) . '</th>'
@@ -76,6 +79,9 @@ class Competitors_Admin_PersonalDataPage {
             self::cell( $class_name );
             self::cell_narrow( $comp['speaker_info'] );
             self::cell_narrow( $comp['sponsors'] );
+            self::cell_narrow( $comp['emergency_contact'] ?? '' );
+            self::cell_narrow( $comp['special_diet'] ?? '' );
+            self::cell_narrow( $comp['address'] ?? '' );
             self::cell_hide( $comp['email'] );
             self::cell( $comp['phone'] );
             self::cell_hide( $comp['dinner'] );

@@ -29,6 +29,11 @@ class Competitors_Public_RegistrationForm {
                 'visible' => 1,
                 'label'   => __( 'Club', 'competitors' ),
             ),
+            'address' => array(
+                'visible'  => 1,
+                'label'    => __( 'Address', 'competitors' ),
+                'required' => 1,
+            ),
             'sponsors' => array(
                 'visible' => 1,
                 'label'   => __( 'Your Sponsors', 'competitors' ),
@@ -37,6 +42,15 @@ class Competitors_Public_RegistrationForm {
                 'visible'  => 1,
                 'label'    => __( 'Support text (ICE phone number, info about you, food preferences/allergies etc.)', 'competitors' ),
                 'required' => 1,
+            ),
+            'emergency_contact' => array(
+                'visible'  => 1,
+                'label'    => __( 'Next of kin (name and phone number)', 'competitors' ),
+                'required' => 1,
+            ),
+            'special_diet' => array(
+                'visible' => 1,
+                'label'   => __( 'Special dietary needs (if any)', 'competitors' ),
             ),
             'license' => array(
                 'visible' => 1,
@@ -105,6 +119,10 @@ class Competitors_Public_RegistrationForm {
                     <label for="club"><?php echo wp_kses_post( $club['label'] ); ?></label>
                     <input aria-label="Club" type="text" id="club" name="club"><br>
                 <?php endif; ?>
+                <?php $address = self::field_setting( 'address' ); if ( $address && $address['visible'] ) : ?>
+                    <label for="address"><?php echo wp_kses_post( $address['label'] ); ?><?php if ( ! empty( $address['required'] ) ) : ?> <span class="text-danger">*</span><?php endif; ?></label>
+                    <input aria-label="Address" type="text" id="address" name="address"<?php echo ! empty( $address['required'] ) ? ' data-required="1"' : ''; ?>><br>
+                <?php endif; ?>
 
                 <div class="extra-visible gender-container">
                     <label><?php esc_html_e( 'Gender', 'competitors' ); ?> <span class="text-danger">*</span></label><br>
@@ -122,6 +140,16 @@ class Competitors_Public_RegistrationForm {
                 <?php $speaker = self::field_setting( 'speaker_info' ); if ( $speaker && $speaker['visible'] ) : ?>
                     <label for="speaker_info"><?php echo wp_kses_post( $speaker['label'] ); ?><?php if ( ! empty( $speaker['required'] ) ) : ?> <span class="text-danger">*</span><?php endif; ?></label>
                     <textarea aria-label="Speaker Info" id="speaker_info" name="speaker_info"<?php echo ! empty( $speaker['required'] ) ? ' data-required="1"' : ''; ?>></textarea><br>
+                <?php endif; ?>
+
+                <?php $kin = self::field_setting( 'emergency_contact' ); if ( $kin && $kin['visible'] ) : ?>
+                    <label for="emergency_contact"><?php echo wp_kses_post( $kin['label'] ); ?><?php if ( ! empty( $kin['required'] ) ) : ?> <span class="text-danger">*</span><?php endif; ?></label>
+                    <input aria-label="Next of kin" type="text" id="emergency_contact" name="emergency_contact"<?php echo ! empty( $kin['required'] ) ? ' data-required="1"' : ''; ?>><br>
+                <?php endif; ?>
+
+                <?php $diet = self::field_setting( 'special_diet' ); if ( $diet && $diet['visible'] ) : ?>
+                    <label for="special_diet"><?php echo wp_kses_post( $diet['label'] ); ?><?php if ( ! empty( $diet['required'] ) ) : ?> <span class="text-danger">*</span><?php endif; ?></label>
+                    <input aria-label="Special diet" type="text" id="special_diet" name="special_diet"<?php echo ! empty( $diet['required'] ) ? ' data-required="1"' : ''; ?>><br>
                 <?php endif; ?>
 
                 <?php echo self::render_date_field(); ?>

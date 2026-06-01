@@ -348,7 +348,7 @@ function handle_competitor_form_submission() {
     ]);
 }
 
-function send_admin_email($name, $email, $phone, $club, $gender, $sponsors, $participation_class, $competition_date, $total_sum, $dinner) {
+function send_admin_email($name, $email, $phone, $club, $gender, $sponsors, $participation_class, $competition_date, $total_sum, $dinner, $address = '', $emergency_contact = '', $special_diet = '') {
     //$test_email = 'tibbecodes@gmail.com';
 
     // Get all admin users emails
@@ -365,9 +365,12 @@ function send_admin_email($name, $email, $phone, $club, $gender, $sponsors, $par
                "Namn: $name\n" .
                "Email: $email\n" .
                "Tel: $phone\n" .
+               "Adress: $address\n" .
                "Klubb: $club\n" .
                "Kön: $gender\n" .
                "Sponsorer: $sponsors\n" .
+               "Närmast anhörig: $emergency_contact\n" .
+               "Specialkost: $special_diet\n" .
                "Klass: $participation_class\n" .
                "Datum för tävling: $competition_date\n" .
                "Avgift: $total_sum:-\n";
