@@ -901,21 +901,45 @@ function render_custom_fields_page() {
         if ($err !== '') {
             echo '<div class="notice notice-error"><p>' . esc_html($err) . '</p></div>';
         } else {
+            global $wpdb;
             $rows = wp_unslash($_POST['cf']);
+            $received = count($rows);
+            // Inspect the data at each stage so a prod-only failure is visible.
+            $cleaned = count(Competitors_CustomFieldRepository::sanitize_definitions($rows));
             Competitors_CustomFieldRepository::save_for_competition($competition_id, $rows);
-            // Re-read to confirm the write actually persisted (catches an
-            // object cache that accepts the write but doesn't store it).
-            $saved_count = count(Competitors_CustomFieldRepository::get_for_competition($competition_id));
-            $class = $saved_count > 0 ? 'notice-success' : 'notice-warning';
-            $msg = $saved_count > 0
-                ? sprintf(
-                    /* translators: 1: number of fields, 2: competition name + date */
-                    _n('Saved %1$d custom field for “%2$s”.', 'Saved %1$d custom fields for “%2$s”.', $saved_count, 'competitors'),
-                    $saved_count,
-                    $current['name'] . ' — ' . $current['event_date']
-                )
-                : __('The form was received but 0 fields were stored — either every row was blank, or the option write did not persist (object cache). Tell the developer.', 'competitors');
-            echo '<div class="notice ' . esc_attr($class) . ' is-dismissible"><p>' . esc_html($msg) . '</p></div>';
+
+            // 1) normal re-read (through caches)
+            $reread = count(Competitors_CustomFieldRepository::get_for_competition($competition_id));
+            // 2) re-read straight from the DB row, bypassing the object cache
+            wp_cache_delete('competitors_options', 'options');
+            wp_cache_delete('alloptions', 'options');
+            $raw = $wpdb->get_var($wpdb->prepare(
+                "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s",
+                'competitors_options'
+            ));
+            $db_opts = is_string($raw) ? maybe_unserialize($raw) : array();
+            $in_db = (is_array($db_opts) && isset($db_opts['custom_fields'][$competition_id]) && is_array($db_opts['custom_fields'][$competition_id]))
+                ? count($db_opts['custom_fields'][$competition_id]) : 0;
+
+            if ($reread > 0) {
+                echo '<div class="notice notice-success is-dismissible"><p>'
+                    . esc_html(sprintf(
+                        /* translators: 1: number of fields, 2: competition name + date */
+                        _n('Saved %1$d custom field for “%2$s”.', 'Saved %1$d custom fields for “%2$s”.', $reread, 'competitors'),
+                        $reread,
+                        $current['name'] . ' — ' . $current['event_date']
+                    ))
+                    . '</p></div>';
+            } else {
+                // Copy-pasteable diagnostic so we can see where it breaks on prod.
+                echo '<div class="notice notice-error"><p><strong>Save diagnostic (send this to the developer):</strong><br>'
+                    . 'event_id=' . esc_html($competition_id)
+                    . ' &middot; rows_received=' . esc_html($received)
+                    . ' &middot; rows_after_sanitize=' . esc_html($cleaned)
+                    . ' &middot; reread_via_cache=' . esc_html($reread)
+                    . ' &middot; stored_in_db=' . esc_html($in_db)
+                    . '</p></div>';
+            }
         }
     }
 
