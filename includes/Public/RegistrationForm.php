@@ -192,15 +192,20 @@ class Competitors_Public_RegistrationForm {
     private static function render_date_field() {
         $competitions = Competitors_CompetitionRepository::find_all();
 
+        // Pre-select the current competition's date so most registrants
+        // don't have to touch the dropdown.
+        $current      = Competitors_CompetitionRepository::find_current();
+        $current_date = $current ? $current['event_date'] : '';
+
         ob_start();
         ?>
         <div class="mb-3">
-            <label for="competition_date"><?php esc_html_e( 'Select your competition date', 'competitors' ); ?> <span class="text-danger"> * </span></label>
+            <label for="competition_date"><?php esc_html_e( 'Select date', 'competitors' ); ?> <span class="text-danger"> * </span></label>
             <select id="competition_date" name="competition_date">
                 <option value=""><?php esc_html_e( 'Please select a date', 'competitors' ); ?></option>
                 <?php foreach ( $competitions as $comp ) : ?>
                     <?php if ( ! (bool) $comp['is_locked'] ) : ?>
-                        <option value="<?php echo esc_attr( $comp['event_date'] ); ?>">
+                        <option value="<?php echo esc_attr( $comp['event_date'] ); ?>" <?php selected( $current_date, $comp['event_date'] ); ?>>
                             <?php echo esc_html( $comp['event_date'] . ' - ' . $comp['name'] ); ?>
                         </option>
                     <?php endif; ?>
