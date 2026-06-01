@@ -900,6 +900,24 @@ function render_custom_fields_page() {
     }
 
     $defs = Competitors_CustomFieldRepository::get_for_competition($competition_id);
+    $stored_count = count($defs);
+
+    // Ground-truth status box — answers "is this actually saved, and will it
+    // even show on the public form?" without needing CLI access on prod.
+    $form_is_new = class_exists('Competitors_Migration') && Competitors_Migration::is_complete();
+    echo '<div class="notice notice-info inline" style="border-left-color:#2271b1;"><p style="margin:.5em 0;">'
+        . '<strong>' . esc_html__('Status', 'competitors') . ':</strong> '
+        . esc_html(sprintf(
+            /* translators: %d: number of saved fields */
+            _n('%d custom field saved for this event.', '%d custom fields saved for this event.', $stored_count, 'competitors'),
+            $stored_count
+        ))
+        . ' &nbsp;|&nbsp; '
+        . ($form_is_new
+            ? '<span style="color:#00a32a;">' . esc_html__('New registration form is active — saved fields will appear on it.', 'competitors') . '</span>'
+            : '<span style="color:#d63638;">' . esc_html__('The public form is still the LEGACY version — custom fields cannot appear until the data migration is completed.', 'competitors') . '</span>')
+        . '</p></div>';
+
     // First visit (no fields yet): pre-fill the suggested 2026 starter set so
     // the admin can review and Save to persist them.
     $prefilled = false;
