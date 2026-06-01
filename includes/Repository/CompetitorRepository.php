@@ -90,16 +90,19 @@ class Competitors_CompetitorRepository {
                 'email'          => sanitize_email( $data['email'] ?? '' ),
                 'phone'          => sanitize_text_field( $data['phone'] ?? '' ),
                 'club'           => sanitize_text_field( $data['club'] ?? '' ),
+                'address'        => sanitize_text_field( $data['address'] ?? '' ),
                 'gender'         => sanitize_text_field( $data['gender'] ?? '' ),
                 'sponsors'       => sanitize_textarea_field( $data['sponsors'] ?? '' ),
                 'speaker_info'   => sanitize_textarea_field( $data['speaker_info'] ?? '' ),
+                'emergency_contact' => sanitize_text_field( $data['emergency_contact'] ?? '' ),
+                'special_diet'   => sanitize_text_field( $data['special_diet'] ?? '' ),
                 'license'        => sanitize_text_field( $data['license'] ?? '' ),
                 'dinner'         => sanitize_text_field( $data['dinner'] ?? '' ),
                 'consent'        => sanitize_text_field( $data['consent'] ?? '' ),
                 'fee'            => (float) ( $data['fee'] ?? 0 ),
                 'display_order'  => (int) ( $data['display_order'] ?? 0 ),
             ),
-            array( '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%d' )
+            array( '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%d' )
         );
 
         return $result ? $wpdb->insert_id : false;
@@ -123,9 +126,12 @@ class Competitors_CompetitorRepository {
             'email'          => '%s',
             'phone'          => '%s',
             'club'           => '%s',
+            'address'        => '%s',
             'gender'         => '%s',
             'sponsors'       => '%s',
             'speaker_info'   => '%s',
+            'emergency_contact' => '%s',
+            'special_diet'   => '%s',
             'license'        => '%s',
             'dinner'         => '%s',
             'consent'        => '%s',

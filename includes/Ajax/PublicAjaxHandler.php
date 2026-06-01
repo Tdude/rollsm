@@ -75,9 +75,12 @@ class Competitors_Ajax_PublicAjaxHandler {
         }
 
         $club              = sanitize_text_field( $_POST['club'] ?? '' );
+        $address           = sanitize_text_field( $_POST['address'] ?? '' );
         $gender            = sanitize_text_field( $_POST['gender'] ?? '' );
         $sponsors          = sanitize_text_field( $_POST['sponsors'] ?? '' );
         $speaker_info      = sanitize_textarea_field( $_POST['speaker_info'] ?? '' );
+        $emergency_contact = sanitize_text_field( $_POST['emergency_contact'] ?? '' );
+        $special_diet      = sanitize_text_field( $_POST['special_diet'] ?? '' );
         $participation_class = sanitize_text_field( $_POST['participation_class'] ?? '' );
         $license           = isset( $_POST['license'] ) ? 'yes' : 'no';
         $dinner            = isset( $_POST['dinner'] ) ? 'yes' : 'no';
@@ -173,9 +176,12 @@ class Competitors_Ajax_PublicAjaxHandler {
             'email'          => $email,
             'phone'          => $phone,
             'club'           => $club,
+            'address'        => $address,
             'gender'         => $gender,
             'sponsors'       => $sponsors,
             'speaker_info'   => $speaker_info,
+            'emergency_contact' => $emergency_contact,
+            'special_diet'   => $special_diet,
             'license'        => $license,
             'dinner'         => $dinner,
             'consent'        => $consent,
@@ -213,9 +219,12 @@ class Competitors_Ajax_PublicAjaxHandler {
                 'email'              => $email,
                 'phone'              => $phone,
                 'club'               => $club,
+                'address'            => $address,
                 'gender'             => $gender,
                 'sponsors'           => $sponsors,
                 'speaker_info'       => $speaker_info,
+                'emergency_contact'  => $emergency_contact,
+                'special_diet'       => $special_diet,
                 'participation_class'=> $participation_class,
                 'license'            => $license,
                 'dinner'             => $dinner,
@@ -239,7 +248,7 @@ class Competitors_Ajax_PublicAjaxHandler {
 
         // Send notification emails
         if ( function_exists( 'send_admin_email' ) ) {
-            send_admin_email( $name, $email, $phone, $club, $gender, $sponsors, $participation_class, $competition_date, $total_sum, $dinner );
+            send_admin_email( $name, $email, $phone, $club, $gender, $sponsors, $participation_class, $competition_date, $total_sum, $dinner, $address, $emergency_contact, $special_diet );
         }
         if ( function_exists( 'send_confirmation_email' ) ) {
             send_confirmation_email( $name, $email, $competition_date, $total_sum, $dinner );

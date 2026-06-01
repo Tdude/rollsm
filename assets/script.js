@@ -206,6 +206,31 @@ document.addEventListener("DOMContentLoaded", () => {
         toggleClass(dateField, "border-danger", false);
       }
 
+      // Generic required-field check for any admin-toggled field marked
+      // data-required (e.g. address, next of kin, special diet, speaker info).
+      // Skip fields hidden from view so a hidden-but-required field can't
+      // block submission.
+      form.querySelectorAll('[data-required="1"]').forEach((field) => {
+        if (field.offsetParent === null) {
+          return;
+        }
+        if (!field.value.trim()) {
+          const labelEl = form.querySelector(`label[for="${field.id}"]`);
+          const fieldLabel = labelEl
+            ? labelEl.textContent.replace("*", "").trim()
+            : field.name;
+          handleValidationMessage({
+            message: `${fieldLabel} is required.`,
+            success: false,
+            show: true,
+          });
+          toggleClass(field, "border-danger", true);
+          isValid = false;
+        } else {
+          toggleClass(field, "border-danger", false);
+        }
+      });
+
       return isValid;
     }
 
