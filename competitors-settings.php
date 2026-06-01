@@ -1914,6 +1914,28 @@ function debug_competitors_options_submission() {
 function competitors_options_sanitize($input) {
 	$sanitized = get_option('competitors_options', []);
 
+	// Preserve per-event custom field definitions. They are written via
+	// CustomFieldRepository::save_for_competition(), which calls
+	// update_option() — and update_option runs this function (it is the
+	// option's registered sanitize_callback, applied through the
+	// sanitize_option_competitors_options filter). Without this block the
+	// custom_fields key in $input would be discarded on every save, so the
+	// definitions never persisted. ($sanitized already carries forward any
+	// previously-stored custom_fields when $input omits the key, e.g. when
+	// other settings tabs are saved.)
+	if (isset($input['custom_fields']) && is_array($input['custom_fields'])) {
+		$sanitized['custom_fields'] = [];
+		foreach ($input['custom_fields'] as $comp_id => $defs) {
+			$comp_id = (int) $comp_id;
+			if ($comp_id <= 0 || !is_array($defs)) {
+				continue;
+			}
+			$sanitized['custom_fields'][$comp_id] = class_exists('Competitors_CustomFieldRepository')
+				? Competitors_CustomFieldRepository::sanitize_definitions($defs)
+				: $defs;
+		}
+	}
+
 	// Sanitize available competition classes
 	if (isset($input['available_competition_classes'])) {
 		$sanitized['available_competition_classes'] = [];

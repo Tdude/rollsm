@@ -114,8 +114,12 @@ class Competitors_CustomFieldRepository {
 
             $options = array();
             if ( $type === 'select' && ! empty( $row['options'] ) ) {
-                foreach ( explode( ',', (string) $row['options'] ) as $opt ) {
-                    $opt = sanitize_text_field( trim( $opt ) );
+                // Accept options as a comma-separated string (from the admin
+                // form) or an already-split array (when re-sanitizing stored
+                // defs), so this method is idempotent.
+                $raw_opts = is_array( $row['options'] ) ? $row['options'] : explode( ',', (string) $row['options'] );
+                foreach ( $raw_opts as $opt ) {
+                    $opt = sanitize_text_field( trim( (string) $opt ) );
                     if ( $opt !== '' ) {
                         $options[] = $opt;
                     }
