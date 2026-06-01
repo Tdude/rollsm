@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Competitors_Database {
 
-    const DB_VERSION = '1.3.0';
+    const DB_VERSION = '1.4.0';
     const DB_VERSION_OPTION = 'comp_db_version';
 
     /**
@@ -178,6 +178,7 @@ class Competitors_Database {
             license varchar(10) NOT NULL DEFAULT '',
             dinner varchar(10) NOT NULL DEFAULT '',
             consent varchar(10) NOT NULL DEFAULT '',
+            extra_fields longtext DEFAULT NULL,
             fee decimal(10,2) NOT NULL DEFAULT 0.00,
             display_order int NOT NULL DEFAULT 0,
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,

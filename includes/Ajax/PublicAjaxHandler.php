@@ -83,7 +83,10 @@ class Competitors_Ajax_PublicAjaxHandler {
         $special_diet      = sanitize_text_field( $_POST['special_diet'] ?? '' );
         $participation_class = sanitize_text_field( $_POST['participation_class'] ?? '' );
         $license           = isset( $_POST['license'] ) ? 'yes' : 'no';
-        $dinner            = isset( $_POST['dinner'] ) ? 'yes' : 'no';
+        // Dinner is retired as a fixed yes/no field — it is now a per-event
+        // custom field (a headcount, with no fee). Kept as 'no' so the legacy
+        // dinner column and email path stay valid for historical data.
+        $dinner            = 'no';
         $competition_date  = sanitize_text_field( $_POST['competition_date'] ?? '' );
 
         if ( empty( $competition_date ) || ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $competition_date ) ) {
@@ -158,15 +161,24 @@ class Competitors_Ajax_PublicAjaxHandler {
             ) );
         }
 
-        // Calculate fee
+        // Calculate fee (class fee only — dinner is no longer charged here;
+        // attendees pay the restaurant directly).
         $prices = function_exists( 'get_competitor_price_list' ) ? get_competitor_price_list() : array();
         $total_sum = 0;
         if ( isset( $prices[ $participation_class ] ) ) {
             $total_sum += $prices[ $participation_class ];
         }
-        if ( $dinner === 'yes' && isset( $prices['dinner'] ) ) {
-            $total_sum += $prices['dinner'];
-        }
+
+        // Per-event custom fields (dinner headcount, planned rolls, distance
+        // paddle, …). Built from the current event's definitions so the saved
+        // values match exactly what the form rendered, and stored
+        // self-describing (key+label+type+value) on the competitor row.
+        $custom_defs   = class_exists( 'Competitors_CustomFieldRepository' )
+            ? Competitors_CustomFieldRepository::get_for_current()
+            : array();
+        $custom_posted = isset( $_POST['custom'] ) && is_array( $_POST['custom'] ) ? wp_unslash( $_POST['custom'] ) : array();
+        $custom_values = $custom_defs ? Competitors_CustomFieldRepository::build_values( $custom_defs, $custom_posted ) : array();
+        $extra_fields_json = ! empty( $custom_values ) ? wp_json_encode( $custom_values ) : null;
 
         // Insert into custom table
         $competitor_id = Competitors_CompetitorRepository::create( array(
@@ -185,6 +197,7 @@ class Competitors_Ajax_PublicAjaxHandler {
             'license'        => $license,
             'dinner'         => $dinner,
             'consent'        => $consent,
+            'extra_fields'   => $extra_fields_json,
             'fee'            => $total_sum,
         ) );
 
@@ -233,6 +246,7 @@ class Competitors_Ajax_PublicAjaxHandler {
                 'selected_rolls'     => $selected_rolls,
                 '_competitors_custom_order' => 0,
                 'competition_date'   => $competition_date,
+                'extra_fields'       => $extra_fields_json,
                 'fee'                => $total_sum,
             ),
         ) );
@@ -248,7 +262,7 @@ class Competitors_Ajax_PublicAjaxHandler {
 
         // Send notification emails
         if ( function_exists( 'send_admin_email' ) ) {
-            send_admin_email( $name, $email, $phone, $club, $gender, $sponsors, $participation_class, $competition_date, $total_sum, $dinner, $address, $emergency_contact, $special_diet );
+            send_admin_email( $name, $email, $phone, $club, $gender, $sponsors, $participation_class, $competition_date, $total_sum, $dinner, $address, $emergency_contact, $special_diet, $custom_values );
         }
         if ( function_exists( 'send_confirmation_email' ) ) {
             send_confirmation_email( $name, $email, $competition_date, $total_sum, $dinner );

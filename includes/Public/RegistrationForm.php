@@ -56,10 +56,9 @@ class Competitors_Public_RegistrationForm {
                 'visible' => 1,
                 'label'   => __( 'I have a competition license or will get one for this comp!', 'competitors' ),
             ),
-            'dinner' => array(
-                'visible' => 1,
-                'label'   => __( 'Join competition dinner (200 SEK)', 'competitors' ),
-            ),
+            // Dinner is no longer a fixed yes/no field — it is now a
+            // per-event custom field (e.g. a headcount). See the
+            // "Custom Fields" admin tab and Competitors_CustomFieldRepository.
         );
     }
 
@@ -162,12 +161,8 @@ class Competitors_Public_RegistrationForm {
                     </div>
                 <?php endif; ?>
 
-                <?php $dinner = self::field_setting( 'dinner' ); if ( $dinner && $dinner['visible'] ) : ?>
-                    <div class="extra-visible" id="dinner-container">
-                        <input aria-label="Join competition dinner" type="checkbox" id="dinner" name="dinner">
-                        <label for="dinner"><?php echo wp_kses_post( $dinner['label'] ); ?></label>
-                    </div>
-                <?php endif; ?>
+                <?php echo self::render_custom_fields(); ?>
+
                 <div class="extra-visible" id="consent-container">
                     <input aria-label="Consent" type="checkbox" id="consent" name="consent" value="yes" required>
                     <label for="consent"><?php echo wp_kses_post( __( 'I agree <span class="text-danger"> * </span> for you to save my data, publish results, photos, etc.', 'competitors' ) ); ?></label>
@@ -213,6 +208,69 @@ class Competitors_Public_RegistrationForm {
             </select>
         </div>
         <?php
+        return ob_get_clean();
+    }
+
+    /**
+     * Render the current event's custom fields (per-event extras such as
+     * dinner headcount, planned rolls, distance paddle). Definitions come
+     * from the Custom Fields admin tab; inputs are named custom[<key>].
+     *
+     * @return string
+     */
+    public static function render_custom_fields() {
+        if ( ! class_exists( 'Competitors_CustomFieldRepository' ) ) {
+            return '';
+        }
+        $defs = Competitors_CustomFieldRepository::get_for_current();
+        if ( empty( $defs ) ) {
+            return '';
+        }
+
+        ob_start();
+        foreach ( $defs as $def ) {
+            $key      = $def['key'];
+            $id       = 'custom_' . $key;
+            $name     = 'custom[' . $key . ']';
+            $required = ! empty( $def['required'] );
+            $req_attr = $required ? ' data-required="1"' : '';
+            ?>
+            <div class="extra-visible custom-field custom-field-<?php echo esc_attr( $def['type'] ); ?>">
+                <label for="<?php echo esc_attr( $id ); ?>"><?php echo esc_html( $def['label'] ); ?><?php if ( $required ) : ?> <span class="text-danger">*</span><?php endif; ?></label>
+                <?php
+                switch ( $def['type'] ) {
+                    case 'textarea':
+                        ?><textarea id="<?php echo esc_attr( $id ); ?>" name="<?php echo esc_attr( $name ); ?>"<?php echo $req_attr; // phpcs:ignore ?>></textarea><?php
+                        break;
+                    case 'number':
+                        ?><input type="number" min="0" step="1" id="<?php echo esc_attr( $id ); ?>" name="<?php echo esc_attr( $name ); ?>"<?php echo $req_attr; // phpcs:ignore ?>><?php
+                        break;
+                    case 'yesno':
+                        ?>
+                        <select id="<?php echo esc_attr( $id ); ?>" name="<?php echo esc_attr( $name ); ?>"<?php echo $req_attr; // phpcs:ignore ?>>
+                            <option value=""><?php esc_html_e( 'Please select', 'competitors' ); ?></option>
+                            <option value="yes"><?php esc_html_e( 'Yes', 'competitors' ); ?></option>
+                            <option value="no"><?php esc_html_e( 'No', 'competitors' ); ?></option>
+                        </select>
+                        <?php
+                        break;
+                    case 'select':
+                        ?>
+                        <select id="<?php echo esc_attr( $id ); ?>" name="<?php echo esc_attr( $name ); ?>"<?php echo $req_attr; // phpcs:ignore ?>>
+                            <option value=""><?php esc_html_e( 'Please select', 'competitors' ); ?></option>
+                            <?php foreach ( (array) $def['options'] as $opt ) : ?>
+                                <option value="<?php echo esc_attr( $opt ); ?>"><?php echo esc_html( $opt ); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <?php
+                        break;
+                    default: // text
+                        ?><input type="text" id="<?php echo esc_attr( $id ); ?>" name="<?php echo esc_attr( $name ); ?>"<?php echo $req_attr; // phpcs:ignore ?>><?php
+                }
+                ?>
+            </div>
+            <?php
+        }
         return ob_get_clean();
     }
 

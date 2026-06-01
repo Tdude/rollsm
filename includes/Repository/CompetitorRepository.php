@@ -99,10 +99,13 @@ class Competitors_CompetitorRepository {
                 'license'        => sanitize_text_field( $data['license'] ?? '' ),
                 'dinner'         => sanitize_text_field( $data['dinner'] ?? '' ),
                 'consent'        => sanitize_text_field( $data['consent'] ?? '' ),
+                'extra_fields'   => isset( $data['extra_fields'] ) ? (string) $data['extra_fields'] : null,
                 'fee'            => (float) ( $data['fee'] ?? 0 ),
                 'display_order'  => (int) ( $data['display_order'] ?? 0 ),
             ),
-            array( '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%d' )
+            // 19 columns: competition_id, class_id, wp_post_id (%d×3),
+            // name…consent + extra_fields (%s×14), fee (%f), display_order (%d).
+            array( '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%d' )
         );
 
         return $result ? $wpdb->insert_id : false;
@@ -135,6 +138,7 @@ class Competitors_CompetitorRepository {
             'license'        => '%s',
             'dinner'         => '%s',
             'consent'        => '%s',
+            'extra_fields'   => '%s',
             'fee'            => '%f',
             'display_order'  => '%d',
         );
@@ -148,6 +152,9 @@ class Competitors_CompetitorRepository {
             }
             if ( $field === 'email' ) {
                 $update[ $field ] = sanitize_email( $data[ $field ] );
+            } elseif ( $field === 'extra_fields' ) {
+                // Pre-encoded JSON — store verbatim; text-sanitizing would corrupt it.
+                $update[ $field ] = (string) $data[ $field ];
             } elseif ( $fmt === '%s' ) {
                 $update[ $field ] = sanitize_text_field( $data[ $field ] );
             } elseif ( $fmt === '%f' ) {

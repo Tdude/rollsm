@@ -661,6 +661,21 @@ function add_competitors_submenu_for_form_settings() {
 add_action('admin_menu', 'add_competitors_submenu_for_form_settings');
 
 /**
+ * Adds a submenu page for per-event custom registration fields.
+ */
+function add_competitors_submenu_for_custom_fields() {
+    add_submenu_page(
+        'competitors-settings',
+        esc_html__('Custom Fields', 'competitors'),
+        esc_html__('Custom Fields', 'competitors'),
+        'manage_options',
+        'competitors-custom-fields',
+        'render_custom_fields_page'
+    );
+}
+add_action('admin_menu', 'add_competitors_submenu_for_custom_fields');
+
+/**
  * Adds a submenu page under the plugin's settings for personal data management.
  * When migration is complete, delegates to the new custom-table-backed class.
  */
@@ -694,6 +709,7 @@ function render_admin_page_header() {
         'competitors-settings' => esc_html__('Rolls & Points', 'competitors'),
         'competitors-classes-dates' => esc_html__('Classes & Dates', 'competitors'),
         'competitors-form-settings' => esc_html__('Form Settings', 'competitors'),
+        'competitors-custom-fields' => esc_html__('Custom Fields', 'competitors'),
         'competitors-detailed-data' => esc_html__('Competitor List', 'competitors'),
         'competitors-scoring' => esc_html__('Judges Scoring', 'competitors'),
     ];
@@ -830,6 +846,125 @@ function render_form_settings_page() {
     settings_fields('competitors_form_settings_group');
     do_settings_sections('competitors_form_settings');
     submit_button();
+    echo '</form>';
+    echo '</div>';
+}
+
+/**
+ * Renders the Custom Fields tab — per-event extra registration fields
+ * (e.g. dinner headcount, planned rolls, distance paddle) for the current
+ * competition. Definitions are stored per competition and submitted values
+ * are saved self-describing on each competitor row.
+ */
+function render_custom_fields_page() {
+    if (!current_user_can('manage_options')) {
+        echo esc_html__('Access denied to settings, sorry.', 'competitors');
+        return;
+    }
+
+    render_admin_page_header();
+
+    echo '<div class="wrap">';
+    echo '<h1>' . esc_html__('Custom Fields', 'competitors') . '</h1>';
+
+    $current = class_exists('Competitors_CompetitionRepository')
+        ? Competitors_CompetitionRepository::find_current()
+        : null;
+
+    if (!$current) {
+        echo '<div class="notice notice-warning inline"><p>'
+            . esc_html__('There is no current competition yet. Create and mark a competition as current under Classes & Dates first — custom fields are configured per event.', 'competitors')
+            . '</p></div></div>';
+        return;
+    }
+
+    $competition_id = (int) $current['id'];
+
+    // Handle save.
+    if (isset($_POST['competitors_custom_fields_nonce'])
+        && wp_verify_nonce($_POST['competitors_custom_fields_nonce'], 'competitors_custom_fields_save')) {
+        $rows = isset($_POST['cf']) && is_array($_POST['cf']) ? wp_unslash($_POST['cf']) : array();
+        Competitors_CustomFieldRepository::save_for_competition($competition_id, $rows);
+        echo '<div class="notice notice-success is-dismissible"><p>'
+            . esc_html__('Custom fields saved.', 'competitors') . '</p></div>';
+    }
+
+    $defs = Competitors_CustomFieldRepository::get_for_competition($competition_id);
+    // First visit (no fields yet): pre-fill the suggested 2026 starter set so
+    // the admin can review and Save to persist them.
+    $prefilled = false;
+    if (empty($defs)) {
+        $defs = Competitors_CustomFieldRepository::default_2026_seed();
+        $prefilled = true;
+    }
+
+    echo '<p class="description">' . sprintf(
+        /* translators: %s: competition name + date */
+        esc_html__('These fields appear on the registration form for the current event: %s. They collect information only (no scoring, no fee). Leave a row blank to remove it.', 'competitors'),
+        '<strong>' . esc_html($current['name'] . ' — ' . $current['event_date']) . '</strong>'
+    ) . '</p>';
+
+    if ($prefilled) {
+        echo '<div class="notice notice-info inline"><p>'
+            . esc_html__('Suggested starter fields are pre-filled below. Review them and click Save to add them to this event.', 'competitors')
+            . '</p></div>';
+    }
+
+    $types = array(
+        'text'     => esc_html__('Text', 'competitors'),
+        'textarea' => esc_html__('Text area', 'competitors'),
+        'number'   => esc_html__('Number', 'competitors'),
+        'yesno'    => esc_html__('Yes / No', 'competitors'),
+        'select'   => esc_html__('Dropdown', 'competitors'),
+    );
+
+    // Render existing rows plus 3 blank spares for adding new fields.
+    $rows = $defs;
+    for ($i = 0; $i < 3; $i++) {
+        $rows[] = array('key' => '', 'label' => '', 'type' => 'text', 'required' => 0, 'options' => array());
+    }
+
+    echo '<form method="post" action="">';
+    wp_nonce_field('competitors_custom_fields_save', 'competitors_custom_fields_nonce');
+    echo '<table class="wp-list-table widefat fixed striped">';
+    echo '<thead><tr>'
+        . '<th style="width:160px;">' . esc_html__('Key', 'competitors') . '</th>'
+        . '<th>' . esc_html__('Label (shown to competitor)', 'competitors') . '</th>'
+        . '<th style="width:120px;">' . esc_html__('Type', 'competitors') . '</th>'
+        . '<th style="width:80px;">' . esc_html__('Required', 'competitors') . '</th>'
+        . '<th>' . esc_html__('Dropdown options (comma-separated)', 'competitors') . '</th>'
+        . '</tr></thead><tbody>';
+
+    foreach ($rows as $i => $row) {
+        $key      = isset($row['key']) ? $row['key'] : '';
+        $label    = isset($row['label']) ? $row['label'] : '';
+        $type     = isset($row['type']) ? $row['type'] : 'text';
+        $required = !empty($row['required']);
+        $options  = !empty($row['options']) && is_array($row['options']) ? implode(', ', $row['options']) : '';
+        $base     = 'cf[' . $i . ']';
+        ?>
+        <tr>
+            <td><input type="text" class="regular-text" name="<?php echo esc_attr($base); ?>[key]" value="<?php echo esc_attr($key); ?>" placeholder="<?php esc_attr_e('auto from label', 'competitors'); ?>"></td>
+            <td><input type="text" class="large-text" name="<?php echo esc_attr($base); ?>[label]" value="<?php echo esc_attr($label); ?>"></td>
+            <td>
+                <select name="<?php echo esc_attr($base); ?>[type]">
+                    <?php foreach ($types as $tval => $tlabel) : ?>
+                        <option value="<?php echo esc_attr($tval); ?>" <?php selected($type, $tval); ?>><?php echo esc_html($tlabel); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </td>
+            <td style="text-align:center;">
+                <input type="hidden" name="<?php echo esc_attr($base); ?>[required]" value="0">
+                <input type="checkbox" name="<?php echo esc_attr($base); ?>[required]" value="1" <?php checked($required); ?>>
+            </td>
+            <td><input type="text" class="large-text" name="<?php echo esc_attr($base); ?>[options]" value="<?php echo esc_attr($options); ?>" placeholder="<?php esc_attr_e('only for Dropdown', 'competitors'); ?>"></td>
+        </tr>
+        <?php
+    }
+
+    echo '</tbody></table>';
+    echo '<p class="description">' . esc_html__('Tip: leave the Key blank to auto-generate one from the label. Avoid renaming a Key after competitors have registered — already-saved answers keep their original label.', 'competitors') . '</p>';
+    submit_button(esc_html__('Save Custom Fields', 'competitors'));
     echo '</form>';
     echo '</div>';
 }

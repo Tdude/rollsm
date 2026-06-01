@@ -348,7 +348,7 @@ function handle_competitor_form_submission() {
     ]);
 }
 
-function send_admin_email($name, $email, $phone, $club, $gender, $sponsors, $participation_class, $competition_date, $total_sum, $dinner, $address = '', $emergency_contact = '', $special_diet = '') {
+function send_admin_email($name, $email, $phone, $club, $gender, $sponsors, $participation_class, $competition_date, $total_sum, $dinner, $address = '', $emergency_contact = '', $special_diet = '', $custom_fields = array()) {
     //$test_email = 'tibbecodes@gmail.com';
 
     // Get all admin users emails
@@ -377,6 +377,18 @@ function send_admin_email($name, $email, $phone, $club, $gender, $sponsors, $par
 
     if ($dinner === 'yes') {
         $message .= "Middag: Ja (200 SEK)\n";
+    }
+
+    // Per-event custom fields (dinner headcount, planned rolls, etc.)
+    if (is_array($custom_fields)) {
+        foreach ($custom_fields as $cf) {
+            $value = isset($cf['value']) ? (string) $cf['value'] : '';
+            if ($value === '') {
+                continue;
+            }
+            $label = isset($cf['label']) ? (string) $cf['label'] : (isset($cf['key']) ? $cf['key'] : '');
+            $message .= "$label: $value\n";
+        }
     }
 
     if (!wp_mail($admin_emails, $subject, $message)) {

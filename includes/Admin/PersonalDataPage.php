@@ -56,6 +56,7 @@ class Competitors_Admin_PersonalDataPage {
            . '<th class="hide-on-narrow">' . esc_html__( 'Next of kin', 'competitors' ) . '</th>'
            . '<th class="hide-on-narrow">' . esc_html__( 'Special diet', 'competitors' ) . '</th>'
            . '<th class="hide-on-narrow">' . esc_html__( 'Address', 'competitors' ) . '</th>'
+           . '<th class="hide-on-narrow">' . esc_html__( 'Extra', 'competitors' ) . '</th>'
            . '<th class="hide-for-print">' . esc_html__( 'Email', 'competitors' ) . '</th>'
            . '<th>' . esc_html__( 'Phone', 'competitors' ) . '</th>'
            . '<th class="hide-for-print">' . esc_html__( 'Dinner', 'competitors' ) . '</th>'
@@ -82,6 +83,11 @@ class Competitors_Admin_PersonalDataPage {
             self::cell_narrow( $comp['emergency_contact'] ?? '' );
             self::cell_narrow( $comp['special_diet'] ?? '' );
             self::cell_narrow( $comp['address'] ?? '' );
+            self::cell_narrow(
+                class_exists( 'Competitors_CustomFieldRepository' )
+                    ? Competitors_CustomFieldRepository::values_to_text( $comp['extra_fields'] ?? '' )
+                    : ''
+            );
             self::cell_hide( $comp['email'] );
             self::cell( $comp['phone'] );
             self::cell_hide( $comp['dinner'] );
