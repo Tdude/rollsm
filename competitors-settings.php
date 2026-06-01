@@ -960,10 +960,9 @@ function render_competitors_form_field_settings_field() {
     <table class="wp-list-table widefat fixed striped">
         <thead>
             <tr>
-                <th style="width:140px;"><?php esc_html_e('Field', 'competitors'); ?></th>
+                <th style="width:160px;"><?php esc_html_e('Field', 'competitors'); ?></th>
                 <th style="width:80px;"><?php esc_html_e('Visible', 'competitors'); ?></th>
                 <th><?php esc_html_e('Custom label (blank = use default)', 'competitors'); ?></th>
-                <th><?php esc_html_e('Default label', 'competitors'); ?></th>
                 <th style="width:90px;"><?php esc_html_e('Required', 'competitors'); ?></th>
             </tr>
         </thead>
@@ -977,7 +976,16 @@ function render_competitors_form_field_settings_field() {
                     : false;
             ?>
                 <tr>
-                    <td><code><?php echo esc_html($key); ?></code></td>
+                    <td>
+                        <code><?php echo esc_html($key); ?></code>
+                        <span class="dashicons dashicons-editor-help"
+                              style="color:#787c82;cursor:help;vertical-align:middle;"
+                              title="<?php echo esc_attr(sprintf(
+                                  /* translators: %s: the field's default label */
+                                  __('Default label: %s', 'competitors'),
+                                  $field['label']
+                              )); ?>"></span>
+                    </td>
                     <td>
                         <input type="hidden" name="competitors_options[form_field_settings][<?php echo esc_attr($key); ?>][visible]" value="0">
                         <input type="checkbox" name="competitors_options[form_field_settings][<?php echo esc_attr($key); ?>][visible]" value="1" <?php checked($row_visible); ?>>
@@ -985,7 +993,6 @@ function render_competitors_form_field_settings_field() {
                     <td>
                         <input type="text" class="regular-text" name="competitors_options[form_field_settings][<?php echo esc_attr($key); ?>][label]" value="<?php echo esc_attr($row_label); ?>" placeholder="<?php echo esc_attr($field['label']); ?>">
                     </td>
-                    <td style="color:#666;font-style:italic;"><?php echo esc_html($field['label']); ?></td>
                     <td>
                         <?php if ($has_required) : ?>
                             <input type="hidden" name="competitors_options[form_field_settings][<?php echo esc_attr($key); ?>][required]" value="0">
