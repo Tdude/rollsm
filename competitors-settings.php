@@ -880,13 +880,23 @@ function render_custom_fields_page() {
 
     $competition_id = (int) $current['id'];
 
-    // Handle save.
+    // Handle save. Report the saved count + the exact event so a mismatch
+    // between "the event you think you're editing" and the one actually
+    // flagged current is immediately visible (the usual cause of
+    // "I saved but nothing shows on the form").
     if (isset($_POST['competitors_custom_fields_nonce'])
         && wp_verify_nonce($_POST['competitors_custom_fields_nonce'], 'competitors_custom_fields_save')) {
         $rows = isset($_POST['cf']) && is_array($_POST['cf']) ? wp_unslash($_POST['cf']) : array();
         Competitors_CustomFieldRepository::save_for_competition($competition_id, $rows);
+        $saved_count = count(Competitors_CustomFieldRepository::get_for_competition($competition_id));
         echo '<div class="notice notice-success is-dismissible"><p>'
-            . esc_html__('Custom fields saved.', 'competitors') . '</p></div>';
+            . esc_html(sprintf(
+                /* translators: 1: number of fields, 2: competition name + date */
+                _n('Saved %1$d custom field for “%2$s”.', 'Saved %1$d custom fields for “%2$s”.', $saved_count, 'competitors'),
+                $saved_count,
+                $current['name'] . ' — ' . $current['event_date']
+            ))
+            . '</p></div>';
     }
 
     $defs = Competitors_CustomFieldRepository::get_for_competition($competition_id);
@@ -903,6 +913,15 @@ function render_custom_fields_page() {
         esc_html__('These fields appear on the registration form for the current event: %s. They collect information only (no scoring, no fee). Leave a row blank to remove it.', 'competitors'),
         '<strong>' . esc_html($current['name'] . ' — ' . $current['event_date']) . '</strong>'
     ) . '</p>';
+
+    // A locked current event is hidden from the public registration date
+    // dropdown, so its custom fields never render — a common "why don't I
+    // see them?" trap. Call it out.
+    if (!empty($current['is_locked'])) {
+        echo '<div class="notice notice-warning inline"><p>'
+            . esc_html__('Note: this event is LOCKED, so it is hidden from the public registration form — these custom fields will not appear there until you unlock it under Classes & Dates.', 'competitors')
+            . '</p></div>';
+    }
 
     if ($prefilled) {
         echo '<div class="notice notice-info inline"><p>'

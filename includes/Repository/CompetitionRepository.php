@@ -66,8 +66,12 @@ class Competitors_CompetitionRepository {
      */
     public static function find_current() {
         global $wpdb;
+        // ORDER BY makes the result deterministic if data integrity ever
+        // leaves more than one row flagged current — otherwise the "current"
+        // event could differ between requests (e.g. a save targeting one row
+        // and a later render reading another).
         return $wpdb->get_row(
-            "SELECT * FROM " . self::table() . " WHERE is_current = 1 LIMIT 1",
+            "SELECT * FROM " . self::table() . " WHERE is_current = 1 ORDER BY event_date DESC, id DESC LIMIT 1",
             ARRAY_A
         );
     }
