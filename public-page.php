@@ -403,8 +403,8 @@ function send_confirmation_email($name, $email, $competition_date, $total_sum, $
     $subject = 'Registration Confirmation for RollSM';
     $message = "Hej $name!\n\n" .
                 "Tack för din anmälan till RollSM $competition_date. Vi ser fram emot att få träffas!\n\n" .
-                "Du kommer att få ett separat mail med mer information kring boendebokning mm.\n\n" .
-                "Din erlagda avgift som du har eller ska Swisha är $total_sum.\n\n";
+                "Du kommer att få ett separat mail med mer information kring boende, bokning mm.\n\n" .
+                "Den avgift som du ska Swisha är $total_sum.\n\n";
 
     if ($dinner === 'yes') {
         $message .= "Middag: Ja (200 SEK)\n";
@@ -415,7 +415,7 @@ function send_confirmation_email($name, $email, $competition_date, $total_sum, $
                 "Hi $name,\n\n".
                 "Thank you for registering for the RollSM competition on $competition_date. We look forward to seeing you there!\n\n".
                 "You will be receiving a separate mail with details on accommodation etc.\n\n".
-                "Your total fee is SEK $total_sum.\n\n";
+                "Your total fee to pay is SEK $total_sum.\n\n";
 
     if ($dinner === 'yes') {
         $message .= "Dinner: Yes (200 SEK)\n";
