@@ -239,6 +239,11 @@ Kaia were 15-17 years old in 2025).
   becomes painful, add a `competition_id` dimension to the
   settings option array and a per-event override UI. Defer until
   the pain is real.
+- Multi-class registration (one person, several classes at the same
+  event) — researched but **not confirmed as needed and not started**.
+  See `MULTI_CLASS_REGISTRATION.md` for the architecture writeup and a
+  latent idempotency-key bug it surfaced. Get explicit confirmation
+  from the competition director before picking this up.
 
 ## Lessons folded back into MIGRATION.md (TODO)
 
