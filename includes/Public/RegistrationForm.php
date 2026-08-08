@@ -103,6 +103,17 @@ class Competitors_Public_RegistrationForm {
         ?>
         <form id="competitors-registration-form" action="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" method="post">
             <input type="hidden" name="action" value="competitors_form_submit_v2">
+
+            <?php /* Honeypot: real users never see or tab to this field. Left
+                     in normal layout flow (not display:none) so bots that
+                     specifically skip hidden fields still fill it in. Any
+                     value here means the submit is treated as spam — see
+                     Competitors_Ajax_PublicAjaxHandler::handle_form_submit(). */ ?>
+            <div class="comp-hp-field" aria-hidden="true">
+                <label for="comp_hp_confirm">Leave this field empty</label>
+                <input type="text" id="comp_hp_confirm" name="comp_hp_confirm" tabindex="-1" autocomplete="off">
+            </div>
+
             <h2 id="registration"><?php esc_html_e( 'Registration', 'competitors' ); ?></h2>
             <p><?php echo wp_kses_post( __( 'Remember to submit your registration at the <a href="#submitbutton-anchor">bottom of the page</a>. Fields marked with an asterisk (<span class="text-danger"> * </span>) are mandatory.', 'competitors' ) ); ?></p>
 

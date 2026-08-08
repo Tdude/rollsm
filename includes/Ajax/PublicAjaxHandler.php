@@ -46,14 +46,54 @@ class Competitors_Ajax_PublicAjaxHandler {
             return;
         }
 
-        // Rate limiting — max 3 registrations per IP per hour
-        $ip_key   = 'comp_reg_' . md5( $_SERVER['REMOTE_ADDR'] ?? '' );
-        $attempts = (int) get_transient( $ip_key );
-        if ( $attempts >= 3 ) {
+        // Honeypot: comp_hp_confirm is invisible to real users (see
+        // RegistrationForm::render()) and never legitimately has a value.
+        // A bot that fills every text input on the page trips it. Fake a
+        // normal success so the bot gets no signal it was caught and has
+        // no reason to adapt — no row is created, no rate-limit counters
+        // are touched, no emails are sent.
+        if ( ! empty( $_POST['comp_hp_confirm'] ) ) {
+            wp_send_json_success( array(
+                'message'      => __( 'Thanks for registering, this will be fun!', 'competitors' ),
+                'total_sum'    => 0,
+                'redirect_url' => add_query_arg( array( 'fee' => 0 ), get_home_url() . '/competitors-thank-you' ),
+            ) );
+            return;
+        }
+
+        // Rate limiting, two tiers, both keyed by IP.
+        //
+        // "Attempts" is a generous flood guard counted on every POST,
+        // valid or not — a household with several kids can easily burn
+        // 2-3 of a low cap on typos/retries alone before anyone spam-related
+        // is involved (this bit the Weidmert family: dad + 2 daughters,
+        // 3rd daughter blocked despite being a legitimate registrant).
+        // Default 15/hour, filterable.
+        //
+        // "Successes" is the tight guard that actually matters for spam:
+        // it only counts registrations that clear validation and get a
+        // real row + two outbound emails, so retries never cost quota,
+        // but a bot that gets past the nonce check still can't mint
+        // more than a handful of spam registrations per hour from one IP.
+        // Default 8/hour, filterable.
+        $ip_hash = md5( $_SERVER['REMOTE_ADDR'] ?? '' );
+
+        $attempts_key   = 'comp_reg_attempts_' . $ip_hash;
+        $attempts_limit = (int) apply_filters( 'competitors_registration_attempt_limit', 15 );
+        $attempts       = (int) get_transient( $attempts_key );
+        if ( $attempts >= $attempts_limit ) {
             wp_send_json_error( array( 'message' => 'Too many registration attempts. Please try again later.' ) );
             return;
         }
-        set_transient( $ip_key, $attempts + 1, 3600 );
+        set_transient( $attempts_key, $attempts + 1, HOUR_IN_SECONDS );
+
+        $success_key   = 'comp_reg_success_' . $ip_hash;
+        $success_limit = (int) apply_filters( 'competitors_registration_success_limit', 8 );
+        $success_count = (int) get_transient( $success_key );
+        if ( $success_count >= $success_limit ) {
+            wp_send_json_error( array( 'message' => 'Too many registrations from this network in the last hour. Please try again later, or contact us if you need to register more people.' ) );
+            return;
+        }
 
         // Validate required fields
         $name    = sanitize_text_field( $_POST['name'] ?? '' );
@@ -204,6 +244,11 @@ class Competitors_Ajax_PublicAjaxHandler {
         if ( ! $competitor_id ) {
             wp_send_json_error( array( 'message' => 'Error creating competitor record.' ) );
         }
+
+        // Only count toward the success cap once a row actually exists —
+        // this is the tier that guards against spam, so it should track
+        // real registrations, not attempts.
+        set_transient( $success_key, $success_count + 1, HOUR_IN_SECONDS );
 
         // Save selected rolls
         $selected_rolls = isset( $_POST['selected_rolls'] ) ? array_map( 'intval', array_keys( $_POST['selected_rolls'] ) ) : array();

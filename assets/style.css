@@ -206,6 +206,18 @@ tr.non-selected-roll {
   opacity: 0;
 }
 
+/* Honeypot field for the registration form: must stay in normal layout
+   flow (not display:none / visibility:hidden) so bots that specifically
+   skip those still fill it in, while real users never see it. */
+.comp-hp-field {
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
 .text-danger {
   color: var(--wp--preset--color--danger-darker);
 }
